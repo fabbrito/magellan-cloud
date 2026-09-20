@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["packages/db/migrations/**"],
+  "ignorePatterns": ["packages/db/migrations/**", "**/worker-configuration.d.ts"],
   "sortImports": true,
   "proseWrap": "always",
   "printWidth": 100

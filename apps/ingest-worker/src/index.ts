@@ -1,3 +1,5 @@
-export * from "@magellan/contract";
-export * from "@magellan/db";
-export * from "@magellan/shared";
+export default {
+  fetch(): Response {
+    return new Response("not found", { status: 404 });
+  },
+} satisfies ExportedHandler<Env>;

@@ -4,11 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "cf-typegen": "wrangler types",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@magellan/contract": "workspace:*",
     "@magellan/db": "workspace:*",
     "@magellan/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.1"
   }
 }

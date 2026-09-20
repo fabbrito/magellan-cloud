@@ -10,12 +10,14 @@
   "scripts": {
     "format": "oxfmt",
     "lint": "oxlint --tsconfig ./tsconfig.base.json",
-    "typecheck": "bun run --filter '*' typecheck"
+    "typecheck": "bun run --filter '*' typecheck",
+    "cf-typegen": "bun run --filter '*' cf-typegen"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
     "oxfmt": "^0.68.0",
     "oxlint": "^1.83.0",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "wrangler": "^4.133.0"
   }
 }
