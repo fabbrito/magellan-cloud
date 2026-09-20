@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { batchSchema, manifestSchema } from "./schema.ts";
 
-const gauge = { key: "power_w", kind: "gauge", unit: "W" };
+const gauge = { key: "power_w", kind: "gauge", unit: "W", exponent: -2 };
 
 const threeKinds = {
   sources: [
@@ -10,7 +10,7 @@ const threeKinds = {
       id: "source_1",
       metrics: [
         gauge,
-        { key: "energy_kwh", kind: "counter", unit: "kWh" },
+        { key: "energy_kwh", kind: "counter", unit: "kWh", exponent: 0 },
         { key: "mode", kind: "state", state_labels: { "0": "idle", "1": "running" } },
       ],
     },
@@ -20,7 +20,7 @@ const threeKinds = {
 const batch = {
   manifest_hash: "0".repeat(64),
   seq: "1",
-  readings: [{ source: "source_1", ts: 1_758_326_400_000, values: { power_w: 1234.5 } }],
+  readings: [{ source: "source_1", ts: 1_758_326_400_000, values: { power_w: 123_450 } }],
 };
 
 describe("manifestSchema", () => {
@@ -45,7 +45,16 @@ describe("manifestSchema", () => {
   });
 
   it("rejects a measured metric without a unit", () => {
-    const missing = { sources: [{ id: "source_1", metrics: [{ key: "power_w", kind: "gauge" }] }] };
+    const missing = {
+      sources: [{ id: "source_1", metrics: [{ key: "power_w", kind: "gauge", exponent: 0 }] }],
+    };
+    expect(manifestSchema.safeParse(missing).success).toBe(false);
+  });
+
+  it("rejects a measured metric without an exponent", () => {
+    const missing = {
+      sources: [{ id: "source_1", metrics: [{ key: "power_w", kind: "gauge", unit: "W" }] }],
+    };
     expect(manifestSchema.safeParse(missing).success).toBe(false);
   });
 
@@ -90,13 +99,25 @@ describe("manifestSchema", () => {
     expect(manifestSchema.safeParse(dup).success).toBe(false);
   });
 
+  it("rejects an exponent past the bound", () => {
+    const wide = { sources: [{ id: "source_1", metrics: [{ ...gauge, exponent: 13 }] }] };
+    expect(manifestSchema.safeParse(wide).success).toBe(false);
+  });
+
+  it("rejects an exponent on a state", () => {
+    const scaled = {
+      sources: [{ id: "source_1", metrics: [{ key: "mode", kind: "state", exponent: 0 }] }],
+    };
+    expect(manifestSchema.safeParse(scaled).success).toBe(false);
+  });
+
   it("rejects a key past the length bound", () => {
     const long = { sources: [{ id: "source_1", metrics: [{ ...gauge, key: "m".repeat(65) }] }] };
     expect(manifestSchema.safeParse(long).success).toBe(false);
   });
 
   it("rejects an unknown property", () => {
-    const extra = { sources: [{ id: "source_1", metrics: [{ ...gauge, scale: 1 }] }] };
+    const extra = { sources: [{ id: "source_1", metrics: [{ ...gauge, factor: 0.01 }] }] };
     expect(manifestSchema.safeParse(extra).success).toBe(false);
   });
 });
@@ -132,10 +153,42 @@ describe("batchSchema", () => {
       seq: "3",
       readings: [
         { source: "source_1", ts: 1_758_326_400_000, values: { power_w: 1 } },
-        { source: "source_2", ts: 1_758_326_460_000, values: { temperature_c: -12.5 } },
+        { source: "source_2", ts: 1_758_326_460_000, values: { temperature_c: -125 } },
       ],
     };
     expect(batchSchema.safeParse(two).success).toBe(true);
+  });
+
+  it("rejects a fractional metric value", () => {
+    const fractional = {
+      ...batch,
+      readings: [{ source: "source_1", ts: 1, values: { power_w: 1234.5 } }],
+    };
+    expect(batchSchema.safeParse(fractional).success).toBe(false);
+  });
+
+  it("rejects a metric value past the exact-integer bound", () => {
+    const wide = {
+      ...batch,
+      readings: [{ source: "source_1", ts: 1, values: { power_w: 9_007_199_254_740_992 } }],
+    };
+    expect(batchSchema.safeParse(wide).success).toBe(false);
+  });
+
+  it("accepts a negative metric value", () => {
+    const below = {
+      ...batch,
+      readings: [{ source: "source_1", ts: 1, values: { temperature_c: -125 } }],
+    };
+    expect(batchSchema.safeParse(below).success).toBe(true);
+  });
+
+  it("rejects a seq past u64::MAX", () => {
+    expect(batchSchema.safeParse({ ...batch, seq: "18446744073709551616" }).success).toBe(false);
+  });
+
+  it("rejects a seq with a leading zero", () => {
+    expect(batchSchema.safeParse({ ...batch, seq: "01" }).success).toBe(false);
   });
 
   it("rejects a seq that is not a string", () => {

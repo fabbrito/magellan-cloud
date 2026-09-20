@@ -8,8 +8,8 @@ const manifest = manifestSchema.parse({
     {
       id: "source_1",
       metrics: [
-        { key: "power_w", kind: "gauge", unit: "W" },
-        { key: "energy_kwh", kind: "counter", unit: "kWh" },
+        { key: "power_w", kind: "gauge", unit: "W", exponent: -2 },
+        { key: "energy_kwh", kind: "counter", unit: "kWh", exponent: 0 },
         { key: "mode", kind: "state", state_labels: { "0": "idle", "1": "running" } },
       ],
     },
@@ -23,7 +23,7 @@ const reading = (source: string, values: Record<string, number>) => ({
 });
 
 const batch = (readings: ReturnType<typeof reading>[]) => ({
-  manifest_hash: "dc803b6bdf3e71bdc6633908d93792832731b960e5559a403e58c275e96fdaef",
+  manifest_hash: "d935aec39b4c492681d137f322ce5876ce1509289a3d5d759cd0b85fbf11790a",
   seq: "1",
   readings,
 });
@@ -32,7 +32,7 @@ describe("checkBatchAgainstManifest", () => {
   it("accepts values that match the declared metrics", () => {
     const check = checkBatchAgainstManifest(
       manifest,
-      batch([reading("source_1", { power_w: 1234.5, energy_kwh: 42, mode: 1 })]),
+      batch([reading("source_1", { power_w: 123_450, energy_kwh: 42, mode: 1 })]),
     );
     expect(check).toEqual({ ok: true });
   });
@@ -48,18 +48,5 @@ describe("checkBatchAgainstManifest", () => {
       batch([reading("source_1", { power_w: 1, voltage_v: 2 })]),
     );
     expect(check).toMatchObject({ ok: false, reason: "metric_unknown", metric: "voltage_v" });
-  });
-
-  it("refuses a fractional counter", () => {
-    const check = checkBatchAgainstManifest(
-      manifest,
-      batch([reading("source_1", { energy_kwh: 1.5 })]),
-    );
-    expect(check).toMatchObject({ ok: false, reason: "counter_not_integer", metric: "energy_kwh" });
-  });
-
-  it("refuses a fractional state", () => {
-    const check = checkBatchAgainstManifest(manifest, batch([reading("source_1", { mode: 0.5 })]));
-    expect(check).toMatchObject({ ok: false, reason: "state_not_integer", metric: "mode" });
   });
 });
