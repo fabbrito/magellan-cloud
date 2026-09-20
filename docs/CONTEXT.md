@@ -63,11 +63,11 @@ so a reading's shape is always traceable to a pinned declaration.
 
 ## Contract
 
-| Term                 | Meaning                                                                      |
-| -------------------- | ---------------------------------------------------------------------------- |
-| **Contract**         | The ingest protocol (Layer 4) — the only interface between the repositories  |
-| **Contract version** | A tag in this repo (`contract-vX.Y.Z`) that `magellan-device` vendors pinned |
-| **Manifest hash**    | SHA-256 over a manifest's canonical JSON — the manifest's identity           |
+| Term                 | Meaning                                                                       |
+| -------------------- | ----------------------------------------------------------------------------- |
+| **Contract**         | The ingest protocol (Layer 4) — the only interface between the repositories   |
+| **Contract version** | A tag in this repo (`contract-vX.Y.Z`) that `magellan-device` vendors pinned  |
+| **Manifest hash**    | SHA-256 over a manifest's bytes as sent — the manifest's identity and its tag |
 
 ## Vocabulary limits
 

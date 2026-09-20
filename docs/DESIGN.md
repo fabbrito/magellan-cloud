@@ -121,23 +121,31 @@ flowchart TB
 
 ## 6. Contract (Layer 4)
 
-The protocol below is the contract until the JSON Schema exists; once it lands, the schema is the
-source of truth and this section is orientation. TypeScript and Rust types are generated from the
-schema, never hand-written twice.
+This section is orientation. The contract's source of truth is `packages/contract/`: Zod schemas the
+cloud parses with. The machine-readable document the device reads is derived from them and emitted
+when the device parser is written — never authored twice. Rust types are written natively rather
+than generated, so the two implementations stay independent of each other's toolchain while agreeing
+on the emitted shape (`docs/adr/0001-contract-authoring.md`). Contract v1 stays malleable until both
+implementations exist; a breaking change after that is a new version, not an edit.
 
 ```
 PUT  /v1/devices/{id}/manifest
 POST /v1/devices/{id}/batches
 ```
 
-**Manifest** — the device's sources and their metrics, with `unit` and `kind` (`gauge`, `counter`,
-`state`). The hash is SHA-256 over the manifest's canonical JSON, and both sides compute it so a
-mismatch is caught rather than trusted.
+**Manifest** — the device's sources and their metrics, with `kind` (`gauge`, `counter`, `state`) and
+a `unit` for anything measured — a state has none. The hash is SHA-256 over the manifest's bytes as
+sent; the cloud recomputes it from the body it receives and answers the PUT with the accepted hash
+in `ETag`, so the device asserts its own matches rather than trusting it.
 
-**Batch** — `manifest_hash`, `seq`, an ordered `readings[]`, and an optional `heartbeat` carrying
-uptime, buffer depth, battery, signal and firmware version. `seq` is a lifetime counter, monotonic
-per device and sent as a decimal string; it is what the cloud deduplicates on, and what makes "was
-this delivered" answerable without a batches table.
+**Batch** — `manifest_hash`, `seq`, an ordered `readings[]`, and an optional `heartbeat` carrying a
+boot id, uptime, buffer depth, battery, signal and firmware version. `seq` is a lifetime counter,
+monotonic per device and sent as a decimal string; it is what the cloud deduplicates on, and what
+makes "was this delivered" answerable without a batches table.
+
+A rule the document cannot state — unique metric keys, a non-empty reading — stays enforced
+cloud-side and travels in the emitted document as description text, so the device author reads the
+rule rather than inferring it.
 
 Responses are policy, not documentation: a device reads the status class and acts.
 
@@ -148,9 +156,13 @@ Responses are policy, not documentation: a device reads the status class and act
 | 429 / 503        | cloud cannot commit now        | retry with backoff, keep buffer  |
 | 5xx, no response | unknown state                  | retry; the duplicate is absorbed |
 
+An unknown `manifest_hash` is not the device's fault — the contract has it send its manifest before
+a batch that names it — so the cloud archives the batch, answers `5xx`, and the archive rebuilds D1
+once the manifest is present.
+
 ## 7. Cloud (Layers 1–3)
 
-- **ingest-worker** — device-facing. Verifies the token, validates against the schema, stores the
+- **ingest-worker** — device-facing. Verifies the token, validates against the contract, stores the
   manifest, commits readings, writes the raw batch to R2.
 - **query-worker** — dashboard-facing, behind Cloudflare Access. Device list, health, and
   time-series queries over D1.

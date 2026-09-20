@@ -25,7 +25,7 @@ Anything that authenticates to Cloudflare is the maintainer's to run, never an a
 ## Layout
 
 ```
-packages/contract/   the contract schema (source of truth) + generated types
+packages/contract/   the contract: Zod schemas the cloud parses with
 packages/db/         D1 schema and migrations
 packages/shared/     token auth, errors, logging
 apps/ingest-worker/  device-facing

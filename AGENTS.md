@@ -36,9 +36,9 @@ hands.
 
 ## The contract is the seam
 
-`packages/contract/` is all the device repo shares with this one. Its JSON Schema is the source of
-truth; TS and Rust types are generated from it, never hand-written twice. A contract change is a
-version the device repo can vendor — changing one repository's copy alone breaks the pair.
+The contract is the only interface the device repo shares with this one, and the two repositories
+are built independently. A contract change is a version the device repo vendors — change one
+repository's copy alone and the pair breaks.
 
 The cloud has no device-specific word. If a table, column, route or chart names a sensor model, the
 boundary has leaked (`docs/CONTEXT.md` > Vocabulary limits).
