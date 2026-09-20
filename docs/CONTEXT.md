@@ -24,17 +24,22 @@ its sources is `magellan-device`'s vocabulary, not this one.
 | Term                 | Meaning                                                                          |
 | -------------------- | -------------------------------------------------------------------------------- |
 | **Source**           | A named thing a device polls, identified per device                              |
-| **Metric**           | A named, typed quantity of a source: a `key`, a `unit`, and a `kind`             |
+| **Metric**           | A named, typed quantity of a source: a `key`, a `unit`, a `kind`, an `exponent`  |
 | **Reading**          | One source poll: a timestamp plus that source's metric values                    |
 | **Manifest**         | A device's description of its sources and metrics, versioned by hash             |
 | **Batch**            | One upload: a `seq`, a manifest hash, ordered readings, an optional heartbeat    |
 | **Sequence** (`seq`) | A lifetime counter, monotonic per device; what the cloud deduplicates on         |
 | **Heartbeat**        | The device's account of itself — uptime, buffer depth, battery, signal, firmware |
+| **Exponent**         | A metric's decimal scale: its values mean `value × 10^exponent`                  |
 | **Measured**         | When the device read the values — the reading's timestamp                        |
 | **Received**         | When the cloud committed the batch. Routinely later than **measured**            |
 
 **Metric `kind`** is one of `gauge`, `counter`, `state`. A gauge is a value in time, a counter only
 increases, a state is a discrete condition. The kind decides which rollups mean anything.
+
+**Caution — a "value" is the integer on the wire, never the physical quantity.** The quantity is a
+value and its metric's exponent together; naming the value alone makes a reading look like a
+measurement in units.
 
 **Caution — "batch" and "reading" are different sizes.** A batch carries many readings and is the
 unit of delivery, retry and dedup. A reading is the unit of storage and query. Saying "batch" when

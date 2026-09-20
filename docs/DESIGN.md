@@ -45,9 +45,9 @@ a contract version, `magellan-device` vendors it pinned to that tag, and each re
 the pair still agrees.
 
 **No data loss across the seam.** Outage handling is a property of the contract: **2xx** means
-committed and the device may drop the batch · **4xx** means rejected, the device drops and logs ·
-**5xx or network** means the device retries with backoff. A batch the cloud refuses to commit is a
-batch the device still holds.
+committed and the device may drop the batch · **4xx** means rejected, the device drops and logs,
+except a rejected credential, which keeps the buffer · **5xx or network** means the device retries
+with backoff. A batch the cloud refuses to commit is a batch the device still holds.
 
 **Only the archive and the contract are durable.** R2 holds every raw batch and every manifest
 unchanged, and the contract is what the other repository reads. D1 is a derived index over the
@@ -105,12 +105,16 @@ flowchart TB
 3. **A reading is one source poll** — a timestamp plus that source's metric values. It is not one
    row per metric.
 4. **Delivery duplicates are absorbed; distinct readings are kept.** Duplicate `(device_id, seq)` is
-   a no-op returning success. Two readings that genuinely share a timestamp collide on the key and
-   the second is dropped, not mistaken for a retry.
-5. **Commit is atomic per batch.** Either every reading in a batch lands and `last_seq` advances, or
-   nothing does and the device retries the whole batch.
-6. **Values are scaled on the device; timestamps are UTC.** The cloud stores numbers and instants,
-   not engineering units in flux and not local time.
+   a no-op returning success. `seq` is a presence check, never a ratchet — a batch below the highest
+   `seq` seen still commits, so a device that lost its counter is not silenced. Two readings that
+   genuinely share a timestamp collide on the key and the second is dropped, not mistaken for a
+   retry.
+5. **Commit is atomic per batch.** Either every reading in a batch lands and its `seq` is recorded,
+   or nothing does and the device retries the whole batch.
+6. **Values are integers, scaled on the device; timestamps are UTC.** A metric declares a decimal
+   exponent and a reading carries whole numbers: the physical value is `value × 10^exponent`. The
+   cloud stores integers and instants — never a float, never engineering units in flux, never local
+   time.
 7. **Every raw batch is archived unchanged.** R2 holds the batch exactly as sent. D1 is a derived
    index over that archive and can be rebuilt from it.
 8. **One revocable token per device.** A token identifies exactly one device and can be rotated or
@@ -134,18 +138,21 @@ POST /v1/devices/{id}/batches
 ```
 
 **Manifest** — the device's sources and their metrics, with `kind` (`gauge`, `counter`, `state`) and
-a `unit` for anything measured — a state has none. The hash is SHA-256 over the manifest's bytes as
-sent; the cloud recomputes it from the body it receives and answers the PUT with the accepted hash
-in `ETag`, so the device asserts its own matches rather than trusting it.
+a `unit` and an `exponent` for anything measured — a state has neither, its value being a code. The
+exponent is the metric's, so re-scaling one is a new manifest (`docs/adr/0002-integer-values.md`).
+The hash is SHA-256 over the manifest's bytes as sent; the cloud recomputes it from the body it
+receives and answers the PUT with the accepted hash in `ETag`, so the device asserts its own matches
+rather than trusting it.
 
 **Batch** — `manifest_hash`, `seq`, an ordered `readings[]`, and an optional `heartbeat` carrying a
 boot id, uptime, buffer depth, battery, signal and firmware version. `seq` is a lifetime counter,
-monotonic per device and sent as a decimal string; it is what the cloud deduplicates on, and what
-makes "was this delivered" answerable without a batches table.
+monotonic per device and sent as a decimal string, canonical and at most u64::MAX; it is what the
+cloud deduplicates on, and what makes "was this delivered" answerable without a batches table. A
+reading's values are integers, each scaled by its metric's `exponent`.
 
-A rule the document cannot state — unique metric keys, a non-empty reading — stays enforced
-cloud-side and travels in the emitted document as description text, so the device author reads the
-rule rather than inferring it.
+A rule the document cannot state — unique source ids, unique metric keys — stays enforced cloud-side
+and travels in the emitted document as description text, so the device author reads the rule rather
+than inferring it. A rule it can state rides as a keyword the device asserts.
 
 Responses are policy, not documentation: a device reads the status class and acts.
 
@@ -153,8 +160,12 @@ Responses are policy, not documentation: a device reads the status class and act
 | ---------------- | ------------------------------ | -------------------------------- |
 | 2xx              | committed (or already present) | drop the batch                   |
 | 4xx              | rejected, will never succeed   | drop and log                     |
+| 401 / 403        | credential rejected            | keep buffer, retry with backoff  |
 | 429 / 503        | cloud cannot commit now        | retry with backoff, keep buffer  |
 | 5xx, no response | unknown state                  | retry; the duplicate is absorbed |
+
+A rejected credential is the one 4xx the cloud causes and the maintainer fixes, so dropping a buffer
+on it loses readings nothing recovers. A device stuck there is a health signal, not a lost device.
 
 An unknown `manifest_hash` is not the device's fault — the contract has it send its manifest before
 a batch that names it — so the cloud archives the batch, answers `5xx`, and the archive rebuilds D1

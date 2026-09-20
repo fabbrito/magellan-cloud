@@ -49,6 +49,12 @@ repository's copy alone and the pair breaks.
 The cloud has no device-specific word. If a table, column, route or chart names a sensor model, the
 boundary has leaked (`docs/CONTEXT.md` > Vocabulary limits).
 
+**Unpublished until tagged.** Until the first `contract-v*` tag the device vendors nothing, so the
+seam is cheap to move. Settle on paper only what the tag freezes — the wire bytes — and what D1 or
+R2 persist. The wire _around_ the bytes — response bodies, header formats, token lifecycle — is the
+ingest rung's to settle against a running worker. Record what that rung answers and build past it:
+on paper an answer buys agreement, not correctness, and each one mints three more questions.
+
 ## Guardrails
 
 - Device tokens and the Cloudflare account id never enter git — env, or a file `.gitignore` already
