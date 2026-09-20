@@ -10,6 +10,7 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks && chmod +x .githooks/githooks .githooks/commit-msg .githooks/pre-commit",
     "check": ".githooks/githooks check",
+    "update": "bun update --latest -r -i && bun install",
     "check:fix": ".githooks/githooks check --fix",
     "format": "oxfmt",
     "lint": "oxlint --tsconfig ./tsconfig.base.json",
