@@ -1,6 +1,15 @@
 {
-  // Root config for editor tooling only. Every package and app has its own tsconfig.
-  "extends": "./tsconfig.base.json",
-  "compilerOptions": { "types": ["bun"] },
-  "files": []
+  // Editor tooling only: one reference per project, so a test file belongs to a project and not to
+  // no project at all. `bun run typecheck` runs each package's own tsc.
+  "files": [],
+  "references": [
+    { "path": "./packages/contract" },
+    { "path": "./packages/db" },
+    { "path": "./packages/shared" },
+    { "path": "./apps/ingest-worker" },
+    { "path": "./apps/query-worker" },
+    { "path": "./apps/jobs-worker" },
+    { "path": "./apps/dashboard" },
+    { "path": "./tools/simulator" }
+  ]
 }

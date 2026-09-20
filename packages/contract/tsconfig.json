@@ -1,7 +1,10 @@
+// Every package restates its own `types` — see AGENTS.md. `["node"]` is for the tests' globals
+// (`TextEncoder`); the schemas themselves stay browser-safe, which is a review line, not a typecheck
+// one.
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": []
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }
