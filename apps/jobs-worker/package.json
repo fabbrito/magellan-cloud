@@ -1,0 +1,13 @@
+{
+  "name": "@magellan/jobs-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@magellan/db": "workspace:*",
+    "@magellan/shared": "workspace:*"
+  }
+}

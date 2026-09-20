@@ -1,0 +1,14 @@
+{
+  "name": "@magellan/ingest-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@magellan/contract": "workspace:*",
+    "@magellan/db": "workspace:*",
+    "@magellan/shared": "workspace:*"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  // Root config for editor tooling only. Every package and app has its own tsconfig.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "types": ["bun"] },
+  "files": []
+}
