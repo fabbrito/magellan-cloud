@@ -3,8 +3,9 @@ import { z } from "zod";
 import { LIMITS } from "./limits.ts";
 
 // Zod is the authoring form: it is both the runtime parser and the TypeScript types, so the two
-// cannot drift, and the wire shape is emitted from it for the device repo to write its Rust parser
-// against. Rust is written natively, not generated (docs/adr/0001-contract-authoring.md).
+// cannot drift, and the wire shape is emitted from it as OpenAPI, once the endpoints exist, for the
+// device repo to write its Rust parser against. Rust is written natively, not generated
+// (docs/adr/0001-contract-authoring.md).
 //
 // Every composite is a named schema and the next one is built from it, so a change lands in one
 // place and the shape of the wire is readable top to bottom.

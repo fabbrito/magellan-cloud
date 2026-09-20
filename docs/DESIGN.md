@@ -126,11 +126,15 @@ flowchart TB
 ## 6. Contract (Layer 4)
 
 This section is orientation. The contract's source of truth is `packages/contract/`: Zod schemas the
-cloud parses with. The machine-readable document the device reads is derived from them and emitted
-when the device parser is written — never authored twice. Rust types are written natively rather
-than generated, so the two implementations stay independent of each other's toolchain while agreeing
-on the emitted shape (`docs/adr/0001-contract-authoring.md`). Contract v1 stays malleable until both
-implementations exist; a breaking change after that is a new version, not an edit.
+cloud parses with. The document the device reads is an OpenAPI description derived from them once
+the endpoints exist — never authored twice. Rust types are written natively rather than generated,
+so the two implementations stay independent of each other's toolchain while agreeing on the emitted
+shape (`docs/adr/0001-contract-authoring.md`).
+
+Until the first `contract-v*` tag the contract is provisional: nothing is vendored, so the seam is
+cheap to move. What the tag freezes — the wire bytes — and what D1 or R2 persist are settled before
+it; the wire _around_ the bytes settles when the endpoints are built, against a running worker
+rather than on paper. After the tag, a breaking change is a new version, not an edit.
 
 ```
 PUT  /v1/devices/{id}/manifest
