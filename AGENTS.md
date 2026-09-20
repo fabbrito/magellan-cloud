@@ -6,6 +6,12 @@ until a rung builds it, after which the built shape wins and the document catche
 
 **Write terse.** Sacrifice grammar for concision — prose, comments, commits, this file.
 
+## The style guide binds
+
+Read `docs/STYLE.md` before writing code, hold every change to it, and enforce its rules
+mechanically wherever a mechanism exists — a config, a lint rule, a test — rather than leaving them
+to attention.
+
 ## Defer
 
 Defer building until needed; revise decisions as issues surface.
@@ -49,12 +55,6 @@ boundary has leaked (`docs/CONTEXT.md` > Vocabulary limits).
   covers. A carrier gets its pattern before it holds one. Tokens are stored hashed.
 - The repository is meant to be published, and a disclosure is what no later commit undoes.
 
-## Comments earn their keep
-
-A comment carries knowledge from outside the code it sits on: why this choice, what breaks
-otherwise, the gotcha the API hides. Narration of the code below it goes stale and dies. One line
-where one line does.
-
 ## Promote what spans
 
 Where knowledge lives, in order: `code > comments > docs > README`. Moving right raises altitude;
@@ -68,6 +68,7 @@ promoted. A comment explaining another package is already a doc in the wrong pla
 | `docs/DESIGN.md`  | what the system is meant to be — layers, invariants, the shape decisions check against |
 | `AGENTS.md`       | how to work here — the process an agent follows, never facts about the system          |
 | `docs/CONTEXT.md` | domain vocabulary                                                                      |
+| `docs/STYLE.md`   | how the code is written — bounds, assertions, naming                                   |
 | `README.md`       | orientation — layout, setup, where the docs are                                        |
 
 A settled decision the project still lives under a year from now goes to `docs/adr/` when the first

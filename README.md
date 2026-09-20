@@ -6,6 +6,7 @@ device half is `magellan-device`; the two meet only at the contract.
 - North star: `docs/DESIGN.md`
 - Vocabulary: `docs/CONTEXT.md`
 - Conventions: `AGENTS.md`
+- Style: `docs/STYLE.md`
 
 ## Status
 
