@@ -28,7 +28,7 @@ export const LIMITS = {
   uptimeSecondsMax: 315_576_000,
   bufferDepthMax: 1_000_000,
   batteryPercentMax: 100,
-  signalMax: 100,
+  signalPercentMax: 100,
   firmwareVersionLengthMax: 32,
   bootIdLengthMin: 8,
   bootIdLengthMax: 32,

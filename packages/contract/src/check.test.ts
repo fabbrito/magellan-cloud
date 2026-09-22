@@ -24,8 +24,10 @@ const reading = (source: string, values: Record<string, number>) => ({
 
 const batch = (readings: ReturnType<typeof reading>[]) => ({
   manifest_hash: "d935aec39b4c492681d137f322ce5876ce1509289a3d5d759cd0b85fbf11790a",
+  boot_id: "0123456789abcdef",
   seq: "1",
   readings,
+  heartbeat: { uptime_seconds: 42, buffer_depth: 1 },
 });
 
 describe("checkBatchAgainstManifest", () => {

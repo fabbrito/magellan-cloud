@@ -19,8 +19,10 @@ const threeKinds = {
 
 const batch = {
   manifest_hash: "0".repeat(64),
+  boot_id: "0123456789abcdef",
   seq: "1",
   readings: [{ source: "source_1", ts: 1_758_326_400_000, values: { power_w: 123_450 } }],
+  heartbeat: { uptime_seconds: 42, buffer_depth: 0 },
 };
 
 describe("manifestSchema", () => {
@@ -44,11 +46,11 @@ describe("manifestSchema", () => {
     );
   });
 
-  it("rejects a measured metric without a unit", () => {
+  it("accepts a measured metric without a unit", () => {
     const missing = {
       sources: [{ id: "source_1", metrics: [{ key: "power_w", kind: "gauge", exponent: 0 }] }],
     };
-    expect(manifestSchema.safeParse(missing).success).toBe(false);
+    expect(manifestSchema.safeParse(missing).success).toBe(true);
   });
 
   it("rejects a measured metric without an exponent", () => {
@@ -127,20 +129,49 @@ describe("batchSchema", () => {
     expect(batchSchema.safeParse(batch).success).toBe(true);
   });
 
+  it("accepts the device's wire shape", () => {
+    // The bytes `magellan-device` parses; both halves must accept this.
+    const wire = {
+      manifest_hash: "d935aec39b4c492681d137f322ce5876ce1509289a3d5d759cd0b85fbf11790a",
+      boot_id: "0123456789abcdef",
+      seq: "1",
+      readings: [{ source: "source_1", ts: 1_758_326_400_000, values: { power_w: 27_034 } }],
+      heartbeat: { uptime_seconds: 42, buffer_depth: 1 },
+    };
+    expect(batchSchema.safeParse(wire).success).toBe(true);
+  });
+
   it("accepts a heartbeat", () => {
     const withHeartbeat = {
       ...batch,
       seq: "2",
       heartbeat: {
-        boot_id: "a1b2c3d4",
         uptime_seconds: 3600,
         buffer_depth: 0,
         battery_percent: 88,
-        signal: 70,
+        signal_percent: 70,
         firmware_version: "1.0.0",
       },
     };
     expect(batchSchema.safeParse(withHeartbeat).success).toBe(true);
+  });
+
+  it("rejects a batch with no boot id", () => {
+    const { boot_id: _bootId, ...withoutBootId } = batch;
+    expect(batchSchema.safeParse(withoutBootId).success).toBe(false);
+  });
+
+  it("rejects a boot id inside a heartbeat", () => {
+    const stale = {
+      ...batch,
+      heartbeat: { ...batch.heartbeat, boot_id: "0123456789abcdef" },
+    };
+    expect(batchSchema.safeParse(stale).success).toBe(false);
+  });
+
+  it("rejects a batch with no heartbeat", () => {
+    const { heartbeat: _heartbeat, ...withoutHeartbeat } = batch;
+    expect(batchSchema.safeParse(withoutHeartbeat).success).toBe(false);
   });
 
   it("accepts the largest seq", () => {
@@ -225,10 +256,6 @@ describe("batchSchema", () => {
   });
 
   it("rejects an uppercase boot id", () => {
-    const upper = {
-      ...batch,
-      heartbeat: { boot_id: "A1B2C3D4", uptime_seconds: 1, buffer_depth: 0 },
-    };
-    expect(batchSchema.safeParse(upper).success).toBe(false);
+    expect(batchSchema.safeParse({ ...batch, boot_id: "A1B2C3D4" }).success).toBe(false);
   });
 });

@@ -42,8 +42,11 @@ const stateLabelsSchema = z
     description: `At most ${LIMITS.stateLabelsMax} labels, keyed by decimal codes of at most ${LIMITS.stateCodeDigitsMax} digits.`,
   });
 
-// A gauge and a counter are both measured, so both need a unit and an exponent; a state has
-// neither — its value is a code. Discriminating on `kind` makes those the only shapes.
+// A gauge and a counter are both measured, so both carry an exponent; a state has neither — its
+// value is a code. Discriminating on `kind` makes those the only shapes.
+//
+// `unit` is optional: an unnamed unit and a unitless quantity are one value on the wire. `exponent`
+// stays required, being orthogonal — a power factor of 0.98 is `98` at `exponent: -2`.
 //
 // The physical value is `value × 10^exponent`, the shape money uses: a published decimal factor
 // folds in exactly on the device, so no float crosses the wire (docs/adr/0002-integer-values.md).
@@ -52,7 +55,11 @@ const exponentSchema = z.int().min(LIMITS.exponentMin).max(LIMITS.exponentMax).m
   description: "Decimal exponent of this metric's values: the value is scaled by 10^exponent.",
 });
 
-const measuredMetricFields = { key: keySchema, unit: unitSchema, exponent: exponentSchema };
+const measuredMetricFields = {
+  key: keySchema,
+  unit: unitSchema.optional(),
+  exponent: exponentSchema,
+};
 
 const gaugeMetricSchema = z.strictObject({
   ...measuredMetricFields,
@@ -143,35 +150,41 @@ export const readingSchema = z
 
 export const heartbeatSchema = z
   .strictObject({
-    // uptime_seconds resets on every reboot, power cut and OTA, so liveness never follows from it;
-    // boot_id makes a reset explainable and needs no flash to keep.
-    boot_id: z.string().regex(bootIdPattern),
+    // Resets on every reboot, power cut and OTA; the batch's boot_id explains the reset.
     uptime_seconds: z.int().min(0).max(LIMITS.uptimeSecondsMax),
     buffer_depth: z.int().min(0).max(LIMITS.bufferDepthMax),
     battery_percent: z.int().min(0).max(LIMITS.batteryPercentMax).optional(),
-    signal: z.int().min(0).max(LIMITS.signalMax).optional(),
+    signal_percent: z.int().min(0).max(LIMITS.signalPercentMax).optional(),
     firmware_version: z.string().min(1).max(LIMITS.firmwareVersionLengthMax).optional(),
   })
   .meta({ description: "The device's account of itself, sent with a batch." });
 
 // A batch is the unit of delivery, retry and dedup; seq is a decimal string because 2^53 is a cliff
 // in JS, and a counter that silently rounds is a dedup that silently fails. u64::MAX is the ceiling
-// the device's counter can reach, so the pattern's 20 digits are narrowed to it here.
+// the device's counter can reach, so the pattern's 20 digits are narrowed to it here. It restarts
+// at zero every boot, so it identifies a batch only beside boot_id.
 const seqSchema = z
   .string()
   .regex(seqPattern)
   .refine((seq) => BigInt(seq) <= LIMITS.seqMax, { message: "seq past u64::MAX" })
-  .meta({ description: "A lifetime counter: canonical decimal, at most u64::MAX." });
+  .meta({
+    description: "A counter, monotonic within one boot: canonical decimal, at most u64::MAX.",
+  });
 
 export const batchSchema = z
   .strictObject({
     manifest_hash: z.string().regex(manifestHashPattern),
+    // Drawn once per boot, needing no flash to keep. An identifier cannot be optional, so it sits
+    // on the batch, and uptime is explained by it beside.
+    boot_id: z.string().regex(bootIdPattern),
     seq: seqSchema,
     readings: z.array(readingSchema).min(1).max(LIMITS.readingsPerBatchMax),
-    heartbeat: heartbeatSchema.optional(),
+    // Required: it is the only D1 trace a batch leaves and the carrier of gap detection.
+    heartbeat: heartbeatSchema,
   })
   .meta({
-    description: "One upload: ordered readings under a manifest hash, deduplicated on seq.",
+    description:
+      "One upload: ordered readings under a manifest hash, deduplicated on boot_id and seq.",
   });
 
 export type Manifest = z.infer<typeof manifestSchema>;
