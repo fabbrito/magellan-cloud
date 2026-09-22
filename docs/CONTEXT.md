@@ -19,20 +19,25 @@ its sources is `magellan-device`'s vocabulary, not this one.
 
 **Caution — "device" is never a browser or HTML concept here.** It is a physical producer.
 
+**Caution — only the uploading agent is a Device.** Whatever it reads — an inverter behind a relay,
+a board on the local network — is a **source** to the manifest, never a Device. The chain is
+device-side arrangement (`magellan-device` ADR 10).
+
 ## Data
 
-| Term                 | Meaning                                                                          |
-| -------------------- | -------------------------------------------------------------------------------- |
-| **Source**           | A named thing a device polls, identified per device                              |
-| **Metric**           | A named, typed quantity of a source: a `key`, a `unit`, a `kind`, an `exponent`  |
-| **Reading**          | One source poll: a timestamp plus that source's metric values                    |
-| **Manifest**         | A device's description of its sources and metrics, versioned by hash             |
-| **Batch**            | One upload: a `seq`, a manifest hash, ordered readings, an optional heartbeat    |
-| **Sequence** (`seq`) | A lifetime counter, monotonic per device; what the cloud deduplicates on         |
-| **Heartbeat**        | The device's account of itself — uptime, buffer depth, battery, signal, firmware |
-| **Exponent**         | A metric's decimal scale: its values mean `value × 10^exponent`                  |
-| **Measured**         | When the device read the values — the reading's timestamp                        |
-| **Received**         | When the cloud committed the batch. Routinely later than **measured**            |
+| Term                 | Meaning                                                                                                          |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Source**           | A named thing a device polls, identified per device                                                              |
+| **Metric**           | A named, typed quantity of a source: a `key`, a `kind`, and for measured kinds an `exponent` and optional `unit` |
+| **Reading**          | One source poll: a timestamp plus that source's metric values                                                    |
+| **Manifest**         | A device's description of its sources and metrics, versioned by hash                                             |
+| **Batch**            | One upload: a `boot_id`, a `seq`, a manifest hash, ordered readings, a heartbeat                                 |
+| **Sequence** (`seq`) | A counter, monotonic within one boot; diagnostic, not what the cloud deduplicates on                             |
+| **Boot id**          | Drawn once per boot, needing no flash; with `seq` it names a batch                                               |
+| **Heartbeat**        | The device's account of itself — uptime, buffer depth, battery, signal, firmware                                 |
+| **Exponent**         | A metric's decimal scale: its values mean `value × 10^exponent`                                                  |
+| **Measured**         | When the device read the values — the reading's timestamp                                                        |
+| **Received**         | When the cloud committed the batch. Routinely later than **measured**                                            |
 
 **Metric `kind`** is one of `gauge`, `counter`, `state`. A gauge is a value in time, a counter only
 increases, a state is a discrete condition. The kind decides which rollups mean anything.
@@ -42,8 +47,8 @@ value and its metric's exponent together; naming the value alone makes a reading
 measurement in units.
 
 **Caution — "batch" and "reading" are different sizes.** A batch carries many readings and is the
-unit of delivery, retry and dedup. A reading is the unit of storage and query. Saying "batch" when
-you mean one poll makes dedup look per-reading, which it is not.
+unit of delivery and retry. A reading is the unit of storage, query and dedup. Saying "batch" when
+you mean one poll makes a duplicate look like a whole upload rather than one colliding row.
 
 **Caution — "metric" is not an observability metric.** It is a quantity a source reports, not CPU
 time or request latency. Those are logs and live elsewhere.

@@ -108,21 +108,23 @@ flowchart TB
    sources change; the hash is the identity. A batch names the manifest it was read under.
 3. **A reading is one source poll** — a timestamp plus that source's metric values. It is not one
    row per metric.
-4. **Delivery duplicates are absorbed; distinct readings are kept.** Duplicate `(device_id, seq)` is
-   a no-op returning success. `seq` is a presence check, never a ratchet — a batch below the highest
-   `seq` seen still commits, so a device that lost its counter is not silenced. Two readings that
-   genuinely share a timestamp collide on the key and the second is dropped, not mistaken for a
-   retry.
-5. **Commit is atomic per batch.** Either every reading in a batch lands and its `seq` is recorded,
-   or nothing does and the device retries the whole batch.
+4. **Delivery duplicates are absorbed; distinct readings are kept.** Deduplication is the readings'
+   own key: `(device_id, source, ts)` is the primary key, so a replayed batch collides row for row
+   and vanishes, and two boots that alias on one `boot_id` lose nothing. `boot_id` and `seq` are
+   diagnostic, leaving a gap visible; they never gate a commit, so a device below its highest `seq`
+   still lands. Two readings that genuinely share a timestamp collide and the second is dropped, not
+   mistaken for a retry (`docs/adr/0003-dedup-is-the-readings-own-key.md`).
+5. **Commit is atomic per batch.** Either every reading in a batch and its heartbeat land, or
+   nothing does and the device retries the whole batch.
 6. **Values are integers, scaled on the device; timestamps are UTC.** A metric declares a decimal
    exponent and a reading carries whole numbers: the physical value is `value × 10^exponent`. The
    cloud stores integers and instants — never a float, never engineering units in flux, never local
    time.
 7. **Every raw batch is archived unchanged.** R2 holds the batch exactly as sent. D1 is a derived
    index over that archive and can be rebuilt from it.
-8. **One revocable token per device.** A token identifies exactly one device and can be rotated or
-   revoked without touching another.
+8. **One revocable token per device.** The token is the authority: it identifies exactly one device,
+   the path `{id}` is a claim checked against it, and a mismatch is refused `403`. It can be rotated
+   or revoked without touching another (`docs/adr/0004-the-token-is-the-authority.md`).
 9. **The contract is the only interface.** There is no shared code, no shared database, no shared
    deployment between the repositories.
 10. **Cost is bounded.** A shape that cannot fit the budget is wrong, not a budget to raise.
@@ -145,18 +147,18 @@ PUT  /v1/devices/{id}/manifest
 POST /v1/devices/{id}/batches
 ```
 
-**Manifest** — the device's sources and their metrics, with `kind` (`gauge`, `counter`, `state`) and
-a `unit` and an `exponent` for anything measured — a state has neither, its value being a code. The
-exponent is the metric's, so re-scaling one is a new manifest (`docs/adr/0002-integer-values.md`).
-The hash is SHA-256 over the manifest's bytes as sent; the cloud recomputes it from the body it
-receives and answers the PUT with the accepted hash in `ETag`, so the device asserts its own matches
-rather than trusting it.
+**Manifest** — the device's sources and their metrics, with `kind` (`gauge`, `counter`, `state`), an
+`exponent` for anything measured and an optional `unit`. A state has neither, its value being a
+code. The exponent is the metric's, so re-scaling one is a new manifest
+(`docs/adr/0002-integer-values.md`). The hash is SHA-256 over the manifest's bytes as sent; the
+cloud recomputes it from the body it receives and answers the PUT with the accepted hash in `ETag`,
+so the device asserts its own matches rather than trusting it.
 
-**Batch** — `manifest_hash`, `seq`, an ordered `readings[]`, and an optional `heartbeat` carrying a
-boot id, uptime, buffer depth, battery, signal and firmware version. `seq` is a lifetime counter,
-monotonic per device and sent as a decimal string, canonical and at most u64::MAX; it is what the
-cloud deduplicates on, and what makes "was this delivered" answerable without a batches table. A
-reading's values are integers, each scaled by its metric's `exponent`.
+**Batch** — `manifest_hash`, a `boot_id`, a `seq`, an ordered `readings[]`, and a `heartbeat`
+carrying uptime, buffer depth, battery percentage, signal percentage and firmware version. `boot_id`
+is drawn once per boot; `seq` is a decimal string, canonical and at most u64::MAX, restarting at
+zero each boot. The pair is diagnostic — gap detection — not the dedup key, which is the readings'
+own (invariant 4). A reading's values are integers, each scaled by its metric's `exponent`.
 
 A rule the document cannot state — unique source ids, unique metric keys — stays enforced cloud-side
 and travels in the emitted document as description text, so the device author reads the rule rather
@@ -197,7 +199,8 @@ is cheap to chart. When D1 cannot commit, ingest archives to R2 and returns "ret
 device keeps its buffer and the archive rebuilds D1 afterwards.
 
 A device token is minted by the cloud, returned once, and stored only as its SHA-256 hash; a device
-sends it as `Authorization: Bearer`.
+sends it as `Authorization: Bearer`. The token alone identifies the device, and the path id must
+match it or the request is `403`.
 
 ## 8. Device (Layers 5–8)
 
@@ -222,7 +225,7 @@ flowchart TD
     E -->|2xx| F[drop batch]
     E -->|4xx| G[drop and log]
     E -->|5xx, 429, 503| C
-    D --> H[ingest: verify token,<br/>validate, dedupe on seq]
+    D --> H[ingest: verify token,<br/>validate, dedupe on reading key]
     H --> I[(R2: raw batch, unchanged)]
     H --> J[(D1: readings, heartbeat)]
     J --> K[jobs: rollups, retention]
