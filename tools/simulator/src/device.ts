@@ -51,9 +51,10 @@ export class SimulatedDevice {
   }
 
   // Answers with the hash the cloud accepted, and refuses to go on if it is not this manifest's:
-  // a device that trusts a hash it did not compute sends batches under one the cloud cannot resolve.
+  // a device that trusts a hash it did not compute sends batches under one the cloud cannot
+  // resolve.
   async declare(): Promise<string> {
-    const response = await this.send("manifest", this.bytes);
+    const response = await this.send("PUT", "manifest", this.bytes);
     const mine = await manifestHash(this.bytes);
     const accepted = (response.headers.get("etag") ?? "").replace(/^W\//, "").replaceAll('"', "");
 
@@ -79,7 +80,7 @@ export class SimulatedDevice {
     };
 
     const body = new host.TextEncoder().encode(JSON.stringify(batch));
-    const response = await this.send("batches", body);
+    const response = await this.send("POST", "batches", body);
     const outcome = classify(response.status);
 
     if (outcome === "committed" || outcome === "rejected") {
@@ -89,12 +90,19 @@ export class SimulatedDevice {
     return outcome;
   }
 
-  private send(resource: string, body: Uint8Array): Promise<CloudResponse> {
+  // The verb rides with the resource rather than being inferred from its name, and the length is
+  // declared: the cloud answers 411 to a body whose size a device will not state.
+  private send(
+    method: "PUT" | "POST",
+    resource: "manifest" | "batches",
+    body: Uint8Array,
+  ): Promise<CloudResponse> {
     return this.options.fetch(`/v1/devices/${this.options.deviceId}/${resource}`, {
-      method: resource === "manifest" ? "PUT" : "POST",
+      method,
       headers: {
         authorization: `Bearer ${this.options.token}`,
         "content-type": "application/json",
+        "content-length": String(body.byteLength),
       },
       body,
     });

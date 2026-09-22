@@ -37,18 +37,18 @@ app.openAPIRegistry.registerComponent("securitySchemes", "deviceToken", {
   scheme: "bearer",
 });
 
-// Refused before the validator parses it, which is where an oversized body would actually be spent.
-// A declared length settles it without reading at all; a chunked body has none, so it is read — far
-// cheaper than parsing — and hono's cache means the validator does not read it twice.
+// Digits only, and few enough that a forged header costs a bounded regex rather than a scan.
+const contentLengthPattern = /^\d{1,15}$/;
+
+// A body the device will not measure is one the cloud will not read: with no parseable length there
+// is nothing to refuse against until the bytes are already spent. Both refusals are 4xx, which a
+// device drops rather than retries (docs/DESIGN.md §6).
 async function refuseOversized(context: Context, next: Next, bytesMax: number) {
   const declared = context.req.header("content-length");
-  if (declared !== undefined) {
-    if (Number(declared) > bytesMax) return context.body(null, 413);
-    return next();
+  if (declared === undefined || !contentLengthPattern.test(declared)) {
+    return context.body(null, 411);
   }
-
-  const body = await context.req.arrayBuffer();
-  if (body.byteLength > bytesMax) return context.body(null, 413);
+  if (Number(declared) > bytesMax) return context.body(null, 413);
   await next();
 }
 
@@ -68,10 +68,18 @@ const manifestRoute = createRoute({
     body: { content: { "application/json": { schema: manifestSchema } }, required: true },
   },
   responses: {
-    200: { description: "The manifest is stored." },
+    200: {
+      description: "The manifest is stored.",
+      // The device ends its run on a missing or disagreeing one, so it is part of the wire the
+      // document states rather than a header the device learns elsewhere (docs/DESIGN.md §6).
+      headers: z.object({
+        ETag: z.string().meta({ description: "The accepted manifest hash, quoted." }),
+      }),
+    },
     400: { description: "The body is not a manifest. A device must not retry it." },
     401: { description: "The credential is absent or resolves to no device." },
     403: { description: "The credential names another device." },
+    411: { description: "No parseable `content-length`. A device must declare what it sends." },
     413: { description: "The body is past `manifestBytesMax`." },
   },
 });
@@ -84,7 +92,8 @@ app.openapi(manifestRoute, async (context) => {
   const hash = await manifestHash(bytes);
 
   // R2 before D1, as for a batch: D1's manifests table is a derived index, and without this object
-  // it is the only copy — every archived batch naming this hash would be unrebuildable (invariant 7).
+  // it is the only copy — every archived batch naming this hash would be unrebuildable
+  // (docs/DESIGN.md invariant 7).
   const declaredAt = Date.now();
   await context.env.ARCHIVE.put(manifestKey(id, hash), bytes, {
     customMetadata: { declared_at: String(declaredAt) },
@@ -118,6 +127,7 @@ const batchesRoute = createRoute({
     400: { description: "The body is not a batch. A device must not retry it." },
     401: { description: "The credential is absent or resolves to no device." },
     403: { description: "The credential names another device." },
+    411: { description: "No parseable `content-length`. A device must declare what it sends." },
     413: { description: "The body is past `batchBytesMax`." },
     422: { description: "A reading names what the manifest does not declare." },
     503: { description: "The named manifest has not arrived. The device keeps the buffer." },

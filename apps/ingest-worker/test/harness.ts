@@ -27,29 +27,56 @@ export async function registerDevice(server: TestHarness, id: string): Promise<s
   return token;
 }
 
+// Every sender states its length, as a device must: the worker answers 411 to a body whose size the
+// caller will not declare. A test that means to omit it passes `undefined` and says so.
+function headersFor(token: string | undefined, byteLength: number): Record<string, string> {
+  const headers: Record<string, string> = {
+    "content-type": "application/json",
+    "content-length": String(byteLength),
+  };
+  if (token !== undefined) headers["authorization"] = `Bearer ${token}`;
+  return headers;
+}
+
+// The return type is wrangler's Response, not the runtime's — left inferred rather than named.
+export function putManifest(
+  server: TestHarness,
+  deviceId: string,
+  token: string | undefined,
+  body: Uint8Array,
+) {
+  return server.fetch(`/v1/devices/${deviceId}/manifest`, {
+    method: "PUT",
+    headers: headersFor(token, body.byteLength),
+    body,
+  });
+}
+
+export function postBatch(server: TestHarness, deviceId: string, token: string, batch: Batch) {
+  const body = new TextEncoder().encode(JSON.stringify(batch));
+  return server.fetch(`/v1/devices/${deviceId}/batches`, {
+    method: "POST",
+    headers: headersFor(token, body.byteLength),
+    body,
+  });
+}
+
 // Declares a manifest through the route, returning the hash the cloud accepted.
 export async function declareManifest(
   server: TestHarness,
   deviceId: string,
   token: string,
 ): Promise<string> {
-  const response = await server.fetch(`/v1/devices/${deviceId}/manifest`, {
-    method: "PUT",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: manifestBytes,
-  });
+  const response = await putManifest(server, deviceId, token, manifestBytes);
   if (response.status !== 200)
     throw new Error(`declaring the manifest answered ${response.status}`);
-  return (response.headers.get("etag") ?? "").replaceAll('"', "");
+  return acceptedHash(response);
 }
 
-// The return type is wrangler's Response, not the runtime's — left inferred rather than named.
-export function postBatch(server: TestHarness, deviceId: string, token: string, batch: Batch) {
-  return server.fetch(`/v1/devices/${deviceId}/batches`, {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: JSON.stringify(batch),
-  });
+// One reader for the header the device treats as load-bearing, so a weak validator is stripped in
+// one place rather than in each caller's own way (docs/DESIGN.md §6).
+export function acceptedHash(response: { headers: { get(name: string): string | null } }): string {
+  return (response.headers.get("etag") ?? "").replace(/^W\//, "").replaceAll('"', "");
 }
 
 // D1 and R2 get a wire reader at the query rung; until then a durable write has no observer but the

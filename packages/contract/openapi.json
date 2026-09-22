@@ -166,7 +166,17 @@
         },
         "responses": {
           "200": {
-            "description": "The manifest is stored."
+            "description": "The manifest is stored.",
+            "headers": {
+              "ETag": {
+                "schema": {
+                  "type": "string",
+                  "description": "The accepted manifest hash, quoted."
+                },
+                "required": true,
+                "description": "The accepted manifest hash, quoted."
+              }
+            }
           },
           "400": {
             "description": "The body is not a manifest. A device must not retry it."
@@ -176,6 +186,9 @@
           },
           "403": {
             "description": "The credential names another device."
+          },
+          "411": {
+            "description": "No parseable `content-length`. A device must declare what it sends."
           },
           "413": {
             "description": "The body is past `manifestBytesMax`."
@@ -309,6 +322,9 @@
           },
           "403": {
             "description": "The credential names another device."
+          },
+          "411": {
+            "description": "No parseable `content-length`. A device must declare what it sends."
           },
           "413": {
             "description": "The body is past `batchBytesMax`."

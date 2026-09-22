@@ -150,6 +150,10 @@ PUT  /v1/devices/{id}/manifest
 POST /v1/devices/{id}/batches
 ```
 
+Both carry a `content-length`. A body whose size the device will not declare is refused with 411
+before it is read: without a declared length there is nothing to bound the read against until the
+bytes are already spent.
+
 **Manifest** — the device's sources and their metrics, with `kind` (`gauge`, `counter`, `state`), an
 `exponent` for anything measured and an optional `unit`. A state has neither, its value being a
 code. The exponent is the metric's, so re-scaling one is a new manifest

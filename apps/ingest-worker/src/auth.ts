@@ -3,7 +3,8 @@ import { hashToken, tokenPattern } from "@magellan/shared";
 import { eq } from "drizzle-orm";
 
 // The token is the authority, the path id a claim checked against it
-// (docs/adr/0004-the-token-is-the-authority.md). Both refusals are retried, not dropped (DESIGN §6).
+// (docs/adr/0004-the-token-is-the-authority.md). Both refusals are retried, not dropped
+// (docs/DESIGN.md §6).
 export type Authorization = { ok: true } | { ok: false; status: 401 | 403 };
 
 const scheme = "Bearer ";
