@@ -10,7 +10,8 @@ device half is `magellan-device`; the two meet only at the contract.
 
 ## Status
 
-Scaffold. Workspaces are wired and the docs are written; no runtime behaviour yet.
+The ingest worker takes a manifest and a batch against D1 and R2, in local workerd. Nothing is
+deployed, and the other workspaces are still scaffold.
 
 ## Setup
 
