@@ -25,49 +25,58 @@ function boot(deviceId: string, token: string): SimulatedDevice {
   });
 }
 
+// What a cloud test may assert is what the cloud did: the rows it wrote, and whether the device was
+// freed to move on. How a device classifies a status is the device's own reading of the contract,
+// tested beside it in tools/simulator/src/outcome.test.ts (magellan-device ADR 2).
 it("carries a boot from declaring to committed", async () => {
-  const token = await registerDevice(server, "inverter");
-  const device = boot("inverter", token);
+  const token = await registerDevice(server, "device-01");
+  const device = boot("device-01", token);
 
   await device.declare();
   device.poll("inlet", 1_767_225_600_000, { temperature: 213 });
-  const outcome = await device.flush(42);
+  await device.flush(42);
 
-  expect(outcome).toBe("committed");
+  expect(device.bufferDepth).toBe(0);
   expect(
-    await query(server, "SELECT source FROM readings WHERE device_id = ?", "inverter"),
+    await query(server, "SELECT source FROM readings WHERE device_id = ?", "device-01"),
   ).toEqual([{ source: "inlet" }]);
 });
 
 it("keeps the buffer until the manifest it named exists", async () => {
-  const token = await registerDevice(server, "generator");
-  const device = boot("generator", token);
+  const token = await registerDevice(server, "device-02");
+  const device = boot("device-02", token);
   device.poll("inlet", 1_767_225_600_000, { temperature: 100 });
 
-  const beforeDeclaring = await device.flush(10);
+  await device.flush(10);
 
-  expect(beforeDeclaring).toBe("unavailable");
+  // Nothing committed and nothing lost: the batch named a manifest the cloud cannot resolve, which
+  // is not the device's fault and so must not cost it the readings (docs/DESIGN.md §6).
   expect(device.bufferDepth).toBe(1);
+  expect(await query(server, "SELECT ts FROM readings WHERE device_id = ?", "device-02")).toEqual(
+    [],
+  );
 
   await device.declare();
-  const afterDeclaring = await device.flush(20);
+  await device.flush(20);
 
-  expect(afterDeclaring).toBe("committed");
   expect(device.bufferDepth).toBe(0);
-  expect(await query(server, "SELECT ts FROM readings WHERE device_id = ?", "generator")).toEqual([
+  expect(await query(server, "SELECT ts FROM readings WHERE device_id = ?", "device-02")).toEqual([
     { ts: 1_767_225_600_000 },
   ]);
 });
 
 it("drops a batch the cloud refuses for good", async () => {
-  const token = await registerDevice(server, "alternator");
-  const device = boot("alternator", token);
+  const token = await registerDevice(server, "device-03");
+  const device = boot("device-03", token);
   await device.declare();
   device.poll("outlet", 1_767_225_600_000, { temperature: 1 });
 
-  const outcome = await device.flush(30);
+  await device.flush(30);
 
-  // The manifest declares no `outlet`, and retrying will not make it declare one.
-  expect(outcome).toBe("rejected");
+  // The manifest declares no `outlet`, and retrying will not make it declare one. An emptied buffer
+  // is what separates this from the unresolved manifest above: refused for good, not deferred.
   expect(device.bufferDepth).toBe(0);
+  expect(await query(server, "SELECT ts FROM readings WHERE device_id = ?", "device-03")).toEqual(
+    [],
+  );
 });
