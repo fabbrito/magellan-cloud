@@ -104,6 +104,10 @@ Work outward. Never inward.
 
 The cloud is tested against the simulator over the contract, never against a real board.
 
+A test sits beside its source when it needs nothing but the module. It moves to the workspace's
+`test/` when it needs something booted — workerd, D1, R2, HTTP, another workspace. The two are
+separate tsconfig projects, so what a test may import is not what the code may.
+
 ## Commits
 
 - Never a red tree: every commit passes formatting, lint, typecheck and tests.

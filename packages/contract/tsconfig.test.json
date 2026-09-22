@@ -1,0 +1,8 @@
+// `["node"]` for the tests' `TextEncoder`.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node"]
+  },
+  "include": ["src/**/*.test.ts", "test/**/*.ts"]
+}
