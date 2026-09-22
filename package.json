@@ -20,6 +20,7 @@
     "dev": "bun run dev:migrate && bun --cwd=apps/ingest-worker run dev",
     "dev:migrate": "bun --cwd=apps/ingest-worker run dev:migrate",
     "dev:exec": "bun --cwd=apps/ingest-worker run dev:exec",
+    "dev:reset": "bun --cwd=apps/ingest-worker run dev:reset",
     "db:generate": "bun --cwd=packages/db run db:generate",
     "mint": "bun --cwd=tools/mint-token run mint",
     "emit": "bun --cwd=tools/emit-openapi run emit",

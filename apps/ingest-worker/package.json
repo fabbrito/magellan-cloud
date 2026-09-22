@@ -10,6 +10,7 @@
     "dev": "wrangler dev",
     "dev:migrate": "wrangler d1 migrations apply DB --local",
     "dev:exec": "wrangler d1 execute DB --local",
+    "dev:reset": "rm -rf .wrangler",
     "live:deploy": "wrangler deploy",
     "live:migrate": "wrangler d1 migrations apply DB --remote",
     "live:exec": "wrangler d1 execute DB --remote",

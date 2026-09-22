@@ -30,11 +30,13 @@ in the names: `dev:*` reaches the local store, `live:*` reaches the account.
 ```bash
 bun run dev                        # local migrations, then the worker on 127.0.0.1:8787
 bun run mint <id> <description>    # a token, and the statement that registers it
+bun run dev:reset                  # drop the local store; the next dev rebuilds it
 ```
 
 `dev` serves the ingest worker in workerd against a local D1 and R2 under
-`apps/ingest-worker/.wrangler`. That store persists across restarts and is not the one the tests use
-— they boot their own and throw it away.
+`apps/ingest-worker/.wrangler`. That store persists across restarts, registered devices included,
+and `dev:reset` is the only thing that clears it. It is not the store the tests use — they boot
+their own and throw it away, so a test run leaves it untouched.
 
 ### Against the device
 
