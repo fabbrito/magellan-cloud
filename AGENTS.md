@@ -40,6 +40,10 @@ Agents write the code and hand over the commands to run. Formatting, typecheckin
 stay agent work; deploy, `--remote`, and secret or bucket commands never leave the maintainer's
 hands.
 
+The split is in the script names, so it is read rather than remembered: **an agent never runs a
+`live:*` script.** Those are the ones that reach the account. `dev:*` reaches the local store only.
+A new command that authenticates gets the `live:` prefix before it gets a body.
+
 ## The contract is the seam
 
 The contract is the only interface the device repo shares with this one, and the two repositories
@@ -103,6 +107,10 @@ Work outward. Never inward.
 | The specific | regression test the exact bug, once found  |
 
 The cloud is tested against the simulator over the contract, never against a real board.
+
+A test sits beside its source when it needs nothing but the module. It moves to the workspace's
+`test/` when it needs something booted — workerd, D1, R2, HTTP, another workspace. The two are
+separate tsconfig projects, so what a test may import is not what the code may.
 
 ## Commits
 

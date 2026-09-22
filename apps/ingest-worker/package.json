@@ -3,18 +3,32 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    "./document": "./src/document.ts"
+  },
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "dev:migrate": "wrangler d1 migrations apply DB --local",
+    "dev:exec": "wrangler d1 execute DB --local",
+    "dev:reset": "rm -rf .wrangler",
+    "live:deploy": "wrangler deploy",
+    "live:migrate": "wrangler d1 migrations apply DB --remote",
+    "live:exec": "wrangler d1 execute DB --remote",
+    "live:tail": "wrangler tail",
     "cf-typegen": "wrangler types",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
+    "@hono/zod-openapi": "^1.6.3",
     "@magellan/contract": "workspace:*",
     "@magellan/db": "workspace:*",
-    "@magellan/shared": "workspace:*"
+    "@magellan/shared": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.8",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@magellan/simulator": "workspace:*",
     "@types/node": "^26.6.2"
   }
 }

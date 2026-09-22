@@ -1,0 +1,9 @@
+// The worker exports TypeScript, not a build, so typechecking it here needs the bindings its own
+// project gets from wrangler's generated declarations.
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["bun"]
+  },
+  "include": ["src/**/*.ts", "../../apps/ingest-worker/worker-configuration.d.ts"]
+}

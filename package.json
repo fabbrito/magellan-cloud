@@ -16,7 +16,19 @@
     "lint": "oxlint --tsconfig ./tsconfig.base.json",
     "test": "vitest run",
     "typecheck": "bun run --filter '*' typecheck",
-    "cf-typegen": "bun run --filter '*' cf-typegen"
+    "cf-typegen": "bun run --filter '*' cf-typegen",
+    "dev": "bun run dev:migrate && bun --cwd=apps/ingest-worker run dev",
+    "dev:migrate": "bun --cwd=apps/ingest-worker run dev:migrate",
+    "dev:exec": "bun --cwd=apps/ingest-worker run dev:exec",
+    "dev:reset": "bun --cwd=apps/ingest-worker run dev:reset",
+    "db:generate": "bun --cwd=packages/db run db:generate",
+    "mint": "bun --cwd=tools/mint-token run mint",
+    "sim": "bun --cwd=tools/simulator run sim",
+    "emit": "bun --cwd=tools/emit-openapi run emit",
+    "live:deploy": "bun --cwd=apps/ingest-worker run live:deploy",
+    "live:migrate": "bun --cwd=apps/ingest-worker run live:migrate",
+    "live:exec": "bun --cwd=apps/ingest-worker run live:exec",
+    "live:tail": "bun --cwd=apps/ingest-worker run live:tail"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",

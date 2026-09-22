@@ -3,13 +3,25 @@
   "name": "magellan-ingest",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-19",
+  // Pinned so the device repo's `[cloud] endpoint` names a fixed address across restarts. The
+  // device refuses plain http unless it is loopback, which this is.
+  "dev": {
+    "port": 8787,
+  },
   "observability": {
     "enabled": true,
+    // The top-level flag does not reach traces; unset here they are silently off.
+    "traces": {
+      "enabled": true,
+    },
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "magellan",
+      // Local dev and tests key D1 by binding name; the maintainer pastes the
+      // real id from `wrangler d1 create`.
+      "database_id": "local",
       "migrations_dir": "../../packages/db/migrations",
     },
   ],

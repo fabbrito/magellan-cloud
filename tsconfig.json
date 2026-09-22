@@ -1,15 +1,19 @@
 {
-  // Editor tooling only: one reference per project, so a test file belongs to a project and not to
-  // no project at all. `bun run typecheck` runs each package's own tsc.
+  // Editor tooling only. Source and tests are separate projects; `bun run typecheck` runs both.
   "files": [],
   "references": [
     { "path": "./packages/contract" },
+    { "path": "./packages/contract/tsconfig.test.json" },
     { "path": "./packages/db" },
     { "path": "./packages/shared" },
+    { "path": "./packages/shared/tsconfig.test.json" },
     { "path": "./apps/ingest-worker" },
+    { "path": "./apps/ingest-worker/tsconfig.test.json" },
     { "path": "./apps/query-worker" },
     { "path": "./apps/jobs-worker" },
     { "path": "./apps/dashboard" },
+    { "path": "./tools/emit-openapi" },
+    { "path": "./tools/mint-token" },
     { "path": "./tools/simulator" }
   ]
 }

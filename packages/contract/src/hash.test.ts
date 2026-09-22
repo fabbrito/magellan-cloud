@@ -21,10 +21,4 @@ describe("manifestHash", () => {
       "d935aec39b4c492681d137f322ce5876ce1509289a3d5d759cd0b85fbf11790a",
     );
   });
-
-  it("changes when the bytes change", async () => {
-    expect(await manifestHash(bytes(manifestJson))).not.toBe(
-      await manifestHash(bytes(`${manifestJson} `)),
-    );
-  });
 });

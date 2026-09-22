@@ -83,7 +83,9 @@ State a bound where it is enforced, once, so the bound a reader trusts is the bo
 ## Naming
 
 - Get the nouns and verbs right. A name is where understanding of the domain shows, or fails to.
-- **No abbreviations.** `source`, not `src`; a long flag over a short one.
+- **No abbreviations**, except where a platform fixes the name: the D1 binding is `env.DB`, so `db`,
+  `getDb` and `Db` carry it rather than putting a second word beside it. `source`, not `src`; a long
+  flag over a short one.
 - **Units and qualifiers last, most significant word first**: `latencyMsMax`, `latencyMsMin`.
   Related names then group and line up.
 - `camelCase` in TypeScript, `snake_case` in SQL and on the wire.
