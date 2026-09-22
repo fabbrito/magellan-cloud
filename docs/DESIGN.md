@@ -11,8 +11,8 @@ against it.
   `AGENTS.md` deferral exemptions cover, plus the invariants those protect.
 - **Present tense.** Stated as fact, including where no code enacts it yet.
 - **On contradiction.** This document or the thing disagreeing with it is wrong. Decide which, then
-  change that one — before a rung builds a shape this document leads; after, the built shape leads
-  and this catches up.
+  change that one — before code enacts a shape this document leads; after, the built shape leads and
+  this catches up.
 - **Concise.** Under 200 lines outside the diagrams. Guidance, not a check.
 
 Vocabulary is `docs/CONTEXT.md`.
@@ -40,9 +40,9 @@ limit is D1 rows written per day; every shape below is chosen to stay inside it.
 themselves are the maintainer's, not this document's.
 
 **Two repositories, one seam.** The cloud and the device halves are built, tested and deployed
-independently. They meet only at the contract (Layer 4); nothing else crosses. This repository tags
-a contract version, `magellan-device` vendors it pinned to that tag, and each repository's CI checks
-the pair still agrees.
+independently. They meet only at the contract (Layer 4); nothing else crosses. This repository
+publishes the contract document and `magellan-device` reads and transcribes it, each side keeping
+its own parser — no shared code, no CI joining the pair.
 
 **No data loss across the seam.** Outage handling is a property of the contract: **2xx** means
 committed and the device may drop the batch · **4xx** means rejected, the device drops and logs,
@@ -95,6 +95,10 @@ flowchart TB
   OTA are out of scope until a manifest round-trip needs them.
 - **No vendor knowledge in the cloud.** If a table, column or chart mentions a device model, the
   boundary has leaked.
+- **No org hierarchy yet.** `sites > plants > devices` is real and deferred: a registry level above
+  devices, cloud-side only. It crosses no seam — a device is re-parented by a registry row, and
+  neither its path nor its environment changes. Deferring costs a registry migration when it lands,
+  not a wire change.
 
 ## 5. Invariants
 
@@ -131,10 +135,10 @@ the endpoints exist — never authored twice. Rust types are written natively ra
 so the two implementations stay independent of each other's toolchain while agreeing on the emitted
 shape (`docs/adr/0001-contract-authoring.md`).
 
-Until the first `contract-v*` tag the contract is provisional: nothing is vendored, so the seam is
-cheap to move. What the tag freezes — the wire bytes — and what D1 or R2 persist are settled before
-it; the wire _around_ the bytes settles when the endpoints are built, against a running worker
-rather than on paper. After the tag, a breaking change is a new version, not an edit.
+Until the first `contract-v*` tag the contract is provisional: no version is published, so the seam
+is cheap to move. What the tag freezes — the wire bytes — and what D1 or R2 persist are settled
+before it; the wire _around_ the bytes settles when the endpoints are built, against a running
+worker rather than on paper. After the tag, a breaking change is a new version, not an edit.
 
 ```
 PUT  /v1/devices/{id}/manifest
@@ -160,13 +164,14 @@ than inferring it. A rule it can state rides as a keyword the device asserts.
 
 Responses are policy, not documentation: a device reads the status class and acts.
 
-| Class            | Meaning                        | Device does                      |
-| ---------------- | ------------------------------ | -------------------------------- |
-| 2xx              | committed (or already present) | drop the batch                   |
-| 4xx              | rejected, will never succeed   | drop and log                     |
-| 401 / 403        | credential rejected            | keep buffer, retry with backoff  |
-| 429 / 503        | cloud cannot commit now        | retry with backoff, keep buffer  |
-| 5xx, no response | unknown state                  | retry; the duplicate is absorbed |
+| Class            | Meaning                          | Device does                      |
+| ---------------- | -------------------------------- | -------------------------------- |
+| 2xx              | committed (or already present)   | drop the batch                   |
+| 4xx              | rejected, will never succeed     | drop and log                     |
+| 401              | credential rejected              | keep buffer, retry with backoff  |
+| 403              | path `{id}` disagrees with token | keep buffer, retry with backoff  |
+| 429 / 503        | cloud cannot commit now          | retry with backoff, keep buffer  |
+| 5xx, no response | unknown state                    | retry; the duplicate is absorbed |
 
 A rejected credential is the one 4xx the cloud causes and the maintainer fixes, so dropping a buffer
 on it loses readings nothing recovers. A device stuck there is a health signal, not a lost device.

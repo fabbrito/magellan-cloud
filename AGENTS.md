@@ -1,7 +1,7 @@
 # Magellan Cloud
 
 Cloud half of Magellan. What the system is meant to be lives in `docs/DESIGN.md`; it is malleable
-until a rung builds it, after which the built shape wins and the document catches up. Vocabulary is
+until code enacts it, after which the built shape wins and the document catches up. Vocabulary is
 `docs/CONTEXT.md`.
 
 **Write terse.** Sacrifice grammar for concision — prose, comments, commits, this file.
@@ -43,8 +43,8 @@ hands.
 ## The contract is the seam
 
 The contract is the only interface the device repo shares with this one, and the two repositories
-are built independently. A contract change is a version the device repo vendors — change one
-repository's copy alone and the pair breaks.
+are built independently. A contract change is a version the device repo reads and transcribes — the
+two parsers move together, and one repository's copy changed alone breaks the pair.
 
 The cloud has no device-specific word. If a table, column, route or chart names a sensor model, the
 boundary has leaked (`docs/CONTEXT.md` > Vocabulary limits).
@@ -87,8 +87,8 @@ not a gap to fill in passing.
 
 ## The hidden contract
 
-`.tmp/` holds plan-internal material — plans, handoffs, session scratch — and may go stale. `docs/`
-and the README never mention it: they stand alone and publishable.
+`.tmp/` holds plan-internal material — plans, handoffs, session scratch — and may go stale. Nothing
+in `docs/`, `README.md` or the code references it: they stand alone and publishable.
 
 ## Tests bite
 

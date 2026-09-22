@@ -59,6 +59,8 @@ time or request latency. Those are logs and live elsewhere.
 | **Rollup**        | Many readings collapsed into one row per bucket per metric                   |
 | **Bucket**        | The window a rollup covers — an hour or a day                                |
 | **Archive**       | R2: every raw batch and every manifest, unchanged. D1 can be rebuilt from it |
+| **Site**          | A cloud-side registry grouping above plant, holding a place                  |
+| **Plant**         | A cloud-side registry grouping between site and device, holding a facility   |
 | **Device token**  | One revocable credential per device; the cloud stores only its hash          |
 | **Silent device** | A device whose last heartbeat is older than its expected cadence             |
 
@@ -68,11 +70,11 @@ so a reading's shape is always traceable to a pinned declaration.
 
 ## Contract
 
-| Term                 | Meaning                                                                       |
-| -------------------- | ----------------------------------------------------------------------------- |
-| **Contract**         | The ingest protocol (Layer 4) — the only interface between the repositories   |
-| **Contract version** | A tag in this repo (`contract-vX.Y.Z`) that `magellan-device` vendors pinned  |
-| **Manifest hash**    | SHA-256 over a manifest's bytes as sent — the manifest's identity and its tag |
+| Term                 | Meaning                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------- |
+| **Contract**         | The ingest protocol (Layer 4) — the only interface between the repositories                             |
+| **Contract version** | A tag in this repo (`contract-vX.Y.Z`) naming the published wire document `magellan-device` transcribes |
+| **Manifest hash**    | SHA-256 over a manifest's bytes as sent — the manifest's identity and its tag                           |
 
 ## Vocabulary limits
 
@@ -87,4 +89,5 @@ leaked.
   never sees them.
 - **No time-series vocabulary.** There is no retention policy, downsampling rule or continuous query
   — there are rollups and a retention window, and nothing else.
-- **No tenancy.** One deployment, one set of devices. `tenant` has no meaning yet.
+- **No tenancy.** One deployment, one set of devices. `tenant` has no meaning yet. `site` and
+  `plant` group devices inside that one deployment, cloud-side only.

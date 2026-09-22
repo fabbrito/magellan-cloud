@@ -28,7 +28,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .dev.vars.*
 !.dev.vars.example
 
-# plan-internal material (AGENTS.md > The hidden contract)
+# plan-internal scratch; docs, README and code never reference it (AGENTS.md > The hidden contract)
 .tmp
 
 # caches

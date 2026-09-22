@@ -36,5 +36,5 @@ apps/dashboard/      static SPA
 tools/simulator/     a fake device that speaks the contract
 ```
 
-The workspaces exist; what goes in them lands rung by rung. `docs/DESIGN.md` is the stack and the
+The workspaces exist; what goes in them lands incrementally. `docs/DESIGN.md` is the stack and the
 boundaries.
