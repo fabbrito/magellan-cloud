@@ -81,6 +81,7 @@ const manifestRoute = createRoute({
     403: { description: "The credential names another device." },
     411: { description: "No parseable `content-length`. A device must declare what it sends." },
     413: { description: "The body is past `manifestBytesMax`." },
+    429: { description: "Too many requests. The device keeps the buffer." },
   },
 });
 
@@ -130,6 +131,7 @@ const batchesRoute = createRoute({
     411: { description: "No parseable `content-length`. A device must declare what it sends." },
     413: { description: "The body is past `batchBytesMax`." },
     422: { description: "A reading names what the manifest does not declare." },
+    429: { description: "Too many requests. The device keeps the buffer." },
     503: { description: "The named manifest has not arrived. The device keeps the buffer." },
   },
 });

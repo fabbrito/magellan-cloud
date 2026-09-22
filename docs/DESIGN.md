@@ -189,6 +189,9 @@ An unknown `manifest_hash` is not the device's fault — the contract has it sen
 a batch that names it — so the cloud archives the batch, answers `5xx`, and the archive rebuilds D1
 once the manifest is present.
 
+A `429` can come from the edge before the worker runs, so both routes may answer one this repository
+never raised.
+
 ## 7. Cloud (Layers 1–3)
 
 - **ingest-worker** — device-facing. Verifies the token, validates against the contract, stores the

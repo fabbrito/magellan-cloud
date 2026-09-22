@@ -192,6 +192,9 @@
           },
           "413": {
             "description": "The body is past `manifestBytesMax`."
+          },
+          "429": {
+            "description": "Too many requests. The device keeps the buffer."
           }
         }
       }
@@ -331,6 +334,9 @@
           },
           "422": {
             "description": "A reading names what the manifest does not declare."
+          },
+          "429": {
+            "description": "Too many requests. The device keeps the buffer."
           },
           "503": {
             "description": "The named manifest has not arrived. The device keeps the buffer."
