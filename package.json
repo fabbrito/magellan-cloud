@@ -23,6 +23,7 @@
     "dev:reset": "bun --cwd=apps/ingest-worker run dev:reset",
     "db:generate": "bun --cwd=packages/db run db:generate",
     "mint": "bun --cwd=tools/mint-token run mint",
+    "sim": "bun --cwd=tools/simulator run sim",
     "emit": "bun --cwd=tools/emit-openapi run emit",
     "live:deploy": "bun --cwd=apps/ingest-worker run live:deploy",
     "live:migrate": "bun --cwd=apps/ingest-worker run live:migrate",
