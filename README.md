@@ -22,7 +22,32 @@ bun install
 `bun run` lists the scripts, so they are not copied here to rot.
 
 Anything that authenticates to Cloudflare is the maintainer's to run, never an agent's
-(`AGENTS.md`). Formatting, typechecking and linting reach nothing and stay agent work.
+(`AGENTS.md`). Formatting, typechecking and linting reach nothing and stay agent work. The split is
+in the names: `dev:*` reaches the local store, `live:*` reaches the account.
+
+## Running it
+
+```bash
+bun run dev                        # local migrations, then the worker on 127.0.0.1:8787
+bun run mint <id> <description>    # a token, and the statement that registers it
+```
+
+`dev` serves the ingest worker in workerd against a local D1 and R2 under
+`apps/ingest-worker/.wrangler`. That store persists across restarts and is not the one the tests use
+— they boot their own and throw it away.
+
+### Against the device
+
+`magellan-device` points at this worker through its `config.toml`:
+
+```toml
+[cloud]
+endpoint = "http://127.0.0.1:8787/v1"
+```
+
+`MAGELLAN_DEVICE_ID` and `MAGELLAN_TOKEN` come from `bun run mint`, whose printed statement
+registers the hash here. The device refuses plain http unless it is loopback, so one running on
+another host wants a tunnel to this one rather than a LAN address.
 
 ## Layout
 
