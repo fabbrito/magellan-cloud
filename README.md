@@ -34,6 +34,7 @@ apps/query-worker/   dashboard-facing, behind Cloudflare Access
 apps/jobs-worker/    cron — rollups, retention, silent-device detection
 apps/dashboard/      static SPA
 tools/simulator/     a fake device that speaks the contract
+tools/mint-token/    mints a device token; the maintainer runs the statement it prints
 ```
 
 The workspaces exist; what goes in them lands incrementally. `docs/DESIGN.md` is the stack and the

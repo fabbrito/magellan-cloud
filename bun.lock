@@ -77,6 +77,19 @@
     "packages/shared": {
       "name": "@magellan/shared",
       "version": "0.0.0",
+      "devDependencies": {
+        "vitest": "^5.0.1",
+      },
+    },
+    "tools/mint-token": {
+      "name": "@magellan/mint-token",
+      "version": "0.0.0",
+      "dependencies": {
+        "@magellan/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.2",
+      },
     },
     "tools/simulator": {
       "name": "@magellan/simulator",
@@ -240,6 +253,8 @@
     "@magellan/ingest-worker": ["@magellan/ingest-worker@workspace:apps/ingest-worker"],
 
     "@magellan/jobs-worker": ["@magellan/jobs-worker@workspace:apps/jobs-worker"],
+
+    "@magellan/mint-token": ["@magellan/mint-token@workspace:tools/mint-token"],
 
     "@magellan/query-worker": ["@magellan/query-worker@workspace:apps/query-worker"],
 
