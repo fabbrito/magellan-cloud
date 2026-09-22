@@ -20,8 +20,8 @@ import { LIMITS } from "./limits.ts";
 const keyPattern = /^[A-Za-z0-9_][A-Za-z0-9_.:-]*$/;
 const stateCodePattern = new RegExp(`^\\d{1,${LIMITS.stateCodeDigitsMax}}$`);
 const manifestHashPattern = new RegExp(`^[0-9a-f]{${LIMITS.manifestHashHexLength}}$`);
-// Leading zeros would spell one seq two ways, and dedup would then drop the wrong reading, so the
-// canonical decimal is the only accepted form.
+// Leading zeros would spell one seq two ways, and a gap would then read as a loss the device never
+// had, so the canonical decimal is the only accepted form.
 const seqPattern = new RegExp(`^(0|[1-9]\\d{0,${LIMITS.seqDigitsMax - 1}})$`);
 const bootIdPattern = new RegExp(`^[0-9a-f]{${LIMITS.bootIdLengthMin},${LIMITS.bootIdLengthMax}}$`);
 
@@ -159,10 +159,11 @@ export const heartbeatSchema = z
   })
   .meta({ description: "The device's account of itself, sent with a batch." });
 
-// A batch is the unit of delivery, retry and dedup; seq is a decimal string because 2^53 is a cliff
-// in JS, and a counter that silently rounds is a dedup that silently fails. u64::MAX is the ceiling
-// the device's counter can reach, so the pattern's 20 digits are narrowed to it here. It restarts
-// at zero every boot, so it identifies a batch only beside boot_id.
+// A batch is the unit of delivery and retry; the reading is the unit of dedup
+// (docs/adr/0003-dedup-is-the-readings-own-key.md). seq is a decimal string because 2^53 is a cliff
+// in JS, and a counter that silently rounds is gap detection that silently lies. u64::MAX is the
+// ceiling the device's counter can reach, so the pattern's 20 digits are narrowed to it here. It
+// restarts at zero every boot, so it identifies a batch only beside boot_id.
 const seqSchema = z
   .string()
   .regex(seqPattern)
@@ -184,7 +185,7 @@ export const batchSchema = z
   })
   .meta({
     description:
-      "One upload: ordered readings under a manifest hash, deduplicated on boot_id and seq.",
+      "One upload: ordered readings under a manifest hash, identified by boot_id and seq. A duplicate is absorbed per reading, not per batch.",
   });
 
 export type Manifest = z.infer<typeof manifestSchema>;
