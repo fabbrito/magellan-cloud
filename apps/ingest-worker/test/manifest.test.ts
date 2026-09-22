@@ -4,7 +4,7 @@ import { afterAll, beforeAll, expect, it } from "vitest";
 import type { TestHarness } from "wrangler";
 
 import { manifest, manifestBytes } from "./fixtures.ts";
-import { registerDevice, startIngest } from "./harness.ts";
+import { archiveOf, declareManifest, registerDevice, startIngest } from "./harness.ts";
 
 let server: TestHarness;
 
@@ -80,4 +80,16 @@ it("refuses a manifest the contract does not accept", async () => {
   });
 
   expect(response.status).toBe(400);
+});
+
+it("archives the manifest under the hash it accepted", async () => {
+  const token = await registerDevice(server, "condenser");
+
+  const hash = await declareManifest(server, "condenser", token);
+
+  // D1's manifests table is a derived index; without this object it is the only copy, and every
+  // archived batch naming it becomes unrebuildable (docs/DESIGN.md invariant 7).
+  expect(await archiveOf(server, "condenser/manifests/")).toEqual([
+    { key: `condenser/manifests/${hash}`, body: new TextDecoder().decode(manifestBytes) },
+  ]);
 });

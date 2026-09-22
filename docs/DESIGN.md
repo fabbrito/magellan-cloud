@@ -105,7 +105,9 @@ flowchart TB
 1. **The cloud stores what the manifest declares, sight unseen.** A metric key the cloud has never
    heard of is stored, not rejected, provided the manifest declares it.
 2. **A manifest is versioned by hash.** The device sends its manifest on boot and whenever its
-   sources change; the hash is the identity. A batch names the manifest it was read under.
+   sources change; the hash is the identity. A batch names the manifest it was read under. The hash
+   identifies the manifest, not the declaring of it: two devices with identical sources send
+   byte-identical manifests, and the registry holds a declaration each.
 3. **A reading is one source poll** — a timestamp plus that source's metric values. It is not one
    row per metric.
 4. **Delivery duplicates are absorbed; distinct readings are kept.** Deduplication is the readings'
@@ -120,8 +122,9 @@ flowchart TB
    exponent and a reading carries whole numbers: the physical value is `value × 10^exponent`. The
    cloud stores integers and instants — never a float, never engineering units in flux, never local
    time.
-7. **Every raw batch is archived unchanged.** R2 holds the batch exactly as sent. D1 is a derived
-   index over that archive and can be rebuilt from it.
+7. **Every raw batch and every manifest is archived unchanged.** R2 holds both exactly as sent,
+   under one prefix a device and then one a kind. D1 is a derived index over that archive and can be
+   rebuilt from it — which the manifests must be in it for, since a batch resolves against one.
 8. **One revocable token per device.** The token is the authority: it identifies exactly one device,
    the path `{id}` is a claim checked against it, and a mismatch is refused `403`. It can be rotated
    or revoked without touching another (`docs/adr/0004-the-token-is-the-authority.md`).

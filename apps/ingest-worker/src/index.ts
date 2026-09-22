@@ -8,7 +8,7 @@ import {
 import { getDb, manifests, type Db } from "@magellan/db";
 import { and, eq } from "drizzle-orm";
 
-import { archiveKey } from "./archive.ts";
+import { archiveKey, manifestKey } from "./archive.ts";
 import { authorize } from "./auth.ts";
 import { commitBatch } from "./commit.ts";
 
@@ -45,19 +45,28 @@ const manifestRoute = createRoute({
 });
 
 app.openapi(manifestRoute, async (context) => {
+  const { id } = context.req.valid("param");
+
   // The hash is over the bytes as received: a re-serialized copy hashes differently (DESIGN §6).
   const bytes = new Uint8Array(await context.req.arrayBuffer());
   const hash = await manifestHash(bytes);
+
+  // R2 before D1, as for a batch: D1's manifests table is a derived index, and without this object
+  // it is the only copy — every archived batch naming this hash would be unrebuildable (invariant 7).
+  const declaredAt = Date.now();
+  await context.env.ARCHIVE.put(manifestKey(id, hash), bytes, {
+    customMetadata: { declared_at: String(declaredAt) },
+  });
 
   // Decoding round-trips: the validator already parsed these bytes as JSON, so they are UTF-8.
   await context
     .get("db")
     .insert(manifests)
     .values({
-      deviceId: context.req.valid("param").id,
+      deviceId: id,
       hash,
       body: new TextDecoder().decode(bytes),
-      declaredAt: Date.now(),
+      declaredAt,
     })
     .onConflictDoNothing();
 

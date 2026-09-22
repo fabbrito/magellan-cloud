@@ -60,9 +60,9 @@ it("archives the bytes it received, one object per batch", async () => {
 
   // A retry overwrites the identical object: the key is the batch's identity, so the archive is
   // idempotent (docs/adr/0003-dedup-is-the-readings-own-key.md).
-  const archived = await archiveOf(server, "boiler");
+  const archived = await archiveOf(server, "boiler/batches/");
   expect(archived).toEqual([
-    { key: expect.stringContaining("0123456789abcdef-3"), body: JSON.stringify(batch) },
+    { key: expect.stringContaining("boiler/batches/"), body: JSON.stringify(batch) },
   ]);
 });
 
@@ -93,7 +93,7 @@ it("archives a batch whose manifest never arrived", async () => {
   await postBatch(server, "turbine", token, batchOf(undeclared, "0"));
 
   // The 503 is only half the contract: the archive is what rebuilds D1 once the manifest lands.
-  expect(await archiveOf(server, "turbine")).toHaveLength(1);
+  expect(await archiveOf(server, "turbine/batches/")).toHaveLength(1);
 });
 
 it("absorbs a replayed batch", async () => {

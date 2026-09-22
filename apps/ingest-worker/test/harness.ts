@@ -56,10 +56,10 @@ export function postBatch(server: TestHarness, deviceId: string, token: string, 
 // binding. Anything HTTP can show is asserted over HTTP instead.
 export async function archiveOf(
   server: TestHarness,
-  deviceId: string,
+  prefix: string,
 ): Promise<{ key: string; body: string | undefined }[]> {
   const env = await server.getWorker<Env>().getEnv();
-  const listed = await env.ARCHIVE.list({ prefix: `${deviceId}/` });
+  const listed = await env.ARCHIVE.list({ prefix });
 
   return Promise.all(
     listed.objects.map(async (object) => {
