@@ -12,6 +12,7 @@
     { "path": "./apps/query-worker" },
     { "path": "./apps/jobs-worker" },
     { "path": "./apps/dashboard" },
+    { "path": "./tools/emit-openapi" },
     { "path": "./tools/mint-token" },
     { "path": "./tools/simulator" }
   ]

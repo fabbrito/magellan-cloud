@@ -1,0 +1,321 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Magellan ingest",
+    "version": "0"
+  },
+  "components": {
+    "securitySchemes": {
+      "deviceToken": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {},
+    "parameters": {}
+  },
+  "paths": {
+    "/v1/devices/{id}/manifest": {
+      "put": {
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "sources": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]*$"
+                        },
+                        "metrics": {
+                          "type": "array",
+                          "items": {
+                            "oneOf": [
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64,
+                                    "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]*$"
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 16
+                                  },
+                                  "exponent": {
+                                    "type": "integer",
+                                    "minimum": -12,
+                                    "maximum": 12,
+                                    "description": "Decimal exponent of this metric's values: the value is scaled by 10^exponent."
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": ["gauge"]
+                                  }
+                                },
+                                "required": ["key", "exponent", "kind"],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64,
+                                    "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]*$"
+                                  },
+                                  "unit": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 16
+                                  },
+                                  "exponent": {
+                                    "type": "integer",
+                                    "minimum": -12,
+                                    "maximum": 12,
+                                    "description": "Decimal exponent of this metric's values: the value is scaled by 10^exponent."
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": ["counter"]
+                                  }
+                                },
+                                "required": ["key", "exponent", "kind"],
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "object",
+                                "properties": {
+                                  "key": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64,
+                                    "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]*$"
+                                  },
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": ["state"]
+                                  },
+                                  "state_labels": {
+                                    "type": "object",
+                                    "additionalProperties": {
+                                      "type": "string",
+                                      "minLength": 1,
+                                      "maxLength": 32
+                                    },
+                                    "maxProperties": 64,
+                                    "propertyNames": {
+                                      "type": "string",
+                                      "pattern": "^\\d{1,9}$"
+                                    },
+                                    "description": "At most 64 labels, keyed by decimal codes of at most 9 digits."
+                                  }
+                                },
+                                "required": ["key", "kind"],
+                                "additionalProperties": false
+                              }
+                            ]
+                          },
+                          "minItems": 1,
+                          "maxItems": 128,
+                          "description": "One to 128 metrics, each key unique within the source."
+                        }
+                      },
+                      "required": ["id", "metrics"],
+                      "additionalProperties": false,
+                      "description": "A named thing a device polls, and the metrics it declares."
+                    },
+                    "minItems": 1,
+                    "maxItems": 32,
+                    "description": "One to 32 sources, each id unique."
+                  }
+                },
+                "required": ["sources"],
+                "additionalProperties": false,
+                "description": "A device's declaration of its sources and their metrics."
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The manifest is stored."
+          },
+          "400": {
+            "description": "The body is not a manifest. A device must not retry it."
+          },
+          "401": {
+            "description": "The credential is absent or resolves to no device."
+          },
+          "403": {
+            "description": "The credential names another device."
+          }
+        }
+      }
+    },
+    "/v1/devices/{id}/batches": {
+      "post": {
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "manifest_hash": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "boot_id": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8,32}$"
+                  },
+                  "seq": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9]\\d{0,19})$",
+                    "description": "A counter, monotonic within one boot: canonical decimal, at most u64::MAX."
+                  },
+                  "readings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "source": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64,
+                          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.:-]*$"
+                        },
+                        "ts": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 32503680000000
+                        },
+                        "values": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991,
+                            "description": "An integer; the physical value is this scaled by its metric's exponent."
+                          },
+                          "minProperties": 1,
+                          "maxProperties": 128,
+                          "description": "One to 128 metric values, keyed by metric key."
+                        }
+                      },
+                      "required": ["source", "ts", "values"],
+                      "additionalProperties": false,
+                      "description": "One source poll: a UTC timestamp in ms and that source's metric values."
+                    },
+                    "minItems": 1,
+                    "maxItems": 512
+                  },
+                  "heartbeat": {
+                    "type": "object",
+                    "properties": {
+                      "uptime_seconds": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 315576000
+                      },
+                      "buffer_depth": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1000000
+                      },
+                      "battery_percent": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "signal_percent": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "firmware_version": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 32
+                      }
+                    },
+                    "required": ["uptime_seconds", "buffer_depth"],
+                    "additionalProperties": false,
+                    "description": "The device's account of itself, sent with a batch."
+                  }
+                },
+                "required": ["manifest_hash", "boot_id", "seq", "readings", "heartbeat"],
+                "additionalProperties": false,
+                "description": "One upload: ordered readings under a manifest hash, identified by boot_id and seq. A duplicate is absorbed per reading, not per batch."
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Committed, or already present."
+          },
+          "400": {
+            "description": "The body is not a batch. A device must not retry it."
+          },
+          "401": {
+            "description": "The credential is absent or resolves to no device."
+          },
+          "403": {
+            "description": "The credential names another device."
+          },
+          "422": {
+            "description": "A reading names what the manifest does not declare."
+          },
+          "503": {
+            "description": "The named manifest has not arrived. The device keeps the buffer."
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

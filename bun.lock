@@ -83,6 +83,16 @@
         "vitest": "^5.0.1",
       },
     },
+    "tools/emit-openapi": {
+      "name": "@magellan/emit-openapi",
+      "version": "0.0.0",
+      "dependencies": {
+        "@magellan/ingest-worker": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.2",
+      },
+    },
     "tools/mint-token": {
       "name": "@magellan/mint-token",
       "version": "0.0.0",
@@ -251,6 +261,8 @@
     "@magellan/dashboard": ["@magellan/dashboard@workspace:apps/dashboard"],
 
     "@magellan/db": ["@magellan/db@workspace:packages/db"],
+
+    "@magellan/emit-openapi": ["@magellan/emit-openapi@workspace:tools/emit-openapi"],
 
     "@magellan/ingest-worker": ["@magellan/ingest-worker@workspace:apps/ingest-worker"],
 

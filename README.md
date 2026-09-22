@@ -27,7 +27,7 @@ Anything that authenticates to Cloudflare is the maintainer's to run, never an a
 ## Layout
 
 ```
-packages/contract/   the contract: Zod schemas the cloud parses with
+packages/contract/   the contract: Zod schemas, and openapi.json emitted from the routes
 packages/db/         D1 schema and migrations
 packages/shared/     token auth, errors, logging
 apps/ingest-worker/  device-facing
@@ -35,6 +35,7 @@ apps/query-worker/   dashboard-facing, behind Cloudflare Access
 apps/jobs-worker/    cron — rollups, retention, silent-device detection
 apps/dashboard/      static SPA
 tools/simulator/     a fake device that speaks the contract
+tools/emit-openapi/  writes packages/contract/openapi.json from the worker's routes
 tools/mint-token/    mints a device token; the maintainer runs the statement it prints
 ```
 

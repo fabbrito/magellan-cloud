@@ -29,9 +29,16 @@ app.use("/v1/devices/:id/*", async (context, next) => {
   await next();
 });
 
+// Named in the document so the device reads the scheme rather than inferring it from a 401.
+app.openAPIRegistry.registerComponent("securitySchemes", "deviceToken", {
+  type: "http",
+  scheme: "bearer",
+});
+
 const manifestRoute = createRoute({
   method: "put",
   path: "/v1/devices/{id}/manifest",
+  security: [{ deviceToken: [] }],
   request: {
     params: z.object({ id: z.string() }),
     body: { content: { "application/json": { schema: manifestSchema } }, required: true },
@@ -76,6 +83,7 @@ app.openapi(manifestRoute, async (context) => {
 const batchesRoute = createRoute({
   method: "post",
   path: "/v1/devices/{id}/batches",
+  security: [{ deviceToken: [] }],
   request: {
     params: z.object({ id: z.string() }),
     body: { content: { "application/json": { schema: batchSchema } }, required: true },
