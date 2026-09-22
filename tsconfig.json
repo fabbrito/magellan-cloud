@@ -8,6 +8,7 @@
     { "path": "./packages/shared" },
     { "path": "./packages/shared/tsconfig.test.json" },
     { "path": "./apps/ingest-worker" },
+    { "path": "./apps/ingest-worker/tsconfig.test.json" },
     { "path": "./apps/query-worker" },
     { "path": "./apps/jobs-worker" },
     { "path": "./apps/dashboard" },
