@@ -1,9 +1,12 @@
 import type { Batch } from "@magellan/contract";
 import { heartbeats, readings, type Db } from "@magellan/db";
 
-// D1 publishes a 100 KB ceiling per statement but no bound-parameter limit, and SQLite's variable
-// cap is what actually binds. Four parameters a row, so 100 rows is well inside either.
-const readingsPerInsertMax = 100;
+// D1 allows 100 bound parameters a statement, and a reading binds one per column. Rows beyond that
+// answer `too many SQL variables`, which a full batch reaches and nothing smaller does — see
+// test/ceiling.test.ts, which is what pins this.
+const boundParametersMax = 100;
+const readingColumns = 4;
+const readingsPerInsertMax = Math.floor(boundParametersMax / readingColumns);
 
 function chunk<Row>(rows: Row[], size: number): Row[][] {
   const chunks: Row[][] = [];

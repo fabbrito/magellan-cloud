@@ -176,6 +176,9 @@
           },
           "403": {
             "description": "The credential names another device."
+          },
+          "413": {
+            "description": "The body is past `manifestBytesMax`."
           }
         }
       }
@@ -306,6 +309,9 @@
           },
           "403": {
             "description": "The credential names another device."
+          },
+          "413": {
+            "description": "The body is past `batchBytesMax`."
           },
           "422": {
             "description": "A reading names what the manifest does not declare."

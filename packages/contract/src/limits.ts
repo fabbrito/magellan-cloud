@@ -32,4 +32,9 @@ export const LIMITS = {
   firmwareVersionLengthMax: 32,
   bootIdLengthMin: 8,
   bootIdLengthMax: 32,
+  // What a body may weigh, so an oversized one is refused before it is read rather than after it is
+  // parsed. They sit just above what the bounds above already permit — 12.17 MiB and 5.30 MiB, which
+  // limits.test.ts recomputes — so nothing legal is refused. Lowering either is a contract change.
+  manifestBytesMax: 13 * 1024 * 1024,
+  batchBytesMax: 6 * 1024 * 1024,
 } as const;

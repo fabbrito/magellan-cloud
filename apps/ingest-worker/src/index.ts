@@ -1,12 +1,14 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import {
   batchSchema,
+  LIMITS,
   checkBatchAgainstManifest,
   manifestHash,
   manifestSchema,
 } from "@magellan/contract";
 import { getDb, manifests, type Db } from "@magellan/db";
 import { and, eq } from "drizzle-orm";
+import type { Context, Next } from "hono";
 
 import { archiveKey, manifestKey } from "./archive.ts";
 import { authorize } from "./auth.ts";
@@ -35,6 +37,28 @@ app.openAPIRegistry.registerComponent("securitySchemes", "deviceToken", {
   scheme: "bearer",
 });
 
+// Refused before the validator parses it, which is where an oversized body would actually be spent.
+// A declared length settles it without reading at all; a chunked body has none, so it is read — far
+// cheaper than parsing — and hono's cache means the validator does not read it twice.
+async function refuseOversized(context: Context, next: Next, bytesMax: number) {
+  const declared = context.req.header("content-length");
+  if (declared !== undefined) {
+    if (Number(declared) > bytesMax) return context.body(null, 413);
+    return next();
+  }
+
+  const body = await context.req.arrayBuffer();
+  if (body.byteLength > bytesMax) return context.body(null, 413);
+  await next();
+}
+
+app.use("/v1/devices/:id/manifest", (context, next) =>
+  refuseOversized(context, next, LIMITS.manifestBytesMax),
+);
+app.use("/v1/devices/:id/batches", (context, next) =>
+  refuseOversized(context, next, LIMITS.batchBytesMax),
+);
+
 const manifestRoute = createRoute({
   method: "put",
   path: "/v1/devices/{id}/manifest",
@@ -48,6 +72,7 @@ const manifestRoute = createRoute({
     400: { description: "The body is not a manifest. A device must not retry it." },
     401: { description: "The credential is absent or resolves to no device." },
     403: { description: "The credential names another device." },
+    413: { description: "The body is past `manifestBytesMax`." },
   },
 });
 
@@ -93,6 +118,7 @@ const batchesRoute = createRoute({
     400: { description: "The body is not a batch. A device must not retry it." },
     401: { description: "The credential is absent or resolves to no device." },
     403: { description: "The credential names another device." },
+    413: { description: "The body is past `batchBytesMax`." },
     422: { description: "A reading names what the manifest does not declare." },
     503: { description: "The named manifest has not arrived. The device keeps the buffer." },
   },
