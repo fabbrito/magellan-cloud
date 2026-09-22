@@ -19,6 +19,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@magellan/simulator": "workspace:*",
     "@types/node": "^26.6.2"
   }
 }
