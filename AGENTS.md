@@ -70,6 +70,7 @@ promoted. A comment explaining another package is already a doc in the wrong pla
 | `docs/CONTEXT.md` | domain vocabulary                                                                      |
 | `docs/STYLE.md`   | how the code is written — bounds, assertions, naming                                   |
 | `README.md`       | orientation — layout, setup, where the docs are                                        |
+| `docs/agents/`    | how the engineering skills read this repo — issue tracker, domain docs consumption     |
 
 A settled decision the project still lives under a year from now goes to `docs/adr/` when the first
 one lands — what was chosen, what it costs, what reverses it, no paths or symbols. A choice that
