@@ -47,9 +47,10 @@ register: $(config) ## mint and register a token - ID=, DESCRIPTION=
 	scripts/register.sh $(ID) '$(DESCRIPTION)'
 
 ##@ Observe
-# JSON carries each invocation's CPU time.
-tail: $(config) ## stream the worker's invocations
-	$(wrangler) tail -c wrangler.prod.jsonc --format json
+# JSON carries each invocation's CPU time. *.prod.* keeps the log out of git.
+tail: $(config) ## stream invocations, appended to logs/tail.prod.jsonl
+	@mkdir -p logs
+	$(wrangler) tail -c wrangler.prod.jsonc --format json | tee -a $(CURDIR)/logs/tail.prod.jsonl
 
 probe: ## walk a simulated boot against the endpoint
 	$(call need,ENDPOINT)
