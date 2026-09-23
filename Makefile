@@ -1,4 +1,4 @@
-# Magellan cloud — every target but help reaches the Cloudflare account. The
+# Magellan cloud — every target but help acts on the live deploy. The
 # maintainer runs them.
 
 -include cloudflare.prod.env
@@ -10,7 +10,7 @@ wrangler := cd $(worker) && bunx wrangler
 need = $(if $($(1)),,$(error $(1) is unset))
 
 # Through the environment, so quotes in the SQL reach wrangler intact.
-export Q
+export SQL
 
 .PHONY: help bootstrap migrate deploy takedown tail sql register probe probe-ceiling
 
@@ -28,7 +28,6 @@ export HELP_AWK
 help: ## show this help
 	@awk "$$HELP_AWK" $(lastword $(MAKEFILE_LIST))
 
-# Names match wrangler.jsonc.
 bootstrap: ## create D1 and R2 - the D1 id goes in cloudflare.prod.env
 	$(wrangler) d1 create magellan
 	$(wrangler) r2 bucket create magellan-archive
@@ -58,18 +57,15 @@ tail: $(config) ## stream invocations, appended to logs/tail.prod.jsonl
 	@mkdir -p logs
 	$(wrangler) tail -c wrangler.prod.jsonc --format json | tee -a $(CURDIR)/logs/tail.prod.jsonl
 
-sql: $(config) ## query the live D1 - Q="<sql>"
-	$(call need,Q)
-	$(wrangler) d1 execute DB --remote -c wrangler.prod.jsonc --command "$$Q"
+sql: $(config) ## query the live D1 - SQL="<statement>"
+	$(call need,SQL)
+	$(wrangler) d1 execute DB --remote -c wrangler.prod.jsonc --command "$$SQL"
 
 probe: ## walk a simulated boot against the endpoint
 	$(call need,ENDPOINT)
 	$(call need,PROBE_DEVICE_ID)
 	$(call need,PROBE_TOKEN)
-	@bun tools/simulator/src/cli.ts $(ENDPOINT) $(PROBE_DEVICE_ID) $(PROBE_TOKEN)
+	@bun tools/simulator/src/cli.ts $(ENDPOINT) $(PROBE_DEVICE_ID) $(PROBE_TOKEN) $(run)
 
-probe-ceiling: ## send the largest manifest and batch
-	$(call need,ENDPOINT)
-	$(call need,PROBE_DEVICE_ID)
-	$(call need,PROBE_TOKEN)
-	@bun tools/simulator/src/cli.ts $(ENDPOINT) $(PROBE_DEVICE_ID) $(PROBE_TOKEN) ceiling
+probe-ceiling: run := ceiling
+probe-ceiling: probe ## send the largest manifest and batch
