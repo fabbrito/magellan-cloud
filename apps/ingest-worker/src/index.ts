@@ -65,7 +65,11 @@ const manifestRoute = createRoute({
   security: [{ deviceToken: [] }],
   request: {
     params: z.object({ id: z.string() }),
-    body: { content: { "application/json": { schema: manifestSchema } }, required: true },
+    body: {
+      content: { "application/json": { schema: manifestSchema } },
+      required: true,
+      "x-max-bytes": LIMITS.manifestBytesMax,
+    },
   },
   responses: {
     200: {
@@ -80,7 +84,7 @@ const manifestRoute = createRoute({
     401: { description: "The credential is absent or resolves to no device." },
     403: { description: "The credential names another device." },
     411: { description: "No parseable `content-length`. A device must declare what it sends." },
-    413: { description: "The body is past `manifestBytesMax`." },
+    413: { description: `The body is past ${LIMITS.manifestBytesMax} bytes.` },
     429: { description: "Too many requests. The device keeps the buffer." },
   },
 });
@@ -121,7 +125,11 @@ const batchesRoute = createRoute({
   security: [{ deviceToken: [] }],
   request: {
     params: z.object({ id: z.string() }),
-    body: { content: { "application/json": { schema: batchSchema } }, required: true },
+    body: {
+      content: { "application/json": { schema: batchSchema } },
+      required: true,
+      "x-max-bytes": LIMITS.batchBytesMax,
+    },
   },
   responses: {
     204: { description: "Committed, or already present." },
@@ -129,7 +137,7 @@ const batchesRoute = createRoute({
     401: { description: "The credential is absent or resolves to no device." },
     403: { description: "The credential names another device." },
     411: { description: "No parseable `content-length`. A device must declare what it sends." },
-    413: { description: "The body is past `batchBytesMax`." },
+    413: { description: `The body is past ${LIMITS.batchBytesMax} bytes.` },
     422: { description: "A reading names what the manifest does not declare." },
     429: { description: "Too many requests. The device keeps the buffer." },
     503: { description: "The named manifest has not arrived. The device keeps the buffer." },
