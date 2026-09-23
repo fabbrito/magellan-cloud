@@ -2,13 +2,13 @@
 # Renders the live wrangler config: the committed one, with the real D1 id.
 
 usage() {
-	echo "usage: ${0##*/} <database-id> <source> <target>" >&2
+	echo "usage: ${0##*/} <database-id> <committed> <target>" >&2
 	exit 1
 }
 
 (($# == 3)) || usage
 id=$1
-source=$2
+committed=$2
 target=$3
 
 uuid='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
@@ -17,10 +17,10 @@ if ! [[ $id =~ $uuid ]]; then
 	exit 1
 fi
 
-config=$(<"$source") || exit
+config=$(<"$committed") || exit
 placeholder='"database_id": "local"'
 if [[ $config != *"$placeholder"* ]]; then
-	echo "$source no longer holds $placeholder" >&2
+	echo "$committed no longer holds $placeholder" >&2
 	exit 1
 fi
 
