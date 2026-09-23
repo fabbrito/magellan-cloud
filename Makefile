@@ -12,7 +12,7 @@ need = $(if $($(1)),,$(error $(1) is unset))
 # Through the environment, so quotes in the SQL reach wrangler intact.
 export Q
 
-.PHONY: help bootstrap migrate deploy tail sql register probe probe-ceiling
+.PHONY: help bootstrap migrate deploy takedown tail sql register probe probe-ceiling
 
 define HELP_AWK
 BEGIN {
@@ -43,6 +43,9 @@ migrate: $(config) ## apply D1 migrations
 
 deploy: $(config) ## deploy the ingest worker
 	$(wrangler) deploy -c wrangler.prod.jsonc
+
+takedown: $(config) ## delete the worker - D1 and R2 stay
+	$(wrangler) delete -c wrangler.prod.jsonc
 
 register: $(config) ## mint and register a token - ID=, DESCRIPTION=
 	$(call need,ID)
