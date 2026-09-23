@@ -11,8 +11,7 @@ it("matches the routes it was emitted from", () => {
   expect(committed).toEqual(openApiDocument());
 });
 
-// The device transcribes its limits from this document, and JSON Schema has no keyword for a body's
-// size.
+// JSON Schema has no keyword for a body's size, so the bound travels as an extension.
 it("states each body's byte bound", () => {
   expect(committed.paths["/v1/devices/{id}/manifest"].put.requestBody).toMatchObject({
     "x-max-bytes": LIMITS.manifestBytesMax,

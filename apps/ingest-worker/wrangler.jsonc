@@ -19,7 +19,7 @@
     {
       "binding": "DB",
       "database_name": "magellan",
-      // Local dev and tests key D1 by binding name. `make` renders the real id.
+      // Local dev and tests key D1 by binding name. The live id is never committed.
       "database_id": "local",
       "migrations_dir": "../../packages/db/migrations",
     },
