@@ -22,8 +22,8 @@ bun install
 `bun run` lists the scripts, so they are not copied here to rot.
 
 Anything that authenticates to Cloudflare is the maintainer's to run, never an agent's
-(`AGENTS.md`). Formatting, typechecking and linting reach nothing and stay agent work. The split is
-in the names: `dev:*` reaches the local store, `live:*` reaches the account.
+(`AGENTS.md`). The split is in the tool: `bun run` reaches the local store at most, `make` reaches
+the account.
 
 ## Running it
 
@@ -51,6 +51,18 @@ endpoint = "http://127.0.0.1:8787/v1"
 registers the hash here. The device refuses plain http unless it is loopback, so one running on
 another host wants a tunnel to this one rather than a LAN address.
 
+## Deploying
+
+The maintainer's. After `wrangler login`, copy `cloudflare.prod.env.example` to
+`cloudflare.prod.env` — git ignores it — and fill it as the targets ask. `make` lists them:
+
+```bash
+make bootstrap                               # D1 and R2; the D1 id goes in cloudflare.prod.env
+make migrate deploy
+make register ID=<id> DESCRIPTION='<text>'   # a device token, printed once
+make probe                                   # or probe-ceiling, with `make tail` beside it
+```
+
 ## Layout
 
 ```
@@ -63,7 +75,8 @@ apps/jobs-worker/    cron — rollups, retention, silent-device detection
 apps/dashboard/      static SPA
 tools/simulator/     a fake device that speaks the contract
 tools/emit-openapi/  writes packages/contract/openapi.json from the worker's routes
-tools/mint-token/    mints a device token; the maintainer runs the statement it prints
+tools/mint-token/    mints a device token and the statement that registers it
+scripts/             the Makefile's shell, reaching the account
 ```
 
 The workspaces exist; what goes in them lands incrementally. `docs/DESIGN.md` is the stack and the

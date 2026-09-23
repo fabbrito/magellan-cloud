@@ -40,9 +40,10 @@ Agents write the code and hand over the commands to run. Formatting, typecheckin
 stay agent work; deploy, `--remote`, and secret or bucket commands never leave the maintainer's
 hands.
 
-The split is in the script names, so it is read rather than remembered: **an agent never runs a
-`live:*` script.** Those are the ones that reach the account. `dev:*` reaches the local store only.
-A new command that authenticates gets the `live:` prefix before it gets a body.
+The split is in the tool, so it is read rather than remembered: **an agent never runs `make`.**
+`package.json` scripts reach the local store at most and are agent work; the `Makefile` and its
+`scripts/` reach the account. A new command that authenticates goes in the `Makefile` before it gets
+a body.
 
 ## The contract is the seam
 
