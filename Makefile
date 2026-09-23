@@ -7,9 +7,12 @@ worker := apps/ingest-worker
 config := $(worker)/wrangler.prod.jsonc
 wrangler := cd $(worker) && bunx wrangler
 
-need = $(if $($(1)),,$(error $(1) is unset in cloudflare.prod.env))
+need = $(if $($(1)),,$(error $(1) is unset))
 
-.PHONY: help bootstrap migrate deploy tail register probe probe-ceiling
+# Through the environment, so quotes in the SQL reach wrangler intact.
+export Q
+
+.PHONY: help bootstrap migrate deploy tail sql register probe probe-ceiling
 
 define HELP_AWK
 BEGIN {
@@ -51,6 +54,10 @@ register: $(config) ## mint and register a token - ID=, DESCRIPTION=
 tail: $(config) ## stream invocations, appended to logs/tail.prod.jsonl
 	@mkdir -p logs
 	$(wrangler) tail -c wrangler.prod.jsonc --format json | tee -a $(CURDIR)/logs/tail.prod.jsonl
+
+sql: $(config) ## query the live D1 - Q="<sql>"
+	$(call need,Q)
+	$(wrangler) d1 execute DB --remote -c wrangler.prod.jsonc --command "$$Q"
 
 probe: ## walk a simulated boot against the endpoint
 	$(call need,ENDPOINT)
