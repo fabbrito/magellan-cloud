@@ -130,12 +130,12 @@
                                       "minLength": 1,
                                       "maxLength": 32
                                     },
-                                    "maxProperties": 64,
+                                    "maxProperties": 32,
                                     "propertyNames": {
                                       "type": "string",
                                       "pattern": "^\\d{1,9}$"
                                     },
-                                    "description": "At most 64 labels, keyed by decimal codes of at most 9 digits."
+                                    "description": "At most 32 labels, keyed by decimal codes of at most 9 digits."
                                   }
                                 },
                                 "required": ["key", "kind"],
@@ -153,8 +153,8 @@
                       "description": "A named thing a device polls, and the metrics it declares."
                     },
                     "minItems": 1,
-                    "maxItems": 32,
-                    "description": "One to 32 sources, each id unique."
+                    "maxItems": 8,
+                    "description": "One to 8 sources, each id unique."
                   }
                 },
                 "required": ["sources"],
