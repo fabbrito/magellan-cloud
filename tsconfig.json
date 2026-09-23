@@ -14,6 +14,8 @@
     { "path": "./apps/dashboard" },
     { "path": "./tools/emit-openapi" },
     { "path": "./tools/mint-token" },
-    { "path": "./tools/simulator" }
+    { "path": "./tools/simulator" },
+    { "path": "./tools/simulator/tsconfig.test.json" },
+    { "path": "./tools/simulator/tsconfig.cli.json" }
   ]
 }
