@@ -9,6 +9,8 @@ import { expect, it } from "vitest";
 
 import { ceilingReadings, gaugeManifest, largestManifest } from "./ceiling.ts";
 
+const firstTs = Date.UTC(2026, 0, 1);
+
 it("declares the largest manifest the contract accepts", () => {
   const metrics = largestManifest.sources.flatMap((source) => source.metrics);
   const labelCounts = metrics.map((metric) =>
@@ -26,7 +28,7 @@ it("fills the largest batch the contract accepts", () => {
     manifest_hash: "0".repeat(LIMITS.manifestHashHexLength),
     boot_id: "0123456789abcdef",
     seq: "0",
-    readings: ceilingReadings(1_767_225_600_000),
+    readings: ceilingReadings(firstTs),
     heartbeat: { uptime_seconds: 0, buffer_depth: LIMITS.readingsPerBatchMax },
   };
   const valueCounts = batch.readings.map((reading) => Object.keys(reading.values).length);
