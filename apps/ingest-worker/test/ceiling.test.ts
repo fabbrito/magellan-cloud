@@ -1,4 +1,5 @@
 import { LIMITS } from "@magellan/contract";
+import { largestManifest } from "@magellan/simulator";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import type { TestHarness } from "wrangler";
 
@@ -41,6 +42,14 @@ it("commits a batch at every bound the contract allows", async () => {
   expect(
     await query(server, "SELECT count(*) AS rows FROM readings WHERE device_id = ?", "device-01"),
   ).toEqual([{ rows: LIMITS.readingsPerBatchMax }]);
+});
+
+// D1 refuses a value past 2 MB, and a deterministic refusal answered 5xx is retried forever.
+it("stores the largest manifest the contract allows", async () => {
+  const token = await registerDevice(server, "device-03");
+  const body = new TextEncoder().encode(JSON.stringify(largestManifest));
+
+  expect((await putManifest(server, "device-03", token, body)).status).toBe(200);
 });
 
 it("refuses a body past the byte bound", async () => {

@@ -24,11 +24,7 @@
     "db:generate": "bun --cwd=packages/db run db:generate",
     "mint": "bun --cwd=tools/mint-token run mint",
     "sim": "bun --cwd=tools/simulator run sim",
-    "emit": "bun --cwd=tools/emit-openapi run emit",
-    "live:deploy": "bun --cwd=apps/ingest-worker run live:deploy",
-    "live:migrate": "bun --cwd=apps/ingest-worker run live:migrate",
-    "live:exec": "bun --cwd=apps/ingest-worker run live:exec",
-    "live:tail": "bun --cwd=apps/ingest-worker run live:tail"
+    "emit": "bun --cwd=tools/emit-openapi run emit"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",

@@ -34,6 +34,7 @@
         ],
         "requestBody": {
           "required": true,
+          "x-max-bytes": 1999000,
           "content": {
             "application/json": {
               "schema": {
@@ -130,12 +131,12 @@
                                       "minLength": 1,
                                       "maxLength": 32
                                     },
-                                    "maxProperties": 64,
+                                    "maxProperties": 32,
                                     "propertyNames": {
                                       "type": "string",
                                       "pattern": "^\\d{1,9}$"
                                     },
-                                    "description": "At most 64 labels, keyed by decimal codes of at most 9 digits."
+                                    "description": "At most 32 labels, keyed by decimal codes of at most 9 digits."
                                   }
                                 },
                                 "required": ["key", "kind"],
@@ -153,8 +154,8 @@
                       "description": "A named thing a device polls, and the metrics it declares."
                     },
                     "minItems": 1,
-                    "maxItems": 32,
-                    "description": "One to 32 sources, each id unique."
+                    "maxItems": 8,
+                    "description": "One to 8 sources, each id unique."
                   }
                 },
                 "required": ["sources"],
@@ -191,7 +192,7 @@
             "description": "No parseable `content-length`. A device must declare what it sends."
           },
           "413": {
-            "description": "The body is past `manifestBytesMax`."
+            "description": "The body is past 1999000 bytes."
           },
           "429": {
             "description": "Too many requests. The device keeps the buffer."
@@ -218,6 +219,7 @@
         ],
         "requestBody": {
           "required": true,
+          "x-max-bytes": 6291456,
           "content": {
             "application/json": {
               "schema": {
@@ -330,7 +332,7 @@
             "description": "No parseable `content-length`. A device must declare what it sends."
           },
           "413": {
-            "description": "The body is past `batchBytesMax`."
+            "description": "The body is past 6291456 bytes."
           },
           "422": {
             "description": "A reading names what the manifest does not declare."

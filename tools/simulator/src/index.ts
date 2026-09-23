@@ -1,3 +1,4 @@
+export { ceilingReadings, gaugeManifest, largestManifest } from "./ceiling.ts";
 export {
   SimulatedDevice,
   type CloudFetch,
