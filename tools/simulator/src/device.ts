@@ -1,5 +1,6 @@
 import { manifestHash, type Batch, type Manifest, type Reading } from "@magellan/contract";
 
+import { etagHash } from "./etag.ts";
 import { classify, type Outcome } from "./outcome.ts";
 
 // Compiled inside whatever runs it, so it names the one host global it needs rather than inheriting
@@ -56,7 +57,7 @@ export class SimulatedDevice {
   async declare(): Promise<string> {
     const response = await this.send("PUT", "manifest", this.bytes);
     const mine = await manifestHash(this.bytes);
-    const accepted = (response.headers.get("etag") ?? "").replace(/^W\//, "").replaceAll('"', "");
+    const accepted = etagHash(response.headers.get("etag") ?? "");
 
     if (response.status !== 200)
       throw new Error(`the cloud refused the manifest: ${response.status}`);
