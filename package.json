@@ -24,7 +24,7 @@
     "db:generate": "bun --cwd=packages/db run db:generate",
     "mint": "bun --cwd=tools/mint-token run mint",
     "sim": "bun --cwd=tools/simulator run sim",
-    "emit": "bun --cwd=tools/emit-openapi run emit"
+    "emit": "bun --cwd=tools/emit-openapi run emit && bun format"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",

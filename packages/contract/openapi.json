@@ -106,10 +106,16 @@
                                   "kind": {
                                     "type": "string",
                                     "enum": ["counter"]
+                                  },
+                                  "resets": {
+                                    "type": "string",
+                                    "enum": ["daily"],
+                                    "description": "The cadence this counter resets on. The boundary is not sent; a decrease marks it."
                                   }
                                 },
                                 "required": ["key", "exponent", "kind"],
-                                "additionalProperties": false
+                                "additionalProperties": false,
+                                "description": "Monotonic between resets. Any decrease is a reset, declared or not: a restart or a wrap reads the same."
                               },
                               {
                                 "type": "object",
