@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { batchSchema, manifestSchema } from "./schema.ts";
 
 const gauge = { key: "power_w", kind: "gauge", unit: "W", exponent: -2 };
+const counter = { key: "energy_kwh", kind: "counter", unit: "kWh", exponent: 0 };
 
 const threeKinds = {
   sources: [
@@ -10,7 +11,7 @@ const threeKinds = {
       id: "source_1",
       metrics: [
         gauge,
-        { key: "energy_kwh", kind: "counter", unit: "kWh", exponent: 0 },
+        counter,
         { key: "mode", kind: "state", state_labels: { "0": "idle", "1": "running" } },
       ],
     },
@@ -116,6 +117,28 @@ describe("manifestSchema", () => {
   it("rejects a key past the length bound", () => {
     const long = { sources: [{ id: "source_1", metrics: [{ ...gauge, key: "m".repeat(65) }] }] };
     expect(manifestSchema.safeParse(long).success).toBe(false);
+  });
+
+  it("accepts a counter that resets daily", () => {
+    const daily = { sources: [{ id: "source_1", metrics: [{ ...counter, resets: "daily" }] }] };
+    expect(manifestSchema.safeParse(daily).success).toBe(true);
+  });
+
+  it("rejects a cadence past the enum", () => {
+    const weekly = { sources: [{ id: "source_1", metrics: [{ ...counter, resets: "weekly" }] }] };
+    expect(manifestSchema.safeParse(weekly).success).toBe(false);
+  });
+
+  it("rejects resets on a gauge", () => {
+    const resetting = { sources: [{ id: "source_1", metrics: [{ ...gauge, resets: "daily" }] }] };
+    expect(manifestSchema.safeParse(resetting).success).toBe(false);
+  });
+
+  it("rejects resets on a state", () => {
+    const resetting = {
+      sources: [{ id: "source_1", metrics: [{ key: "mode", kind: "state", resets: "daily" }] }],
+    };
+    expect(manifestSchema.safeParse(resetting).success).toBe(false);
   });
 
   it("rejects an unknown property", () => {

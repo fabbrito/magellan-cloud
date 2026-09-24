@@ -66,10 +66,23 @@ const gaugeMetricSchema = z.strictObject({
   kind: z.literal("gauge"),
 });
 
-const counterMetricSchema = z.strictObject({
-  ...measuredMetricFields,
-  kind: z.literal("counter"),
+// Only the cadence crosses the wire, never the boundary: the cloud finds a reset by the decrease,
+// so neither a clock nor a time zone has to agree across the seam
+// (docs/adr/0005-the-device-owns-meaning.md).
+const resetsSchema = z.enum(["daily"]).meta({
+  description: "The cadence this counter resets on. The boundary is not sent; a decrease marks it.",
 });
+
+const counterMetricSchema = z
+  .strictObject({
+    ...measuredMetricFields,
+    kind: z.literal("counter"),
+    resets: resetsSchema.optional(),
+  })
+  .meta({
+    description:
+      "Monotonic between resets. Any decrease is a reset, declared or not: a restart or a wrap reads the same.",
+  });
 
 const stateMetricSchema = z.strictObject({
   key: keySchema,

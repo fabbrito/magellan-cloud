@@ -1,4 +1,5 @@
 export { ceilingReadings, gaugeManifest, largestManifest } from "./ceiling.ts";
+export { daysManifest, daysReadings, energyStep, type DaysOptions } from "./days.ts";
 export {
   SimulatedDevice,
   type CloudFetch,
