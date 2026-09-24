@@ -2,6 +2,8 @@ import { manifestSchema } from "@magellan/contract";
 import { devices, heartbeats, layouts, manifests, readings, type Db } from "@magellan/db";
 import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 
+import type { Heartbeat, Layout } from "./api.ts";
+import { layoutBodySchema } from "./layout.ts";
 import type { Declaration } from "./metric.ts";
 
 // Every read here is bounded where it runs: the limit a caller trusts is the one in the query.
@@ -68,14 +70,27 @@ export async function manifestsOf(
   return rows.map(declarationOf);
 }
 
-export async function latestHeartbeat(db: Db, deviceId: string) {
-  const [heartbeat] = await db
+function heartbeatOf(row: typeof heartbeats.$inferSelect): Heartbeat {
+  return {
+    boot_id: row.bootId,
+    seq: row.seq,
+    uptime_seconds: row.uptimeSeconds,
+    buffer_depth: row.bufferDepth,
+    battery_percent: row.batteryPercent,
+    signal_percent: row.signalPercent,
+    firmware_version: row.firmwareVersion,
+    received_at: row.receivedAt,
+  };
+}
+
+export async function latestHeartbeat(db: Db, deviceId: string): Promise<Heartbeat | undefined> {
+  const [row] = await db
     .select()
     .from(heartbeats)
     .where(eq(heartbeats.deviceId, deviceId))
     .orderBy(desc(heartbeats.receivedAt))
     .limit(1);
-  return heartbeat;
+  return row === undefined ? undefined : heartbeatOf(row);
 }
 
 export function receiptsSince(db: Db, deviceId: string, sinceMs: number) {
@@ -114,11 +129,21 @@ export function metricSamples(db: Db, query: SampleQuery, limit: number) {
     .limit(limit);
 }
 
-export function layoutsOf(db: Db, deviceId: string) {
-  return db
+// Throws on a body this worker wrote and cannot read: a bug here, never the caller's.
+function layoutOf(row: { name: string; body: string; updatedAt: number }): Layout {
+  return {
+    name: row.name,
+    cards: layoutBodySchema.parse(JSON.parse(row.body)).cards,
+    updated_at: row.updatedAt,
+  };
+}
+
+export async function layoutsOf(db: Db, deviceId: string): Promise<Layout[]> {
+  const rows = await db
     .select({ name: layouts.name, body: layouts.body, updatedAt: layouts.updatedAt })
     .from(layouts)
     .where(eq(layouts.deviceId, deviceId))
     .orderBy(asc(layouts.name))
     .limit(layoutsPerDeviceMax);
+  return rows.map(layoutOf);
 }

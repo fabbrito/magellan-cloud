@@ -1,12 +1,12 @@
 import { keySchema } from "@magellan/contract";
-import { getDb, layouts, type heartbeats } from "@magellan/db";
+import { getDb, layouts } from "@magellan/db";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { validator } from "hono/validator";
 import { z } from "zod";
 
-import type { DeviceDetail, DeviceSummary, Heartbeat, Layout } from "./api.ts";
+import type { DeviceDetail, DeviceSummary } from "./api.ts";
 import { seqGaps } from "./health.ts";
 import { layoutBodySchema, layoutNameSchema, undeclaredCards } from "./layout.ts";
 import { detailOf, problem } from "./problem.ts";
@@ -64,28 +64,6 @@ const knownDevice = createMiddleware<Worker>(async (context, next) => {
   await next();
 });
 
-function heartbeatOf(row: typeof heartbeats.$inferSelect): Heartbeat {
-  return {
-    boot_id: row.bootId,
-    seq: row.seq,
-    uptime_seconds: row.uptimeSeconds,
-    buffer_depth: row.bufferDepth,
-    battery_percent: row.batteryPercent,
-    signal_percent: row.signalPercent,
-    firmware_version: row.firmwareVersion,
-    received_at: row.receivedAt,
-  };
-}
-
-// Throws on a body this worker wrote and cannot read: a bug here, never the caller's.
-function layoutOf(row: { name: string; body: string; updatedAt: number }): Layout {
-  return {
-    name: row.name,
-    cards: layoutBodySchema.parse(JSON.parse(row.body)).cards,
-    updated_at: row.updatedAt,
-  };
-}
-
 app.get("/devices", async (context) => {
   const rows = await listDevices(getDb(context.env.DB));
   return context.json(
@@ -115,7 +93,7 @@ app.get("/devices/:id", deviceParam, knownDevice, async (context) => {
       manifest === undefined
         ? null
         : { hash: manifest.hash, declared_at: manifest.declaredAt, body: manifest.manifest },
-    heartbeat: heartbeat === undefined ? null : heartbeatOf(heartbeat),
+    heartbeat: heartbeat ?? null,
     seq_gaps: seqGaps(receipts),
   } satisfies DeviceDetail);
 });
@@ -142,17 +120,16 @@ app.get(
 
 app.get("/devices/:id/layouts", deviceParam, knownDevice, async (context) => {
   const { id } = context.req.valid("param");
-  const rows = await layoutsOf(getDb(context.env.DB), id);
-  return context.json(rows.map(layoutOf));
+  return context.json(await layoutsOf(getDb(context.env.DB), id));
 });
 
 app.get("/devices/:id/layouts/:name", layoutParam, knownDevice, async (context) => {
   const { id, name } = context.req.valid("param");
-  const rows = await layoutsOf(getDb(context.env.DB), id);
+  const saved = await layoutsOf(getDb(context.env.DB), id);
 
-  const row = rows.find((layout) => layout.name === name);
-  if (row === undefined) return problem(context, 404, "No such layout");
-  return context.json(layoutOf(row));
+  const layout = saved.find((each) => each.name === name);
+  if (layout === undefined) return problem(context, 404, "No such layout");
+  return context.json(layout);
 });
 
 // 201 when the name is new, 204 when it replaces: the same PUT, twice, lands one layout.
