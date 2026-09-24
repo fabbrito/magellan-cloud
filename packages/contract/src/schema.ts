@@ -25,7 +25,7 @@ const manifestHashPattern = new RegExp(`^[0-9a-f]{${LIMITS.manifestHashHexLength
 const seqPattern = new RegExp(`^(0|[1-9]\\d{0,${LIMITS.seqDigitsMax - 1}})$`);
 const bootIdPattern = new RegExp(`^[0-9a-f]{${LIMITS.bootIdLengthMin},${LIMITS.bootIdLengthMax}}$`);
 
-const keySchema = z.string().min(1).max(LIMITS.keyLengthMax).regex(keyPattern);
+export const keySchema = z.string().min(1).max(LIMITS.keyLengthMax).regex(keyPattern);
 const unitSchema = z.string().min(1).max(LIMITS.unitLengthMax);
 
 const stateLabelsSchema = z
