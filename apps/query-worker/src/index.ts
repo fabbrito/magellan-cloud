@@ -2,6 +2,7 @@ import { keySchema } from "@magellan/contract";
 import { getDb, layouts, type heartbeats } from "@magellan/db";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
+import { createMiddleware } from "hono/factory";
 import { validator } from "hono/validator";
 import { z } from "zod";
 
@@ -25,7 +26,10 @@ import {
 // nothing the worker could check. A stopgap until the platform has its own auth.
 //
 // Versioned though it ships with its only client: the path is what a bookmark or a script keeps.
-const app = new Hono<{ Bindings: Env }>().basePath("/api/v1");
+type Device = NonNullable<Awaited<ReturnType<typeof deviceOf>>>;
+type Worker = { Bindings: Env; Variables: { device: Device } };
+
+const app = new Hono<Worker>().basePath("/api/v1");
 
 const dayMs = 24 * 60 * 60 * 1000;
 
@@ -50,6 +54,15 @@ const seriesParam = validated(
 const layoutParam = validated("param", z.object({ id: keySchema, name: layoutNameSchema }));
 const seriesQuery = validated("query", seriesQuerySchema);
 const layoutBody = validated("json", layoutBodySchema);
+
+// Every route under a device answers 404 for one never registered, before it reads anything else.
+// Runs after the param validator, so a malformed id is a 400 first.
+const knownDevice = createMiddleware<Worker>(async (context, next) => {
+  const device = await deviceOf(getDb(context.env.DB), context.req.param("id") ?? "");
+  if (device === undefined) return problem(context, 404, "No such device");
+  context.set("device", device);
+  await next();
+});
 
 function heartbeatOf(row: typeof heartbeats.$inferSelect): Heartbeat {
   return {
@@ -84,12 +97,10 @@ app.get("/devices", async (context) => {
   );
 });
 
-app.get("/devices/:id", deviceParam, async (context) => {
+app.get("/devices/:id", deviceParam, knownDevice, async (context) => {
   const { id } = context.req.valid("param");
+  const device = context.get("device");
   const db = getDb(context.env.DB);
-
-  const device = await deviceOf(db, id);
-  if (device === undefined) return problem(context, 404, "No such device");
 
   const [manifest, heartbeat, receipts] = await Promise.all([
     currentManifest(db, id),
@@ -112,6 +123,7 @@ app.get("/devices/:id", deviceParam, async (context) => {
 app.get(
   "/devices/:id/sources/:source/metrics/:metric/series",
   seriesParam,
+  knownDevice,
   seriesQuery,
   async (context) => {
     const { id, source, metric } = context.req.valid("param");
@@ -124,13 +136,13 @@ app.get(
   },
 );
 
-app.get("/devices/:id/layouts", deviceParam, async (context) => {
+app.get("/devices/:id/layouts", deviceParam, knownDevice, async (context) => {
   const { id } = context.req.valid("param");
   const rows = await layoutsOf(getDb(context.env.DB), id);
   return context.json(rows.map(layoutOf));
 });
 
-app.get("/devices/:id/layouts/:name", layoutParam, async (context) => {
+app.get("/devices/:id/layouts/:name", layoutParam, knownDevice, async (context) => {
   const { id, name } = context.req.valid("param");
   const rows = await layoutsOf(getDb(context.env.DB), id);
 
@@ -140,12 +152,10 @@ app.get("/devices/:id/layouts/:name", layoutParam, async (context) => {
 });
 
 // 201 when the name is new, 204 when it replaces: the same PUT, twice, lands one layout.
-app.put("/devices/:id/layouts/:name", layoutParam, layoutBody, async (context) => {
+app.put("/devices/:id/layouts/:name", layoutParam, knownDevice, layoutBody, async (context) => {
   const { id, name } = context.req.valid("param");
   const body = context.req.valid("json");
   const db = getDb(context.env.DB);
-
-  if ((await deviceOf(db, id)) === undefined) return problem(context, 404, "No such device");
 
   // Checked against the manifest current now; a later one dropping a key keeps the card.
   const manifest = await currentManifest(db, id);
@@ -171,7 +181,7 @@ app.put("/devices/:id/layouts/:name", layoutParam, layoutBody, async (context) =
   return context.body(null, replacing ? 204 : 201);
 });
 
-app.delete("/devices/:id/layouts/:name", layoutParam, async (context) => {
+app.delete("/devices/:id/layouts/:name", layoutParam, knownDevice, async (context) => {
   const { id, name } = context.req.valid("param");
   await getDb(context.env.DB)
     .delete(layouts)

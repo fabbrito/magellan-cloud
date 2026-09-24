@@ -4,7 +4,7 @@ import { z } from "zod";
 
 import type { Series, SeriesData } from "./api.ts";
 import { describeMetric, exponentsOf } from "./metric.ts";
-import { currentManifest, deviceOf, manifestsOf, metricSamples } from "./read.ts";
+import { currentManifest, manifestsOf, metricSamples } from "./read.ts";
 import {
   counterIntervals,
   counterSegments,
@@ -56,13 +56,9 @@ function dataOf(metric: Metric, samples: Sample[]): SeriesData {
   }
 }
 
-// 404 for a device or metric never declared; 422 for a range too dense or re-declared too often
+// The device is known. 404 for a metric never declared; 422 for a range too dense or re-declared too often
 // to answer in one read.
 export async function readSeries(db: Db, query: SeriesQuery): Promise<SeriesResult> {
-  if ((await deviceOf(db, query.deviceId)) === undefined) {
-    return { ok: false, status: 404, title: "No such device" };
-  }
-
   const rows = await metricSamples(
     db,
     { ...query, fromMs: query.from, toMs: query.to },

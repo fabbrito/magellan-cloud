@@ -78,8 +78,14 @@ describe("devices", () => {
     });
   });
 
-  it("answers 404 for a device never registered", async () => {
-    const response = await server.fetch("/api/v1/devices/nobody");
+  it.each([
+    ["GET", "/api/v1/devices/nobody"],
+    ["GET", "/api/v1/devices/nobody/layouts"],
+    ["GET", "/api/v1/devices/nobody/layouts/Today"],
+    ["DELETE", "/api/v1/devices/nobody/layouts/Today"],
+    ["GET", "/api/v1/devices/nobody/sources/source_1/metrics/power/series?from=0&to=1"],
+  ])("answers 404 for a device never registered: %s %s", async (method, path) => {
+    const response = await server.fetch(path, { method });
 
     expect(response.status).toBe(404);
     expect(response.headers.get("content-type")).toBe("application/problem+json");
@@ -88,6 +94,14 @@ describe("devices", () => {
       status: 404,
       title: "No such device",
     });
+  });
+
+  it("answers 404 for a layout saved to a device never registered", async () => {
+    const response = await putLayout(server, "nobody", "Today", {
+      cards: [{ source: "source_1", metric: "power", as: "tile" }],
+    });
+
+    expect(response.status).toBe(404);
   });
 });
 
