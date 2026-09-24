@@ -1,8 +1,7 @@
 import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-// Presentation, written by the query worker: the one D1 table the archive cannot rebuild
-// (docs/DESIGN.md §2). `body` is JSON cards naming metric keys, never what the keys mean — that is
-// read from the manifest (docs/adr/0005-the-device-owns-meaning.md).
+// Presentation: the one D1 table the archive cannot rebuild (docs/DESIGN.md §2). Names keys, never
+// their meaning (docs/adr/0005-the-device-owns-meaning.md).
 export const layouts = sqliteTable(
   "layouts",
   {

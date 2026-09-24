@@ -3,8 +3,7 @@ import { z } from "zod";
 
 import { metricOf } from "./metric.ts";
 
-// A layout is presentation: which metrics to show and as what. What a key means is read from the
-// manifest, never stored here (docs/adr/0005-the-device-owns-meaning.md).
+// Presentation only (docs/adr/0005-the-device-owns-meaning.md).
 const cardsMax = 32;
 
 // A name is a path segment, so it takes a key's URL-unreserved characters and needs no escaping.
@@ -23,8 +22,7 @@ export const layoutBodySchema = z.strictObject({
 export type Card = z.infer<typeof cardSchema>;
 export type LayoutBody = z.infer<typeof layoutBodySchema>;
 
-// A layout is saved against the manifest current then; a key a later one drops keeps its card,
-// which then charts history.
+// Checked on save only: a key a later manifest drops keeps its card, which charts history.
 export function undeclaredCards(manifest: Manifest, cards: Card[]): Card[] {
   return cards.filter((card) => metricOf(manifest, card.source, card.metric) === undefined);
 }

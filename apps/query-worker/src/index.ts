@@ -138,7 +138,6 @@ app.put("/devices/:id/layouts/:name", layoutParam, knownDevice, layoutBody, asyn
   const body = context.req.valid("json");
   const db = getDb(context.env.DB);
 
-  // Checked against the manifest current now; a later one dropping a key keeps the card.
   const manifest = await currentManifest(db, id);
   const undeclared =
     manifest === undefined ? body.cards : undeclaredCards(manifest.manifest, body.cards);
