@@ -3,8 +3,8 @@ import type { Db } from "@magellan/db";
 import { z } from "zod";
 
 import type { Series, SeriesData } from "./api.ts";
-import { describeMetric, exponentsOf } from "./metric.ts";
-import { currentManifest, manifestsOf, metricSamples } from "./read.ts";
+import { describeMetric, exponentsOf, metricOf } from "./metric.ts";
+import { currentManifest, manifestsOf, metricSamples, type SampleQuery } from "./read.ts";
 import {
   counterIntervals,
   counterSegments,
@@ -29,13 +29,8 @@ const msSchema = z
 export const seriesQuerySchema = z
   .object({ from: msSchema, to: msSchema })
   .refine((query) => query.to > query.from, { message: "to is after from" })
-  .refine((query) => query.to - query.from <= windowMsMax, { message: "range past a month" });
-
-export type SeriesQuery = z.infer<typeof seriesQuerySchema> & {
-  deviceId: string;
-  source: string;
-  metric: string;
-};
+  .refine((query) => query.to - query.from <= windowMsMax, { message: "range past a month" })
+  .transform((query) => ({ fromMs: query.from, toMs: query.to }));
 
 export type SeriesResult =
   | { ok: true; series: Series }
@@ -58,12 +53,8 @@ function dataOf(metric: Metric, samples: Sample[]): SeriesData {
 
 // The device is known. 404 for a metric never declared; 422 for a range too dense or re-declared too often
 // to answer in one read.
-export async function readSeries(db: Db, query: SeriesQuery): Promise<SeriesResult> {
-  const rows = await metricSamples(
-    db,
-    { ...query, fromMs: query.from, toMs: query.to },
-    samplesMax + 1,
-  );
+export async function readSeries(db: Db, query: SampleQuery): Promise<SeriesResult> {
+  const rows = await metricSamples(db, query, samplesMax + 1);
   if (rows.length > samplesMax) {
     return { ok: false, status: 422, title: `More than ${samplesMax} readings; narrow the range` };
   }
@@ -76,13 +67,13 @@ export async function readSeries(db: Db, query: SeriesQuery): Promise<SeriesResu
   }
 
   const declarations = await manifestsOf(db, query.deviceId, [...hashes]);
-  const metric = describeMetric(declarations, query.source, query.metric);
+  const metric = describeMetric(declarations, query.source, query.key);
   if (metric === undefined) {
     return { ok: false, status: 404, title: "No manifest declares this metric" };
   }
 
   // Ingest refuses a value its manifest does not declare, so every row's hash declares this key.
-  const exponents = exponentsOf(declarations, query.source, query.metric);
+  const exponents = exponentsOf(declarations, query.source, query.key);
   const samples = rows.map((row) => {
     const exponent = exponents.get(row.manifestHash);
     if (exponent === undefined) throw new Error(`manifest ${row.manifestHash} lacks the metric`);
@@ -91,7 +82,7 @@ export async function readSeries(db: Db, query: SeriesQuery): Promise<SeriesResu
   });
 
   const declared =
-    current !== undefined && describeMetric([current], query.source, query.metric) !== undefined;
+    current !== undefined && metricOf(current.manifest, query.source, query.key) !== undefined;
 
   return { ok: true, series: { metric, declared, data: dataOf(metric, samples) } };
 }

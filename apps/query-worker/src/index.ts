@@ -49,7 +49,7 @@ function validated<Target extends "param" | "query" | "json", Schema extends z.Z
 const deviceParam = validated("param", z.object({ id: keySchema }));
 const seriesParam = validated(
   "param",
-  z.object({ id: keySchema, source: keySchema, metric: keySchema }),
+  z.object({ id: keySchema, source: keySchema, key: keySchema }),
 );
 const layoutParam = validated("param", z.object({ id: keySchema, name: layoutNameSchema }));
 const seriesQuery = validated("query", seriesQuerySchema);
@@ -121,16 +121,20 @@ app.get("/devices/:id", deviceParam, knownDevice, async (context) => {
 });
 
 app.get(
-  "/devices/:id/sources/:source/metrics/:metric/series",
+  "/devices/:id/sources/:source/metrics/:key/series",
   seriesParam,
   knownDevice,
   seriesQuery,
   async (context) => {
-    const { id, source, metric } = context.req.valid("param");
+    const { id, source, key } = context.req.valid("param");
     const window = context.req.valid("query");
 
-    const query = { deviceId: id, source, metric, ...window };
-    const result = await readSeries(getDb(context.env.DB), query);
+    const result = await readSeries(getDb(context.env.DB), {
+      deviceId: id,
+      source,
+      key,
+      ...window,
+    });
     if (!result.ok) return problem(context, result.status, result.title);
     return context.json(result.series);
   },

@@ -6,6 +6,10 @@ export interface Declaration {
   manifest: Manifest;
 }
 
+export function metricOf(manifest: Manifest, source: string, key: string): Metric | undefined {
+  return indexManifest(manifest).get(source)?.get(key);
+}
+
 // What a metric is comes from the latest manifest declaring it, so a key the current manifest
 // dropped still charts its history (docs/adr/0005-the-device-owns-meaning.md).
 export function describeMetric(
@@ -15,7 +19,7 @@ export function describeMetric(
 ): Metric | undefined {
   const latestFirst = declarations.toSorted((left, right) => right.declaredAt - left.declaredAt);
   for (const declaration of latestFirst) {
-    const metric = indexManifest(declaration.manifest).get(source)?.get(key);
+    const metric = metricOf(declaration.manifest, source, key);
     if (metric !== undefined) return metric;
   }
   return undefined;
@@ -29,7 +33,7 @@ export function exponentsOf(
 ): Map<string, number> {
   const exponents = new Map<string, number>();
   for (const declaration of declarations) {
-    const metric = indexManifest(declaration.manifest).get(source)?.get(key);
+    const metric = metricOf(declaration.manifest, source, key);
     if (metric === undefined) continue;
     exponents.set(declaration.hash, metric.kind === "state" ? 0 : metric.exponent);
   }

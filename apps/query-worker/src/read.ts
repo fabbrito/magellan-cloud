@@ -86,14 +86,18 @@ export function receiptsSince(db: Db, deviceId: string, sinceMs: number) {
     .limit(receiptsMax);
 }
 
+export interface SampleQuery {
+  deviceId: string;
+  source: string;
+  key: string;
+  fromMs: number;
+  toMs: number;
+}
+
 // One metric out of each reading's JSON. The key pattern admits `.`, so the path quotes it; it
 // admits no `"`, so the quoting cannot be broken out of.
-export function metricSamples(
-  db: Db,
-  query: { deviceId: string; source: string; metric: string; fromMs: number; toMs: number },
-  limit: number,
-) {
-  const value = sql<number | null>`json_extract(${readings.values}, ${`$."${query.metric}"`})`;
+export function metricSamples(db: Db, query: SampleQuery, limit: number) {
+  const value = sql<number | null>`json_extract(${readings.values}, ${`$."${query.key}"`})`;
   return db
     .select({ ts: readings.ts, manifestHash: readings.manifestHash, value })
     .from(readings)

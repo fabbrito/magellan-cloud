@@ -1,3 +1,5 @@
+import { pairs } from "./pairs.ts";
+
 // What a chart draws, from one metric's readings. Pure: the rows come in resolved, each value beside
 // the exponent of the manifest it was read under, so a metric re-scaled mid-range charts each value
 // by its own (docs/adr/0002-integer-values.md).
@@ -45,37 +47,29 @@ export function gaugePoints(samples: Sample[]): Point[] {
   return samples.map((sample) => ({ ts: sample.ts, value: scale(sample.value, sample.exponent) }));
 }
 
-// Any decrease is a reset, declared or not: the delta across one is the value after it, which is
-// what accrued since (docs/adr/0005-the-device-owns-meaning.md). Under one exponent the difference
-// is taken in integers and scaled once, so a delta is as exact as the values.
-function delta(previous: Sample, current: Sample): number {
-  if (previous.exponent === current.exponent) {
-    if (current.value >= previous.value) {
-      return scale(current.value - previous.value, current.exponent);
-    }
-    return scale(current.value, current.exponent);
-  }
+// Any decrease is a reset, declared or not (docs/adr/0005-the-device-owns-meaning.md). Under one
+// exponent the integers compare, exact past what scaling keeps.
+function resets(previous: Sample, current: Sample): boolean {
+  if (previous.exponent === current.exponent) return current.value < previous.value;
+  return scale(current.value, current.exponent) < scale(previous.value, previous.exponent);
+}
 
-  const before = scale(previous.value, previous.exponent);
-  const after = scale(current.value, current.exponent);
-  if (after >= before) return after - before;
-  return after;
+// The delta across a reset is the value after it: what accrued since. Under one exponent the
+// difference is taken in integers and scaled once, so a delta is as exact as the values.
+function delta(previous: Sample, current: Sample): number {
+  if (resets(previous, current)) return scale(current.value, current.exponent);
+  if (previous.exponent === current.exponent) {
+    return scale(current.value - previous.value, current.exponent);
+  }
+  return scale(current.value, current.exponent) - scale(previous.value, previous.exponent);
 }
 
 export function counterIntervals(samples: Sample[]): Interval[] {
-  const intervals: Interval[] = [];
-  for (let index = 1; index < samples.length; index += 1) {
-    const previous = samples[index - 1];
-    const current = samples[index];
-    if (previous === undefined || current === undefined) throw new Error("index past samples");
-
-    intervals.push({ start: previous.ts, end: current.ts, delta: delta(previous, current) });
-  }
-  return intervals;
-}
-
-function decreases(previous: Sample, current: Sample): boolean {
-  return scale(current.value, current.exponent) < scale(previous.value, previous.exponent);
+  return pairs(samples).map(([previous, current]) => ({
+    start: previous.ts,
+    end: current.ts,
+    delta: delta(previous, current),
+  }));
 }
 
 export function counterSegments(samples: Sample[]): Segment[] {
@@ -86,7 +80,7 @@ export function counterSegments(samples: Sample[]): Segment[] {
 
     const next = samples[index + 1];
     const last = next === undefined;
-    if (last || decreases(current, next)) {
+    if (last || resets(current, next)) {
       segments.push({ end: current.ts, total: scale(current.value, current.exponent) });
     }
   }
