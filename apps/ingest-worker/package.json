@@ -7,10 +7,9 @@
     "./document": "./src/document.ts"
   },
   "scripts": {
-    "dev": "wrangler dev",
-    "dev:migrate": "wrangler d1 migrations apply DB --local",
-    "dev:exec": "wrangler d1 execute DB --local",
-    "dev:reset": "rm -rf .wrangler",
+    "dev": "wrangler dev --persist-to ../../.wrangler/state",
+    "dev:migrate": "wrangler d1 migrations apply DB --local --persist-to ../../.wrangler/state",
+    "dev:exec": "wrangler d1 execute DB --local --persist-to ../../.wrangler/state",
     "cf-typegen": "wrangler types",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },

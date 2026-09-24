@@ -10,8 +10,8 @@ device half is `magellan-device`; the two meet only at the contract.
 
 ## Status
 
-The ingest worker takes a manifest and a batch against D1 and R2, in local workerd. Nothing is
-deployed, and the other workspaces are still scaffold.
+The ingest worker is live and takes a device's manifests and batches. The query worker answers
+devices, series and layouts over the same D1; the dashboard and the jobs worker are still scaffold.
 
 ## Setup
 
@@ -28,15 +28,16 @@ the account.
 ## Running it
 
 ```bash
-bun run dev                        # local migrations, then the worker on 127.0.0.1:8787
+bun run dev                        # local migrations, then ingest on :8787 and query on :8788
+bun run dev:ingest                 # or one of them alone: dev:ingest, dev:query
 bun run mint <id> <description>    # a token, and the statement that registers it
 bun run dev:reset                  # drop the local store; the next dev rebuilds it
 ```
 
-`dev` serves the ingest worker in workerd against a local D1 and R2 under
-`apps/ingest-worker/.wrangler`. That store persists across restarts, registered devices included,
-and `dev:reset` is the only thing that clears it. It is not the store the tests use — they boot
-their own and throw it away, so a test run leaves it untouched.
+`dev` serves both workers in workerd against one local D1 and R2 under `.wrangler/state` at the
+root, so the query worker reads what ingest commits. That store persists across restarts, registered
+devices included, and `dev:reset` is the only thing that clears it. It is not the store the tests
+use — they boot their own and throw it away, so a test run leaves it untouched.
 
 ### Against the device
 
@@ -59,10 +60,15 @@ no `wrangler login` is left for anything else to use. `make` lists them:
 
 ```bash
 make bootstrap                               # D1 and R2; the D1 id goes in cloudflare.prod.env
-make migrate deploy
+make migrate deploy                          # migrate first: a new ingest writes the new shape
 make register ID=<id> DESCRIPTION='<text>'   # a device token, printed once
-make probe                                   # or probe-ceiling, with `make tail` beside it
+make probe                                   # or probe-ceiling, with `make tail WORKER=ingest` beside it
+make sql SQL='<statement>'                   # the live D1; `$` in a JSON path reaches it intact
 ```
+
+The query worker has no auth of its own: Cloudflare Access guards it, set on the worker itself —
+Workers & Pages > `magellan-query` > Access > All traffic. Until that is on, its workers.dev URL is
+public, so it is the step right after the first deploy.
 
 ## Layout
 

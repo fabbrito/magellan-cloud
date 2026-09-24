@@ -6,6 +6,7 @@ export { indexManifest } from "./manifest.ts";
 export {
   batchSchema,
   heartbeatSchema,
+  keySchema,
   manifestSchema,
   metricSchema,
   readingSchema,

@@ -17,7 +17,10 @@ import { LIMITS } from "./limits.ts";
 
 // Pattern-bound ASCII is what keeps a manifest readable in both languages. Every numeric bound is
 // interpolated from LIMITS so the reader and the parser cannot disagree.
-const keyPattern = /^[A-Za-z0-9_][A-Za-z0-9_.:-]*$/;
+//
+// Keys are URL-unreserved characters only, so a source id or metric key is a path segment as is,
+// never escaped. The first character is never `.`, so no key is a `.` or `..` segment.
+const keyPattern = /^[A-Za-z0-9_][A-Za-z0-9_.-]*$/;
 const stateCodePattern = new RegExp(`^\\d{1,${LIMITS.stateCodeDigitsMax}}$`);
 const manifestHashPattern = new RegExp(`^[0-9a-f]{${LIMITS.manifestHashHexLength}}$`);
 // Leading zeros would spell one seq two ways, and a gap would then read as a loss the device never
@@ -25,7 +28,7 @@ const manifestHashPattern = new RegExp(`^[0-9a-f]{${LIMITS.manifestHashHexLength
 const seqPattern = new RegExp(`^(0|[1-9]\\d{0,${LIMITS.seqDigitsMax - 1}})$`);
 const bootIdPattern = new RegExp(`^[0-9a-f]{${LIMITS.bootIdLengthMin},${LIMITS.bootIdLengthMax}}$`);
 
-const keySchema = z.string().min(1).max(LIMITS.keyLengthMax).regex(keyPattern);
+export const keySchema = z.string().min(1).max(LIMITS.keyLengthMax).regex(keyPattern);
 const unitSchema = z.string().min(1).max(LIMITS.unitLengthMax);
 
 const stateLabelsSchema = z

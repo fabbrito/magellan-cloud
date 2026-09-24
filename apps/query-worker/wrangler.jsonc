@@ -1,0 +1,28 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "magellan-query",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-19",
+  // Beside ingest in `bun run dev`: its own port, and its own inspector, which both would otherwise
+  // race for.
+  "dev": {
+    "port": 8788,
+    "inspector_port": 9230,
+  },
+  "observability": {
+    "enabled": true,
+    // The top-level flag does not reach traces; unset here they are silently off.
+    "traces": {
+      "enabled": true,
+    },
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "magellan",
+      // Local dev and tests key D1 by binding name. The live id is never committed.
+      "database_id": "local",
+      "migrations_dir": "../../packages/db/migrations",
+    },
+  ],
+}

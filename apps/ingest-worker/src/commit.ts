@@ -5,7 +5,7 @@ import { heartbeats, readings, type Db } from "@magellan/db";
 // answer `too many SQL variables`, which a full batch reaches and nothing smaller does — see
 // test/ceiling.test.ts, which is what pins this.
 const boundParametersMax = 100;
-const readingColumns = 4;
+const readingColumns = 5;
 const readingsPerInsertMax = Math.floor(boundParametersMax / readingColumns);
 
 function chunk<Row>(rows: Row[], size: number): Row[][] {
@@ -45,6 +45,7 @@ export async function commitBatch(
     deviceId,
     source: reading.source,
     ts: reading.ts,
+    manifestHash: batch.manifest_hash,
     values: reading.values,
   }));
 

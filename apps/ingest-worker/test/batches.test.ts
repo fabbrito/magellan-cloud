@@ -76,10 +76,17 @@ it("commits a row per reading and the batch receipt", async () => {
   expect(
     await query(
       server,
-      "SELECT source, ts, `values` FROM readings WHERE device_id = ?",
+      "SELECT source, ts, manifest_hash, `values` FROM readings WHERE device_id = ?",
       "device-04",
     ),
-  ).toEqual([{ source: "inlet", ts: 1_767_225_600_000, values: '{"temperature":213}' }]);
+  ).toEqual([
+    {
+      source: "inlet",
+      ts: 1_767_225_600_000,
+      manifest_hash: manifestHash,
+      values: '{"temperature":213}',
+    },
+  ]);
   expect(
     await query(
       server,
