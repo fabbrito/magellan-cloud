@@ -114,6 +114,16 @@ describe("manifestSchema", () => {
     expect(manifestSchema.safeParse(scaled).success).toBe(false);
   });
 
+  it("rejects a key a URL path would need to escape", () => {
+    const colon = { sources: [{ id: "source_1", metrics: [{ ...gauge, key: "power:w" }] }] };
+    expect(manifestSchema.safeParse(colon).success).toBe(false);
+  });
+
+  it("accepts a key of URL-unreserved characters", () => {
+    const dotted = { sources: [{ id: "source-1", metrics: [{ ...gauge, key: "power.w_1" }] }] };
+    expect(manifestSchema.safeParse(dotted).success).toBe(true);
+  });
+
   it("rejects a key past the length bound", () => {
     const long = { sources: [{ id: "source_1", metrics: [{ ...gauge, key: "m".repeat(65) }] }] };
     expect(manifestSchema.safeParse(long).success).toBe(false);
