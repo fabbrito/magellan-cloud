@@ -3,8 +3,11 @@
   "name": "magellan-query",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-19",
+  // Beside ingest in `bun run dev`: its own port, and its own inspector, which both would otherwise
+  // race for.
   "dev": {
     "port": 8788,
+    "inspector_port": 9230,
   },
   "observability": {
     "enabled": true,

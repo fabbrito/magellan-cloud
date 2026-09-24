@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "wrangler dev --persist-to ../../.wrangler/state",
     "cf-typegen": "wrangler types",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
