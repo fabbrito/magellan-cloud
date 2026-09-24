@@ -39,8 +39,13 @@ device-side arrangement (`magellan-device` ADR 10).
 | **Measured**         | When the device read the values — the reading's timestamp                                                        |
 | **Received**         | When the cloud committed the batch. Routinely later than **measured**                                            |
 
-**Metric `kind`** is one of `gauge`, `counter`, `state`. A gauge is a value in time, a counter only
-increases, a state is a discrete condition. The kind decides which rollups mean anything.
+**Metric `kind`** is one of `gauge`, `counter`, `state`. A gauge is a value in time, a counter is
+monotonic between resets, a state is a discrete condition. The kind decides which rollups mean
+anything.
+
+**Reset** — a counter's value decreasing. Any decrease is one, declared or not: a counter restarting
+at midnight, on reboot or on wrap reads the same. **`resets`** is a counter's declared cadence
+(`daily`), never its boundary; a delta across a reset is the value after it.
 
 **Caution — a "value" is the integer on the wire, never the physical quantity.** The quantity is a
 value and its metric's exponent together; naming the value alone makes a reading look like a
@@ -68,6 +73,12 @@ time or request latency. Those are logs and live elsewhere.
 | **Plant**         | A cloud-side registry grouping between site and device, holding a facility   |
 | **Device token**  | One revocable credential per device; the cloud stores only its hash          |
 | **Silent device** | A device whose last heartbeat is older than its expected cadence             |
+| **Layout**        | A named, ordered set of cards for one device, kept by the cloud              |
+| **Card**          | One metric of one source in a layout, shown as a `tile` or a `chart`         |
+
+**Caution — a layout is presentation, a manifest is meaning.** A layout names metric keys and how to
+show them; what a key means is only ever read from the manifest. A card is never called a panel —
+that word is the device's.
 
 **Caution — "source" and "manifest" are versioned differently.** A source has a stable `id` within a
 device; the manifest that describes it changes. A batch names the manifest hash it was read under,

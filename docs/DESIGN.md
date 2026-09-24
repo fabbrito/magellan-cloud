@@ -51,7 +51,9 @@ with backoff. A batch the cloud refuses to commit is a batch the device still ho
 
 **Only the archive and the contract are durable.** R2 holds every raw batch and every manifest
 unchanged, and the contract is what the other repository reads. D1 is a derived index over the
-archive and can be rebuilt from it, so its columns are engineering, not this document.
+archive and can be rebuilt from it, so its columns are engineering, not this document. Layouts are
+the exception: presentation the maintainer writes, held only in D1. Losing one loses no reading,
+only the work of rebuilding it by hand.
 
 ## 3. Layers
 
@@ -85,6 +87,9 @@ flowchart TB
 - **A generic collector.** The cloud is device- and source-agnostic by construction: manifests
   declare the shape, and the dashboard renders charts from metric descriptors rather than from
   hardcoded fields.
+- **The device owns meaning, the cloud owns presentation.** A manifest says what a metric is — kind,
+  exponent, unit, whether a counter resets — never how it is shown. Which metrics a dashboard shows,
+  and how, is a layout the cloud keeps (`docs/adr/0005-the-device-owns-meaning.md`).
 - **Effectively-once, never exactly-once.** Exactly-once does not exist end to end. At-least-once
   delivery plus idempotent commitment is what is built.
 - **One deployable per worker**, separate for cost and blast radius, not for autonomy. One D1
@@ -157,9 +162,12 @@ bytes are already spent.
 **Manifest** — the device's sources and their metrics, with `kind` (`gauge`, `counter`, `state`), an
 `exponent` for anything measured and an optional `unit`. A state has neither, its value being a
 code. The exponent is the metric's, so re-scaling one is a new manifest
-(`docs/adr/0002-integer-values.md`). The hash is SHA-256 over the manifest's bytes as sent; the
-cloud recomputes it from the body it receives and answers the PUT with the accepted hash in `ETag`,
-so the device asserts its own matches rather than trusting it.
+(`docs/adr/0002-integer-values.md`). A counter is monotonic between resets and any decrease is a
+reset; one that resets on a cadence declares `resets: "daily"`. The cadence is all it says — the
+cloud finds each reset by the decrease, so no boundary or time zone crosses the wire. The hash is
+SHA-256 over the manifest's bytes as sent; the cloud recomputes it from the body it receives and
+answers the PUT with the accepted hash in `ETag`, so the device asserts its own matches rather than
+trusting it.
 
 **Batch** — `manifest_hash`, a `boot_id`, a `seq`, an ordered `readings[]`, and a `heartbeat`
 carrying uptime, buffer depth, battery percentage, signal percentage and firmware version. `boot_id`
@@ -196,11 +204,14 @@ never raised.
 
 - **ingest-worker** — device-facing. Verifies the token, validates against the contract, stores the
   manifest, commits readings, writes the raw batch to R2.
-- **query-worker** — dashboard-facing, behind Cloudflare Access. Device list, health, and
-  time-series queries over D1.
+- **query-worker** — dashboard-facing, behind Cloudflare Access. Serves the dashboard and its API
+  from one origin: device list, health, time-series queries over D1, and layouts, the one thing it
+  writes.
 - **jobs-worker** — cron. Hourly and daily rollups, D1 retention, silent-device detection.
-- **dashboard** — static SPA. Renders charts generically from metric descriptors.
-- **D1** — the registry (devices, manifests, metrics), recent readings, heartbeats, rollups.
+- **dashboard** — static SPA. Renders a device's layout, each card resolved against the metric
+  descriptors of the current manifest.
+- **D1** — the registry (devices, manifests, metrics), recent readings, heartbeats, rollups,
+  layouts.
 - **R2** — every raw batch and every manifest, unchanged. The archive D1 can be rebuilt from.
 
 Readings are one row per poll, with the minimum indexes the queries need — indexes cost writes on
