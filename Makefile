@@ -5,9 +5,16 @@
 
 worker := apps/ingest-worker
 config := $(worker)/wrangler.prod.jsonc
-wrangler := cd $(worker) && bunx wrangler
 
 need = $(if $($(1)),,$(error $(1) is unset))
+
+# The token lives in one child's env, never the shell's; a failed lookup stops
+# the recipe rather than falling back to a stored login.
+auth = $(call need,CLOUDFLARE_TOKEN_CMD)$(call need,CLOUDFLARE_ACCOUNT_ID)token=$$($(CLOUDFLARE_TOKEN_CMD)) && CLOUDFLARE_API_TOKEN=$$token
+wrangler = cd $(worker) && $(auth) bun x wrangler
+
+# Names the account, so the token needs no scope to look it up.
+export CLOUDFLARE_ACCOUNT_ID
 
 # Through the environment, so quotes in the SQL reach wrangler intact.
 export SQL
@@ -50,7 +57,7 @@ takedown: $(config) ## delete the worker - D1 and R2 stay
 register: $(config) ## mint and register a token - ID=, DESCRIPTION=
 	$(call need,ID)
 	$(call need,DESCRIPTION)
-	scripts/register.sh $(ID) '$(DESCRIPTION)'
+	$(auth) scripts/register.sh $(ID) '$(DESCRIPTION)'
 
 ##@ Observe
 # JSON carries each invocation's CPU time. *.prod.* keeps the log out of git.

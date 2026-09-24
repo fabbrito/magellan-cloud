@@ -53,8 +53,9 @@ another host wants a tunnel to this one rather than a LAN address.
 
 ## Deploying
 
-The maintainer's. After `wrangler login`, copy `cloudflare.prod.env.example` to
-`cloudflare.prod.env` — git ignores it — and fill it as the targets ask. `make` lists them:
+The maintainer's. Copy `cloudflare.prod.env.example` to `cloudflare.prod.env` — git ignores it — and
+fill it as the targets ask. Each target fetches a scoped API token from `CLOUDFLARE_TOKEN_CMD`, so
+no `wrangler login` is left for anything else to use. `make` lists them:
 
 ```bash
 make bootstrap                               # D1 and R2; the D1 id goes in cloudflare.prod.env
