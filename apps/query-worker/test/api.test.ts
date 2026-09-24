@@ -195,6 +195,24 @@ describe("series", () => {
     expect((await server.fetch(seriesPath("device-07", "source_1", "voltage"))).status).toBe(404);
   });
 
+  it("reads the last day when the window is left out", async () => {
+    await sendDays("device-12");
+    const response = await server.fetch(
+      "/api/v1/devices/device-12/sources/source_1/metrics/power/series",
+    );
+
+    expect(response.status).toBe(200);
+  });
+
+  it("refuses a window with one bound", async () => {
+    const response = await server.fetch(
+      seriesPath("nobody", "source_1", "power", `from=${firstTs}`),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ detail: expect.stringContaining("together") });
+  });
+
   it("refuses a range that ends before it starts", async () => {
     const path = seriesPath("device-07", "source_1", "power", `from=${lastTs}&to=${firstTs}`);
     const response = await server.fetch(path);

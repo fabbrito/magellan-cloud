@@ -10,7 +10,7 @@ import type { DeviceDetail, DeviceSummary } from "./api.ts";
 import { seqGaps } from "./health.ts";
 import { layoutBodySchema, layoutNameSchema, undeclaredCards } from "./layout.ts";
 import { detailOf, problem } from "./problem.ts";
-import { readSeries, seriesQuerySchema } from "./query.ts";
+import { readSeries, seriesQuerySchema, windowOf } from "./query.ts";
 import {
   currentManifest,
   deviceOf,
@@ -56,7 +56,7 @@ const seriesQuery = validated("query", seriesQuerySchema);
 const layoutBody = validated("json", layoutBodySchema);
 
 // Every route under a device answers 404 for one never registered, before it reads anything else.
-// Runs after the param validator, so a malformed id is a 400 first.
+// Runs after the validators, so a malformed request is a 400 first.
 const knownDevice = createMiddleware<Worker>(async (context, next) => {
   const device = await deviceOf(getDb(context.env.DB), context.req.param("id") ?? "");
   if (device === undefined) return problem(context, 404, "No such device");
@@ -101,11 +101,11 @@ app.get("/devices/:id", deviceParam, knownDevice, async (context) => {
 app.get(
   "/devices/:id/sources/:source/metrics/:key/series",
   seriesParam,
-  knownDevice,
   seriesQuery,
+  knownDevice,
   async (context) => {
     const { id, source, key } = context.req.valid("param");
-    const window = context.req.valid("query");
+    const window = windowOf(context.req.valid("query"), Date.now());
 
     const result = await readSeries(getDb(context.env.DB), {
       deviceId: id,
@@ -133,7 +133,7 @@ app.get("/devices/:id/layouts/:name", layoutParam, knownDevice, async (context) 
 });
 
 // 201 when the name is new, 204 when it replaces: the same PUT, twice, lands one layout.
-app.put("/devices/:id/layouts/:name", layoutParam, knownDevice, layoutBody, async (context) => {
+app.put("/devices/:id/layouts/:name", layoutParam, layoutBody, knownDevice, async (context) => {
   const { id, name } = context.req.valid("param");
   const body = context.req.valid("json");
   const db = getDb(context.env.DB);

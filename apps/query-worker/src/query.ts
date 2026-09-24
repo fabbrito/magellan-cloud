@@ -15,8 +15,9 @@ import {
 
 // The source and metric are the resource, in the path; only the window is a filter.
 
+const dayMs = 24 * 60 * 60 * 1000;
 // A month of one reading every five minutes is ~9000 rows; a denser range is narrowed, not paged.
-const windowMsMax = 31 * 24 * 60 * 60 * 1000;
+const windowMsMax = 31 * dayMs;
 const samplesMax = 10_000;
 // D1 binds at most 100 parameters a statement, and the manifest read binds each hash plus the id.
 const manifestsPerRangeMax = 90;
@@ -26,11 +27,33 @@ const msSchema = z
   .regex(/^\d{1,15}$/)
   .transform(Number);
 
+// Both bounds or neither: half a window would be a guess. Neither is the last day, resolved against
+// the clock by `windowOf`, so the schema stays pure.
 export const seriesQuerySchema = z
-  .object({ from: msSchema, to: msSchema })
-  .refine((query) => query.to > query.from, { message: "to is after from" })
-  .refine((query) => query.to - query.from <= windowMsMax, { message: "range past a month" })
-  .transform((query) => ({ fromMs: query.from, toMs: query.to }));
+  .object({ from: msSchema.optional(), to: msSchema.optional() })
+  .refine((query) => (query.from === undefined) === (query.to === undefined), {
+    message: "from and to come together",
+  })
+  .refine((query) => query.from === undefined || query.to === undefined || query.to > query.from, {
+    message: "to is after from",
+  })
+  .refine(
+    (query) =>
+      query.from === undefined || query.to === undefined || query.to - query.from <= windowMsMax,
+    { message: "range past a month" },
+  );
+
+export interface Window {
+  fromMs: number;
+  toMs: number;
+}
+
+export function windowOf(query: z.infer<typeof seriesQuerySchema>, nowMs: number): Window {
+  if (query.from === undefined || query.to === undefined) {
+    return { fromMs: nowMs - dayMs, toMs: nowMs };
+  }
+  return { fromMs: query.from, toMs: query.to };
+}
 
 export type SeriesResult =
   | { ok: true; series: Series }
