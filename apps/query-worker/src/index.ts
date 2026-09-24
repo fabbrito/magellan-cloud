@@ -1,3 +1,6 @@
-export * from "@magellan/contract";
-export * from "@magellan/db";
-export * from "@magellan/shared";
+// Routes land with the API; until then nothing is served.
+export default {
+  fetch(): Response {
+    return new Response(null, { status: 404 });
+  },
+};

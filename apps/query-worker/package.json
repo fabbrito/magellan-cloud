@@ -4,11 +4,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "cf-typegen": "wrangler types",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@magellan/contract": "workspace:*",
     "@magellan/db": "workspace:*",
-    "@magellan/shared": "workspace:*"
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.8",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@magellan/simulator": "workspace:*",
+    "@types/node": "^26.6.2"
   }
 }
