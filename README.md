@@ -62,7 +62,7 @@ no `wrangler login` is left for anything else to use. `make` lists them:
 make bootstrap                               # D1 and R2; the D1 id goes in cloudflare.prod.env
 make migrate deploy                          # migrate first: a new ingest writes the new shape
 make register ID=<id> DESCRIPTION='<text>'   # a device token, printed once
-make probe                                   # or probe-ceiling, with `make tail` beside it
+make probe                                   # or probe-ceiling, with `make tail WORKER=ingest` beside it
 make sql SQL='<statement>'                   # the live D1; `$` in a JSON path reaches it intact
 ```
 
