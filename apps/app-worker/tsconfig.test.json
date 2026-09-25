@@ -3,5 +3,5 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["src/**/*.test.ts", "test/**/*.ts", "worker-configuration.d.ts"]
+  "include": ["src/server/**/*.test.ts", "test/**/*.ts", "worker-configuration.d.ts"]
 }

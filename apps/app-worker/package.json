@@ -8,7 +8,7 @@
     "build": "vite build",
     "ui:add": "TS_NODE_PROJECT=tsconfig.client.json shadcn add",
     "cf-typegen": "wrangler types",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json && tsc --noEmit -p tsconfig.test.json"
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.client.json && tsc --noEmit -p tsconfig.client.test.json && tsc --noEmit -p tsconfig.test.json"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -35,10 +35,13 @@
     "@magellan/shared": "workspace:*",
     "@magellan/simulator": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^26.6.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
+    "happy-dom": "^20.14.5",
     "tailwindcss": "^4.3.3",
     "vite": "^8.3.0"
   }

@@ -3,7 +3,7 @@ import type { Manifest, Metric } from "@magellan/contract";
 import type { Card } from "./layout.ts";
 import type { Interval, Point, Run, Segment } from "./series.ts";
 
-export type { Card, Interval, Point, Run, Segment };
+export type { Card, Interval, Manifest, Metric, Point, Run, Segment };
 
 // A refusal's body, RFC 9457. Defined beside the bodies a client reads, not with the responder that
 // writes it, so the client imports problem bodies without the HTTP layer.

@@ -11,8 +11,8 @@ device half is `magellan-device`; the two meet only at the contract.
 ## Status
 
 The ingest worker is live and takes a device's manifests and batches. The app worker answers
-devices, series and layouts over the same D1 and will serve the dashboard from the same origin; the
-dashboard is not built yet and the jobs worker is still scaffold.
+devices, series and layouts over the same D1 and serves the dashboard from the same origin: a
+device's health, and its layouts of tiles and charts. The jobs worker is still scaffold.
 
 ## Setup
 

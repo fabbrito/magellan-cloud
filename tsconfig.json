@@ -13,6 +13,7 @@
     { "path": "./apps/ingest-worker/tsconfig.test.json" },
     { "path": "./apps/app-worker" },
     { "path": "./apps/app-worker/tsconfig.client.json" },
+    { "path": "./apps/app-worker/tsconfig.client.test.json" },
     { "path": "./apps/app-worker/tsconfig.test.json" },
     { "path": "./apps/jobs-worker" },
     { "path": "./tools/emit-openapi" },
