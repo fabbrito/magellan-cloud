@@ -4,7 +4,7 @@ import { daysManifest, daysReadings, energyStep } from "@magellan/simulator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { TestHarness } from "wrangler";
 
-import { bootDevice, getJson, putLayout, registerDevice, startCloud } from "./harness.ts";
+import { bootDevice, getJson, registerDevice, startCloud } from "./harness.ts";
 
 let server: TestHarness;
 
@@ -80,9 +80,6 @@ describe("devices", () => {
 
   it.each([
     ["GET", "/api/v1/devices/nobody"],
-    ["GET", "/api/v1/devices/nobody/layouts"],
-    ["GET", "/api/v1/devices/nobody/layouts/Today"],
-    ["DELETE", "/api/v1/devices/nobody/layouts/Today"],
     ["GET", "/api/v1/devices/nobody/sources/source_1/metrics/power/series?from=0&to=1"],
   ])("answers 404 for a device never registered: %s %s", async (method, path) => {
     const response = await server.fetch(path, { method });
@@ -94,14 +91,6 @@ describe("devices", () => {
       status: 404,
       title: "No such device",
     });
-  });
-
-  it("answers 404 for a layout saved to a device never registered", async () => {
-    const response = await putLayout(server, "nobody", "Today", {
-      cards: [{ source: "source_1", metric: "power", as: "tile" }],
-    });
-
-    expect(response.status).toBe(404);
   });
 });
 
@@ -219,62 +208,6 @@ describe("series", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ detail: expect.stringContaining("to is after") });
-  });
-});
-
-describe("layouts", () => {
-  const card = { source: "source_1", metric: "energy_today", as: "chart" };
-
-  it("keeps a layout whose cards the manifest declares", async () => {
-    await sendDays("device-08");
-
-    const saved = await putLayout(server, "device-08", "Today", { cards: [card] });
-    const layouts = await getJson<unknown[]>(server, "/api/v1/devices/device-08/layouts");
-
-    expect(saved.status).toBe(201);
-    expect(layouts).toEqual([{ name: "Today", cards: [card], updated_at: expect.any(Number) }]);
-  });
-
-  it("refuses a card the current manifest does not declare, naming it", async () => {
-    await sendDays("device-09");
-    const undeclared = { source: "source_1", metric: "voltage", as: "tile" };
-
-    const refused = await putLayout(server, "device-09", "Today", { cards: [card, undeclared] });
-
-    expect(refused.status).toBe(422);
-    expect(await refused.json()).toMatchObject({ status: 422, undeclared: [undeclared] });
-  });
-
-  it("replaces a layout saved under the same name, and deletes it", async () => {
-    await sendDays("device-10");
-    await putLayout(server, "device-10", "Today", { cards: [card] });
-    const tile = { ...card, as: "tile" };
-
-    const replacedStatus = (await putLayout(server, "device-10", "Today", { cards: [tile] }))
-      .status;
-    const replaced = await getJson<{ cards: unknown[] }[]>(
-      server,
-      "/api/v1/devices/device-10/layouts",
-    );
-    const single = await getJson<{ cards: unknown[] }>(
-      server,
-      "/api/v1/devices/device-10/layouts/Today",
-    );
-    await server.fetch("/api/v1/devices/device-10/layouts/Today", { method: "DELETE" });
-    const deleted = await getJson<unknown[]>(server, "/api/v1/devices/device-10/layouts");
-
-    expect(replacedStatus).toBe(204);
-    expect(replaced.map((layout) => layout.cards)).toEqual([[tile]]);
-    expect(single.cards).toEqual([tile]);
-    expect(deleted).toEqual([]);
-  });
-
-  it("refuses a name a path would need to escape", async () => {
-    await sendDays("device-11");
-
-    const refused = await putLayout(server, "device-11", "Main view", { cards: [card] });
-
-    expect(refused.status).toBe(400);
   });
 });
 

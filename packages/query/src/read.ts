@@ -1,14 +1,12 @@
 import { manifestSchema } from "@magellan/contract";
-import { devices, heartbeats, layouts, manifests, readings, type Db } from "@magellan/db";
+import { devices, heartbeats, manifests, readings, type Db } from "@magellan/db";
 import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 
-import type { Heartbeat, Layout } from "./api.ts";
-import { layoutBodySchema } from "./layout.ts";
+import type { Heartbeat } from "./api.ts";
 import type { Declaration } from "./metric.ts";
 
 // Every read here is bounded where it runs: the limit a caller trusts is the one in the query.
 export const devicesMax = 100;
-export const layoutsPerDeviceMax = 16;
 // A day of heartbeats is ~300 at a five-minute sweep; this leaves room for a device catching up.
 export const receiptsMax = 2000;
 
@@ -127,23 +125,4 @@ export function metricSamples(db: Db, query: SampleQuery, limit: number) {
     )
     .orderBy(asc(readings.ts))
     .limit(limit);
-}
-
-// Throws on a body this worker wrote and cannot read: a bug here, never the caller's.
-function layoutOf(row: { name: string; body: string; updatedAt: number }): Layout {
-  return {
-    name: row.name,
-    cards: layoutBodySchema.parse(JSON.parse(row.body)).cards,
-    updated_at: row.updatedAt,
-  };
-}
-
-export async function layoutsOf(db: Db, deviceId: string): Promise<Layout[]> {
-  const rows = await db
-    .select({ name: layouts.name, body: layouts.body, updatedAt: layouts.updatedAt })
-    .from(layouts)
-    .where(eq(layouts.deviceId, deviceId))
-    .orderBy(asc(layouts.name))
-    .limit(layoutsPerDeviceMax);
-  return rows.map(layoutOf);
 }

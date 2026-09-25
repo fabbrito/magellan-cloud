@@ -1,12 +1,10 @@
 import type { Manifest, Metric } from "@magellan/contract";
 
-import type { Card } from "./layout.ts";
 import type { Interval, Point, Run, Segment } from "./series.ts";
 
-export type { Card, Interval, Point, Run, Segment };
+export type { Interval, Point, Run, Segment };
 
-// A refusal's body, RFC 9457. Defined beside the bodies a client reads, not with the responder that
-// writes it, so the client imports problem bodies without the HTTP layer.
+// A refusal's body, RFC 9457.
 export interface Problem {
   type: "about:blank";
   status: number;
@@ -14,9 +12,8 @@ export interface Problem {
   detail?: string;
 }
 
-// The bodies the API answers with, and the dashboard reads. Types only, free of the Workers
-// runtime and D1, so a browser build imports them without either. The routes hold theirs to these
-// with `satisfies`, so the two cannot drift.
+// The bodies the API answers with. The routes hold theirs to these with `satisfies`, so the two
+// cannot drift.
 
 export interface DeviceSummary {
   id: string;
@@ -54,10 +51,4 @@ export interface Series {
   // Whether the current manifest still declares it; a dropped metric charts its history.
   declared: boolean;
   data: SeriesData;
-}
-
-export interface Layout {
-  name: string;
-  cards: Card[];
-  updated_at: number;
 }

@@ -1,24 +1,18 @@
 import { keySchema } from "@magellan/contract";
-import { getDb, layouts } from "@magellan/db";
+import { getDb } from "@magellan/db";
 import {
   currentManifest,
   type DeviceDetail,
   type DeviceSummary,
   deviceOf,
   latestHeartbeat,
-  layoutBodySchema,
-  layoutNameSchema,
-  layoutsOf,
-  layoutsPerDeviceMax,
   listDevices,
   readSeries,
   receiptsSince,
   seqGaps,
   seriesQuerySchema,
-  undeclaredCards,
   windowOf,
 } from "@magellan/query";
-import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { validator } from "hono/validator";
@@ -26,11 +20,11 @@ import { z } from "zod";
 
 import { detailOf, problem } from "./problem.ts";
 
-// Dashboard-facing. No auth here: worker-level Cloudflare Access guards every way in — routes,
+// Client-facing. No auth here: worker-level Cloudflare Access guards every way in — routes,
 // workers.dev, previews — and a Worker with static assets never receives `ctx.access`, so there is
 // nothing the worker could check. A stopgap until the platform has its own auth.
 //
-// Versioned though it ships with its only client: the path is what a bookmark or a script keeps.
+// Versioned: the path is what a client keeps.
 type Device = NonNullable<Awaited<ReturnType<typeof deviceOf>>>;
 type Worker = { Bindings: Env; Variables: { device: Device } };
 
@@ -56,9 +50,7 @@ const seriesParam = validated(
   "param",
   z.object({ id: keySchema, source: keySchema, key: keySchema }),
 );
-const layoutParam = validated("param", z.object({ id: keySchema, name: layoutNameSchema }));
 const seriesQuery = validated("query", seriesQuerySchema);
-const layoutBody = validated("json", layoutBodySchema);
 
 // Every route under a device answers 404 for one never registered, before it reads anything else.
 // Runs after the validators, so a malformed request is a 400 first.
@@ -122,57 +114,6 @@ app.get(
     return context.json(result.series);
   },
 );
-
-app.get("/devices/:id/layouts", deviceParam, knownDevice, async (context) => {
-  const { id } = context.req.valid("param");
-  return context.json(await layoutsOf(getDb(context.env.DB), id));
-});
-
-app.get("/devices/:id/layouts/:name", layoutParam, knownDevice, async (context) => {
-  const { id, name } = context.req.valid("param");
-  const saved = await layoutsOf(getDb(context.env.DB), id);
-
-  const layout = saved.find((each) => each.name === name);
-  if (layout === undefined) return problem(context, 404, "No such layout");
-  return context.json(layout);
-});
-
-// 201 when the name is new, 204 when it replaces: the same PUT, twice, lands one layout.
-app.put("/devices/:id/layouts/:name", layoutParam, layoutBody, knownDevice, async (context) => {
-  const { id, name } = context.req.valid("param");
-  const body = context.req.valid("json");
-  const db = getDb(context.env.DB);
-
-  const manifest = await currentManifest(db, id);
-  const undeclared =
-    manifest === undefined ? body.cards : undeclaredCards(manifest.manifest, body.cards);
-  if (undeclared.length > 0) {
-    return problem(context, 422, "Cards name metrics the manifest does not declare", {
-      undeclared,
-    });
-  }
-
-  const existing = await layoutsOf(db, id);
-  const replacing = existing.some((layout) => layout.name === name);
-  if (!replacing && existing.length >= layoutsPerDeviceMax) {
-    return problem(context, 422, `A device keeps at most ${layoutsPerDeviceMax} layouts`);
-  }
-
-  const row = { body: JSON.stringify(body), updatedAt: Date.now() };
-  await db
-    .insert(layouts)
-    .values({ deviceId: id, name, ...row })
-    .onConflictDoUpdate({ target: [layouts.deviceId, layouts.name], set: row });
-  return context.body(null, replacing ? 204 : 201);
-});
-
-app.delete("/devices/:id/layouts/:name", layoutParam, knownDevice, async (context) => {
-  const { id, name } = context.req.valid("param");
-  await getDb(context.env.DB)
-    .delete(layouts)
-    .where(and(eq(layouts.deviceId, id), eq(layouts.name, name)));
-  return context.body(null, 204);
-});
 
 app.notFound((context) => problem(context, 404, "No such route"));
 
