@@ -3,5 +3,9 @@
   "ignorePatterns": ["packages/db/migrations/**", "**/worker-configuration.d.ts"],
   "sortImports": true,
   "proseWrap": "always",
-  "printWidth": 100
+  "printWidth": 100,
+  "sortTailwindcss": {
+    "stylesheet": "apps/app-worker/src/client/index.css",
+    "functions": ["cn", "cva"]
+  }
 }
