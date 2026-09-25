@@ -17,6 +17,9 @@ function samplesOf(values: number[], exponent: number): Sample[] {
   return values.map((value, index) => ({ ts: firstTs + index * periodMs, exponent, value }));
 }
 
+// An hour on, as if the device went quiet.
+const later = (sample: Sample): Sample => ({ ...sample, ts: sample.ts + 12 * periodMs });
+
 // Two days of the simulator's daily counter, at the exponent the device declares.
 const days: Sample[] = daysReadings({ firstTs, periodMs, readingsPerDay: 4, days: 2 }).map(
   (reading) => ({ ts: reading.ts, exponent: -2, value: reading.values["energy_today"] ?? 0 }),
@@ -44,10 +47,13 @@ describe("gaugePoints", () => {
 });
 
 describe("counterIntervals", () => {
-  it("takes one step a reading across a daily reset", () => {
-    const deltas = counterIntervals(days).map((interval) => interval.delta);
+  it("takes one step a reading, with no interval across the daily reset", () => {
+    const intervals = counterIntervals(days);
 
-    expect(deltas).toEqual(Array.from({ length: 7 }, () => scale(energyStep, -2)));
+    expect(intervals.map((interval) => interval.delta)).toEqual(
+      Array.from({ length: 6 }, () => scale(energyStep, -2)),
+    );
+    expect(intervals.map((interval) => interval.end)).not.toContain(firstTs + 4 * periodMs);
   });
 
   it("spans the readings it is between", () => {
@@ -58,8 +64,25 @@ describe("counterIntervals", () => {
 
   it("reads an undeclared decrease as a reset", () => {
     expect(
-      counterIntervals(samplesOf([900, 950, 20], 0)).map((interval) => interval.delta),
-    ).toEqual([50, 20]);
+      counterIntervals(samplesOf([900, 950, 20, 30], 0)).map((interval) => interval.delta),
+    ).toEqual([50, 10]);
+  });
+
+  // Regression: a device up mid-day drew its whole morning as one bar.
+  it("has no interval across a silence in the readings", () => {
+    const resumed = [...samplesOf([0, 5, 10], 0), ...samplesOf([2000, 2005], 0).map(later)];
+
+    expect(counterIntervals(resumed).map((interval) => interval.delta)).toEqual([5, 5, 5]);
+  });
+
+  it("takes a sparse device's usual span for usual, not for a silence", () => {
+    const hourly = [0, 1, 2].map((value) => ({
+      ts: firstTs + value * 12 * periodMs,
+      exponent: 0,
+      value,
+    }));
+
+    expect(counterIntervals(hourly).map((interval) => interval.delta)).toEqual([1, 1]);
   });
 
   it("takes a delta across a re-scale in physical units", () => {
@@ -77,7 +100,7 @@ describe("counterIntervals", () => {
       { ts: firstTs + periodMs, exponent: -2, value: 1040 },
     ];
 
-    expect(counterIntervals(rescaled).map((interval) => interval.delta)).toEqual([10.4]);
+    expect(counterIntervals(rescaled)).toEqual([]);
   });
 
   it("has nothing to say about one reading", () => {

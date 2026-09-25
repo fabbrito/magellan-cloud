@@ -106,7 +106,7 @@ describe("devices", () => {
 });
 
 describe("series", () => {
-  it("takes a daily counter's deltas across the reset and totals each day", async () => {
+  it("takes a daily counter's deltas, none across the reset, and totals each day", async () => {
     await sendDays("device-03");
 
     const series = await getJson<Series>(
@@ -118,7 +118,7 @@ describe("series", () => {
     expect(series.declared).toBe(true);
     expect(series.data).toEqual({
       kind: "counter",
-      intervals: Array.from({ length: 7 }, (_unused, index) => ({
+      intervals: [0, 1, 2, 4, 5, 6].map((index) => ({
         start: firstTs + index * periodMs,
         end: firstTs + (index + 1) * periodMs,
         delta: step,
