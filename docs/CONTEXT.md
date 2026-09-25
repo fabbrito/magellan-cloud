@@ -63,7 +63,7 @@ time or request latency. Those are logs and live elsewhere.
 | Term              | Meaning                                                                      |
 | ----------------- | ---------------------------------------------------------------------------- |
 | **Ingest worker** | Device-facing. Verifies the token, validates, stores, commits, archives      |
-| **App worker**    | Dashboard-facing, behind Cloudflare Access. Devices, health, series, the SPA |
+| **App worker**    | Client-facing read API, behind Cloudflare Access. Devices, health, series    |
 | **Jobs worker**   | Cron. Rollups, D1 retention, silent-device detection                         |
 | **Registry**      | D1's declaration of what exists: devices, manifests, metrics                 |
 | **Rollup**        | Many readings collapsed into one row per bucket per metric                   |
@@ -73,12 +73,10 @@ time or request latency. Those are logs and live elsewhere.
 | **Plant**         | A cloud-side registry grouping between site and device, holding a facility   |
 | **Device token**  | One revocable credential per device; the cloud stores only its hash          |
 | **Silent device** | A device whose last heartbeat is older than its expected cadence             |
-| **Layout**        | A named, ordered set of cards for one device, kept by the cloud              |
-| **Card**          | One metric of one source in a layout, shown as a `tile` or a `chart`         |
+| **Client**        | What reads the read API — a Grafana, a script. Owns presentation             |
 
-**Caution — a layout is presentation, a manifest is meaning.** A layout names metric keys and how to
-show them; what a key means is only ever read from the manifest. A card is never called a panel —
-that word is the device's.
+**Caution — a client is not a tenant.** Many clients read one deployment's devices; none owns them.
+Presentation is the client's, never stored here.
 
 **Caution — "source" and "manifest" are versioned differently.** A source has a stable `id` within a
 device; the manifest that describes it changes. A batch names the manifest hash it was read under,

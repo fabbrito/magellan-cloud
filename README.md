@@ -11,8 +11,8 @@ device half is `magellan-device`; the two meet only at the contract.
 ## Status
 
 The ingest worker is live and takes a device's manifests and batches. The app worker answers
-devices, series and layouts over the same D1 and will serve the dashboard from the same origin; the
-dashboard is not built yet and the jobs worker is still scaffold.
+devices, health and series over the same D1 for clients such as Grafana; the cloud has no UI of its
+own. The jobs worker is still scaffold.
 
 ## Setup
 
@@ -76,10 +76,10 @@ Workers & Pages > `magellan-app` > Access > All traffic. The setting lives on th
 ```
 packages/contract/   the contract: Zod schemas, and openapi.json emitted from the routes
 packages/db/         D1 schema and migrations
-packages/query/      reads, series math and the layout schema; `./api` types for the client
+packages/query/      reads, series math, and the API body types
 packages/shared/     token auth, errors, logging
 apps/ingest-worker/  device-facing
-apps/app-worker/     dashboard-facing, behind Cloudflare Access; the SPA and its API
+apps/app-worker/     client-facing read API, behind Cloudflare Access
 apps/jobs-worker/    cron — rollups, retention, silent-device detection
 tools/simulator/     a fake device that speaks the contract
 tools/emit-openapi/  writes packages/contract/openapi.json from the worker's routes

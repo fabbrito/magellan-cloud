@@ -1,6 +1,6 @@
 # 5. The device owns meaning, the cloud owns presentation
 
-- Status: accepted
+- Status: accepted, amended by 0006 — the client owns presentation, the device declares its zone
 
 ## Chosen
 

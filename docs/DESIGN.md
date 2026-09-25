@@ -51,9 +51,7 @@ with backoff. A batch the cloud refuses to commit is a batch the device still ho
 
 **Only the archive and the contract are durable.** R2 holds every raw batch and every manifest
 unchanged, and the contract is what the other repository reads. D1 is a derived index over the
-archive and can be rebuilt from it, so its columns are engineering, not this document. Layouts are
-the exception: presentation the maintainer writes, held only in D1. Losing one loses no reading,
-only the work of rebuilding it by hand.
+archive and can be rebuilt from it, so its columns are engineering, not this document.
 
 ## 3. Layers
 
@@ -63,7 +61,7 @@ Numbered and named. This repository owns Layers 1–4; `magellan-device` owns La
 flowchart TB
     subgraph cloud["magellan-cloud"]
         direction TB
-        L1["Layer 1 — Dashboard<br/>static SPA"]
+        L1["Layer 1 — Read API<br/>for clients: Grafana, scripts"]
         L2["Layer 2 — Workers<br/>ingest · app · jobs"]
         L3["Layer 3 — Storage<br/>D1 recent + rollups · R2 every raw batch"]
         L4["Layer 4 — Contract<br/>ingest protocol v1 · the seam"]
@@ -85,11 +83,12 @@ flowchart TB
 ## 4. What it is, and isn't
 
 - **A generic collector.** The cloud is device- and source-agnostic by construction: manifests
-  declare the shape, and the dashboard renders charts from metric descriptors rather than from
-  hardcoded fields.
-- **The device owns meaning, the cloud owns presentation.** A manifest says what a metric is — kind,
-  exponent, unit, whether a counter resets — never how it is shown. Which metrics a dashboard shows,
-  and how, is a layout the cloud keeps (`docs/adr/0005-the-device-owns-meaning.md`).
+  declare the shape, and the read API serves metric descriptors rather than hardcoded fields.
+- **The device owns meaning, the client owns presentation.** A manifest says what a metric is —
+  kind, exponent, unit, whether a counter resets — never how it is shown. The cloud reconstructs and
+  serves; which metrics a client shows, and how, is the client's
+  (`docs/adr/0005-the-device-owns-meaning.md`, `docs/adr/0006-the-client-owns-presentation.md`).
+- **No UI.** Each client brings its own dashboard; the cloud neither hosts nor configures one.
 - **Effectively-once, never exactly-once.** Exactly-once does not exist end to end. At-least-once
   delivery plus idempotent commitment is what is built.
 - **One deployable per worker**, separate for cost and blast radius, not for autonomy. One D1
@@ -204,13 +203,10 @@ never raised.
 
 - **ingest-worker** — device-facing. Verifies the token, validates against the contract, stores the
   manifest, commits readings, writes the raw batch to R2.
-- **app-worker** — dashboard-facing, behind Cloudflare Access. Serves the dashboard SPA and its API
-  from one origin: device list, health, time-series queries over D1, and layouts, the one thing it
-  writes. The SPA renders a device's layout, each card resolved against the metric descriptors of
-  the current manifest.
+- **app-worker** — client-facing, behind Cloudflare Access. The read API: device list, health,
+  time-series queries over D1. Writes nothing.
 - **jobs-worker** — cron. Hourly and daily rollups, D1 retention, silent-device detection.
-- **D1** — the registry (devices, manifests, metrics), recent readings, heartbeats, rollups,
-  layouts.
+- **D1** — the registry (devices, manifests, metrics), recent readings, heartbeats, rollups.
 - **R2** — every raw batch and every manifest, unchanged. The archive D1 can be rebuilt from.
 
 Readings are one row per poll, with the minimum indexes the queries need — indexes cost writes on
@@ -250,7 +246,7 @@ flowchart TD
     H --> J[(D1: readings, heartbeat)]
     J --> K[jobs: rollups, retention]
     K --> L[(D1: rollups)]
-    J --> M[app + dashboard]
+    J --> M[app: read API → client]
     L --> M
     M -.->|rebuild if needed| I
 ```
