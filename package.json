@@ -24,7 +24,7 @@
     "dev:reset": "rm -rf .wrangler/state",
     "dev:api": "bun run dev:migrate && bun --cwd=apps/api-worker run dev",
     "db:generate": "bun --cwd=packages/db run db:generate",
-    "mint": "bun --cwd=tools/mint-token run mint",
+    "mint": "bun tools/token/src/index.ts mint",
     "sim": "bun --cwd=tools/simulator run sim",
     "emit": "bun --cwd=tools/emit-openapi run emit && bun format"
   },

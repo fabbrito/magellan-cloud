@@ -69,12 +69,12 @@ takedown: $(configs) ## delete both workers - D1 and R2 stay
 register: $(ingest_config) ## mint and register a device token - ID=, DESCRIPTION=
 	$(call need,ID)
 	$(call need,DESCRIPTION)
-	$(auth) scripts/register.sh $(ID) '$(DESCRIPTION)'
+	$(auth) scripts/register.sh device $(ID) '$(DESCRIPTION)'
 
 register-client: $(ingest_config) ## mint and register a read API client token - ID=, DESCRIPTION=
 	$(call need,ID)
 	$(call need,DESCRIPTION)
-	$(auth) scripts/register.sh --client $(ID) '$(DESCRIPTION)'
+	$(auth) scripts/register.sh client $(ID) '$(DESCRIPTION)'
 
 revoke-device: $(ingest_config) ## revoke a device's token - ID=
 	$(call need,ID)

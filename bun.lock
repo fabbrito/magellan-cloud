@@ -108,16 +108,6 @@
         "@types/bun": "^1.4.2",
       },
     },
-    "tools/mint-token": {
-      "name": "@magellan/mint-token",
-      "version": "0.0.0",
-      "dependencies": {
-        "@magellan/shared": "workspace:*",
-      },
-      "devDependencies": {
-        "@types/bun": "^1.4.2",
-      },
-    },
     "tools/simulator": {
       "name": "@magellan/simulator",
       "version": "0.0.0",
@@ -127,6 +117,16 @@
       "devDependencies": {
         "@types/bun": "^1.4.2",
         "vitest": "^5.0.1",
+      },
+    },
+    "tools/token": {
+      "name": "@magellan/token",
+      "version": "0.0.0",
+      "dependencies": {
+        "@magellan/shared": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "^1.4.2",
       },
     },
   },
@@ -287,13 +287,13 @@
 
     "@magellan/jobs-worker": ["@magellan/jobs-worker@workspace:apps/jobs-worker"],
 
-    "@magellan/mint-token": ["@magellan/mint-token@workspace:tools/mint-token"],
-
     "@magellan/query": ["@magellan/query@workspace:packages/query"],
 
     "@magellan/shared": ["@magellan/shared@workspace:packages/shared"],
 
     "@magellan/simulator": ["@magellan/simulator@workspace:tools/simulator"],
+
+    "@magellan/token": ["@magellan/token@workspace:tools/token"],
 
     "@oxc-project/types": ["@oxc-project/types@0.150.0", "", {}, "sha512-rDS5/31E9HfPl/CIzGrn0DOlvBbXFseQ5URJ9sYMfstbKLD/c6Gm9vmRzRGDdAXyOIL4zmO37lc9RIwYqVruZw=="],
 

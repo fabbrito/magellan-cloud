@@ -15,7 +15,7 @@ export async function startIngest(): Promise<TestHarness> {
   return server;
 }
 
-// Registers a device as tools/mint-token does; the token exists only here.
+// Registers a device as tools/token mint does; the token exists only here.
 export async function registerDevice(server: TestHarness, id: string): Promise<string> {
   const token = await mintToken();
   const env = await server.getWorker<Env>().getEnv();
@@ -27,7 +27,7 @@ export async function registerDevice(server: TestHarness, id: string): Promise<s
   return token;
 }
 
-// As scripts/revoke.sh does.
+// As tools/token revoke does.
 export async function revokeDevice(server: TestHarness, id: string): Promise<void> {
   const env = await server.getWorker<Env>().getEnv();
   await env.DB.prepare("UPDATE devices SET revoked_at = ? WHERE id = ?").bind(Date.now(), id).run();
