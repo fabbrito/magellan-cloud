@@ -15,6 +15,13 @@
       "when": 1790263770820,
       "tag": "0001_read_path",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790347799298,
+      "tag": "0002_drop_layouts",
+      "breakpoints": true
     }
   ]
 }

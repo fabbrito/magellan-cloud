@@ -51,11 +51,3 @@ export async function getJson<Body>(server: TestHarness, path: string): Promise<
   if (response.status !== 200) throw new Error(`${path} answered ${response.status}`);
   return (await response.json()) as Body;
 }
-
-export function putLayout(server: TestHarness, deviceId: string, name: string, body: unknown) {
-  return server.fetch(`/api/v1/devices/${deviceId}/layouts/${encodeURIComponent(name)}`, {
-    method: "PUT",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}

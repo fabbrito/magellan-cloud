@@ -2,7 +2,7 @@ import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlit
 
 // The batch receipt, and what gap detection reads (docs/adr/0003-dedup-is-the-readings-own-key.md).
 // `seq` is text: u64::MAX is past an exact JS number. It sorts lexicographically, not numerically.
-// The index serves the dashboard's last-seen read, which would otherwise scan a device's history.
+// The index serves the device list's last-seen read, which would otherwise scan a device's history.
 export const heartbeats = sqliteTable(
   "heartbeats",
   {
