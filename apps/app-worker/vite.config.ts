@@ -19,6 +19,8 @@ export default defineConfig({
       remoteBindings: false,
     }),
   ],
+  // `~` is src, as tsconfig.client.json and components.json have it; the server project has none.
+  resolve: { alias: { "~": "/src" } },
   server: {
     port: 8788,
     strictPort: true,

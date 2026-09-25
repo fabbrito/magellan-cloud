@@ -5,7 +5,8 @@
   "compilerOptions": {
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
     "jsx": "react-jsx",
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "paths": { "~/*": ["./src/*"] }
   },
   "include": ["src/client/**/*.ts", "src/client/**/*.tsx", "vite.config.ts"],
   "exclude": ["src/client/**/*.test.ts", "src/client/**/*.test.tsx"]
