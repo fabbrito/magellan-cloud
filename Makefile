@@ -4,13 +4,13 @@
 -include cloudflare.prod.env
 
 ingest := apps/ingest-worker
-query  := apps/query-worker
+app    := apps/app-worker
 ingest_config := $(ingest)/wrangler.prod.jsonc
-configs := $(ingest_config) $(query)/wrangler.prod.jsonc
+configs := $(ingest_config) $(app)/wrangler.prod.jsonc
 
 need = $(if $($(1)),,$(error $(1) is unset))
 # A choice of worker, named every time: no default to act on by accident.
-need_worker = $(call need,WORKER)$(if $(filter ingest query,$(WORKER)),,$(error WORKER is ingest or query))
+need_worker = $(call need,WORKER)$(if $(filter ingest app,$(WORKER)),,$(error WORKER is ingest or app))
 
 # The token lives in one child's env, never the shell's; a failed lookup stops
 # the recipe rather than falling back to a stored login.
@@ -57,12 +57,12 @@ migrate: $(ingest_config) ## apply D1 migrations
 
 # Ingest first: after a migration, the running one may write a shape the
 # database no longer takes, and the device's buffer holds until it is replaced.
-deploy: $(configs) ## deploy the ingest and query workers
+deploy: $(configs) ## deploy the ingest and app workers
 	$(wrangler) deploy -c wrangler.prod.jsonc
-	$(call wrangler_in,$(query)) deploy -c wrangler.prod.jsonc
+	$(call wrangler_in,$(app)) deploy -c wrangler.prod.jsonc
 
 takedown: $(configs) ## delete both workers - D1 and R2 stay
-	$(call wrangler_in,$(query)) delete -c wrangler.prod.jsonc
+	$(call wrangler_in,$(app)) delete -c wrangler.prod.jsonc
 	$(wrangler) delete -c wrangler.prod.jsonc
 
 register: $(ingest_config) ## mint and register a token - ID=, DESCRIPTION=
@@ -72,7 +72,7 @@ register: $(ingest_config) ## mint and register a token - ID=, DESCRIPTION=
 
 ##@ Observe
 # JSON carries each invocation's CPU time. *.prod.* keeps the log out of git.
-tail: $(configs) ## stream invocations to logs/tail.prod.jsonl - WORKER=ingest|query
+tail: $(configs) ## stream invocations to logs/tail.prod.jsonl - WORKER=ingest|app
 	$(call need_worker)
 	@mkdir -p logs
 	$(call wrangler_in,$($(WORKER))) tail -c wrangler.prod.jsonc --format json | tee -a $(CURDIR)/logs/tail.prod.jsonl

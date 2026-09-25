@@ -1,0 +1,23 @@
+{
+  "name": "@magellan/query",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./api": "./src/api.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@magellan/contract": "workspace:*",
+    "@magellan/db": "workspace:*",
+    "drizzle-orm": "^0.45.2",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@magellan/simulator": "workspace:*",
+    "vitest": "^5.0.1"
+  }
+}

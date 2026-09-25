@@ -1,9 +1,9 @@
 import type { Manifest } from "@magellan/contract";
+import type { Series } from "@magellan/query";
 import { daysManifest, daysReadings, energyStep } from "@magellan/simulator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { TestHarness } from "wrangler";
 
-import type { Series } from "../src/api.ts";
 import { bootDevice, getJson, putLayout, registerDevice, startCloud } from "./harness.ts";
 
 let server: TestHarness;

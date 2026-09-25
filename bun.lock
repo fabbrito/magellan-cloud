@@ -13,11 +13,21 @@
         "wrangler": "^4.135.0",
       },
     },
-    "apps/dashboard": {
-      "name": "@magellan/dashboard",
+    "apps/app-worker": {
+      "name": "@magellan/app-worker",
       "version": "0.0.0",
       "dependencies": {
         "@magellan/contract": "workspace:*",
+        "@magellan/db": "workspace:*",
+        "@magellan/query": "workspace:*",
+        "drizzle-orm": "^0.45.2",
+        "hono": "^4.13.8",
+        "zod": "^4.6.5",
+      },
+      "devDependencies": {
+        "@magellan/shared": "workspace:*",
+        "@magellan/simulator": "workspace:*",
+        "@types/node": "^26.6.2",
       },
     },
     "apps/ingest-worker": {
@@ -45,22 +55,6 @@
         "@magellan/shared": "workspace:*",
       },
     },
-    "apps/query-worker": {
-      "name": "@magellan/query-worker",
-      "version": "0.0.0",
-      "dependencies": {
-        "@magellan/contract": "workspace:*",
-        "@magellan/db": "workspace:*",
-        "drizzle-orm": "^0.45.2",
-        "hono": "^4.13.8",
-        "zod": "^4.6.5",
-      },
-      "devDependencies": {
-        "@magellan/shared": "workspace:*",
-        "@magellan/simulator": "workspace:*",
-        "@types/node": "^26.6.2",
-      },
-    },
     "packages/contract": {
       "name": "@magellan/contract",
       "version": "0.0.0",
@@ -81,6 +75,20 @@
       },
       "devDependencies": {
         "drizzle-kit": "^0.31.10",
+      },
+    },
+    "packages/query": {
+      "name": "@magellan/query",
+      "version": "0.0.0",
+      "dependencies": {
+        "@magellan/contract": "workspace:*",
+        "@magellan/db": "workspace:*",
+        "drizzle-orm": "^0.45.2",
+        "zod": "^4.6.5",
+      },
+      "devDependencies": {
+        "@magellan/simulator": "workspace:*",
+        "vitest": "^5.0.1",
       },
     },
     "packages/shared": {
@@ -267,9 +275,9 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@magellan/contract": ["@magellan/contract@workspace:packages/contract"],
+    "@magellan/app-worker": ["@magellan/app-worker@workspace:apps/app-worker"],
 
-    "@magellan/dashboard": ["@magellan/dashboard@workspace:apps/dashboard"],
+    "@magellan/contract": ["@magellan/contract@workspace:packages/contract"],
 
     "@magellan/db": ["@magellan/db@workspace:packages/db"],
 
@@ -281,7 +289,7 @@
 
     "@magellan/mint-token": ["@magellan/mint-token@workspace:tools/mint-token"],
 
-    "@magellan/query-worker": ["@magellan/query-worker@workspace:apps/query-worker"],
+    "@magellan/query": ["@magellan/query@workspace:packages/query"],
 
     "@magellan/shared": ["@magellan/shared@workspace:packages/shared"],
 
