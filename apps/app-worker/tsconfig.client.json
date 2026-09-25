@@ -1,0 +1,12 @@
+{
+  // The browser build. DOM and JSX stay out of the server project, and the server's bindings out
+  // of this one: the client reads the API through `@magellan/query/api`, types only.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["vite/client"]
+  },
+  "include": ["src/client/**/*.ts", "src/client/**/*.tsx", "vite.config.ts"],
+  "exclude": ["src/client/**/*.test.ts", "src/client/**/*.test.tsx"]
+}

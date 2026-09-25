@@ -1,3 +1,5 @@
+import { mkdir } from "node:fs/promises";
+
 import type { Manifest } from "@magellan/contract";
 import { hashToken, mintToken } from "@magellan/shared";
 import { SimulatedDevice } from "@magellan/simulator";
@@ -7,6 +9,9 @@ import { createTestHarness, type TestHarness } from "wrangler";
 // never as rows a test wrote, so the app reads what ingest actually commits. The app worker is
 // first, so a relative path reaches it; the device reaches ingest by its own handle.
 export async function startCloud(): Promise<TestHarness> {
+  // Wrangler refuses an assets directory that does not exist, and the API needs no client build:
+  // an empty one boots the worker as deployed, minus the SPA.
+  await mkdir(`${import.meta.dirname}/../dist/client`, { recursive: true });
   const server = createTestHarness({
     workers: [
       { configPath: new URL("../wrangler.jsonc", import.meta.url) },

@@ -7,11 +7,13 @@
   // created afresh has no Access: deploy it with both off, turn Access on, then set them back.
   "workers_dev": true,
   "preview_urls": true,
-  // Beside ingest in `bun run dev`: its own port, and its own inspector, which both would otherwise
-  // race for.
-  "dev": {
-    "port": 8788,
-    "inspector_port": 9230,
+  // The SPA. Any other path gets index.html, so an unknown page is the client router's to answer.
+  // `/api/*` always reaches the worker: without the list, a browser navigating there gets
+  // index.html, since navigations skip the worker. The directory is `vite build`'s client output.
+  "assets": {
+    "directory": "./dist/client",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
   },
   "observability": {
     "enabled": true,

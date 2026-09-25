@@ -38,7 +38,8 @@ bun run dev:reset                  # drop the local store; the next dev rebuilds
 `dev` serves both workers in workerd against one local D1 and R2 under `.wrangler/state` at the
 root, so the app worker reads what ingest commits. That store persists across restarts, registered
 devices included, and `dev:reset` is the only thing that clears it. It is not the store the tests
-use — they boot their own and throw it away, so a test run leaves it untouched.
+use — they boot their own and throw it away, so a test run leaves it untouched. The app runs under
+Vite, which serves the SPA and the worker from one origin.
 
 ### Against the device
 

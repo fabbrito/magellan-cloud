@@ -59,6 +59,7 @@ migrate: $(ingest_config) ## apply D1 migrations
 # database no longer takes, and the device's buffer holds until it is replaced.
 deploy: $(configs) ## deploy the ingest and app workers
 	$(wrangler) deploy -c wrangler.prod.jsonc
+	cd $(app) && bun run build
 	$(call wrangler_in,$(app)) deploy -c wrangler.prod.jsonc
 
 takedown: $(configs) ## delete both workers - D1 and R2 stay
