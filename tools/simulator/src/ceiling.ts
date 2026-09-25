@@ -15,6 +15,8 @@ const stateLabels = Object.fromEntries(
 );
 
 export const largestManifest: Manifest = {
+  // The longest name the tz database holds.
+  tz: "America/Argentina/ComodRivadavia",
   sources: Array.from({ length: LIMITS.sourcesMax }, (_unused, index) => ({
     id: pad("s", index),
     metrics: keys.map((key) => ({ key, kind: "state", state_labels: stateLabels })),
@@ -23,6 +25,7 @@ export const largestManifest: Manifest = {
 
 // Gauges, since a state value is a code and cannot carry the widest integer.
 export const gaugeManifest: Manifest = {
+  tz: "UTC",
   sources: [{ id: pad("s", 0), metrics: keys.map((key) => ({ key, kind: "gauge", exponent: 0 })) }],
 };
 

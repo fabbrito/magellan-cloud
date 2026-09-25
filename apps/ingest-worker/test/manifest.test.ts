@@ -74,7 +74,12 @@ it("answers with the hash of the bytes it received", async () => {
 it("refuses a manifest the contract does not accept", async () => {
   const token = await registerDevice(server, "device-05");
 
-  const response = await putManifest(server, "device-05", token, encode({ sources: [] }));
+  const response = await putManifest(
+    server,
+    "device-05",
+    token,
+    encode({ tz: "UTC", sources: [] }),
+  );
 
   expect(response.status).toBe(400);
 });

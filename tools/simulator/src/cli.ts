@@ -63,6 +63,7 @@ if (run.kind === "ceiling") {
   // One source, one gauge: the probe exercises the wire, not the data.
   const device = simulatedDevice(
     {
+      tz: "UTC",
       sources: [
         { id: "inlet", metrics: [{ key: "temperature", kind: "gauge", unit: "C", exponent: -1 }] },
       ],

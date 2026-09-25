@@ -48,6 +48,9 @@ at midnight, on reboot or on wrap reads the same. **`resets`** is a counter's de
 (`daily`), never its boundary. An interval across a reset or a silence has no known delta, so there
 is none; the segment total still counts what accrued.
 
+**Zone** — the device's IANA time zone, the manifest's `tz`. A calendar day is cut in it; timestamps
+stay UTC.
+
 **Caution — a "value" is the integer on the wire, never the physical quantity.** The quantity is a
 value and its metric's exponent together; naming the value alone makes a reading look like a
 measurement in units.

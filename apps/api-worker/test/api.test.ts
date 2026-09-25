@@ -54,6 +54,7 @@ async function sendDays(deviceId: string): Promise<void> {
 }
 
 const withPower = (exponent: number, extra: Manifest["sources"][number]["metrics"] = []) => ({
+  tz: "UTC",
   sources: [
     {
       id: "source_1",
