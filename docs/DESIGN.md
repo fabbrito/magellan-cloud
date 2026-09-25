@@ -64,7 +64,7 @@ flowchart TB
     subgraph cloud["magellan-cloud"]
         direction TB
         L1["Layer 1 — Dashboard<br/>static SPA"]
-        L2["Layer 2 — Workers<br/>ingest · query · jobs"]
+        L2["Layer 2 — Workers<br/>ingest · app · jobs"]
         L3["Layer 3 — Storage<br/>D1 recent + rollups · R2 every raw batch"]
         L4["Layer 4 — Contract<br/>ingest protocol v1 · the seam"]
         L1 --> L2 --> L3 --> L4
@@ -204,12 +204,11 @@ never raised.
 
 - **ingest-worker** — device-facing. Verifies the token, validates against the contract, stores the
   manifest, commits readings, writes the raw batch to R2.
-- **query-worker** — dashboard-facing, behind Cloudflare Access. Serves the dashboard and its API
+- **app-worker** — dashboard-facing, behind Cloudflare Access. Serves the dashboard SPA and its API
   from one origin: device list, health, time-series queries over D1, and layouts, the one thing it
-  writes.
+  writes. The SPA renders a device's layout, each card resolved against the metric descriptors of
+  the current manifest.
 - **jobs-worker** — cron. Hourly and daily rollups, D1 retention, silent-device detection.
-- **dashboard** — static SPA. Renders a device's layout, each card resolved against the metric
-  descriptors of the current manifest.
 - **D1** — the registry (devices, manifests, metrics), recent readings, heartbeats, rollups,
   layouts.
 - **R2** — every raw batch and every manifest, unchanged. The archive D1 can be rebuilt from.
@@ -251,7 +250,7 @@ flowchart TD
     H --> J[(D1: readings, heartbeat)]
     J --> K[jobs: rollups, retention]
     K --> L[(D1: rollups)]
-    J --> M[query + dashboard]
+    J --> M[app + dashboard]
     L --> M
     M -.->|rebuild if needed| I
 ```

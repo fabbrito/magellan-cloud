@@ -63,7 +63,7 @@ time or request latency. Those are logs and live elsewhere.
 | Term              | Meaning                                                                      |
 | ----------------- | ---------------------------------------------------------------------------- |
 | **Ingest worker** | Device-facing. Verifies the token, validates, stores, commits, archives      |
-| **Query worker**  | Dashboard-facing, behind Cloudflare Access. Devices, health, time series     |
+| **App worker**    | Dashboard-facing, behind Cloudflare Access. Devices, health, series, the SPA |
 | **Jobs worker**   | Cron. Rollups, D1 retention, silent-device detection                         |
 | **Registry**      | D1's declaration of what exists: devices, manifests, metrics                 |
 | **Rollup**        | Many readings collapsed into one row per bucket per metric                   |
