@@ -4,10 +4,12 @@ import { expect, it } from "vitest";
 import { describeMetric, exponentsOf } from "./metric.ts";
 
 const withPower = (exponent: number): Manifest => ({
+  tz: "UTC",
   sources: [{ id: "source_1", metrics: [{ key: "power", kind: "gauge", unit: "W", exponent }] }],
 });
 
 const withoutPower: Manifest = {
+  tz: "UTC",
   sources: [{ id: "source_1", metrics: [{ key: "mode", kind: "state" }] }],
 };
 

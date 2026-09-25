@@ -26,6 +26,8 @@ const manifestHashPattern = new RegExp(`^[0-9a-f]{${LIMITS.manifestHashHexLength
 // Leading zeros would spell one seq two ways, and a gap would then read as a loss the device never
 // had, so the canonical decimal is the only accepted form.
 const seqPattern = new RegExp(`^(0|[1-9]\\d{0,${LIMITS.seqDigitsMax - 1}})$`);
+// An IANA name's characters, so an offset (`+03:00`) or an abbreviation with a space never parses.
+const tzPattern = /^[A-Za-z][A-Za-z0-9_+-]*(\/[A-Za-z0-9_+-]+)*$/;
 const bootIdPattern = new RegExp(`^[0-9a-f]{${LIMITS.bootIdLengthMin},${LIMITS.bootIdLengthMax}}$`);
 
 export const keySchema = z.string().min(1).max(LIMITS.keyLengthMax).regex(keyPattern);
@@ -70,8 +72,8 @@ const gaugeMetricSchema = z.strictObject({
 });
 
 // Only the cadence crosses the wire, never the boundary: the cloud finds a reset by the decrease,
-// so neither a clock nor a time zone has to agree across the seam
-// (docs/adr/0005-the-device-owns-meaning.md).
+// so no clock has to agree across the seam (docs/adr/0005-the-device-owns-meaning.md). The
+// manifest's zone cuts calendar days for reads, never finds a reset.
 const resetsSchema = z.enum(["daily"]).meta({
   description: "The cadence this counter resets on. The boundary is not sent; a decrease marks it.",
 });
@@ -120,8 +122,31 @@ export const sourceSchema = z
 
 // The schema checks shape and internal consistency, never domain meaning: the cloud stores what a
 // manifest declares, sight unseen (docs/DESIGN.md invariant 1).
+// The pattern is what the document carries; that the zone exists is checked here, against the
+// runtime's tz database. The device checks against its own, so a zone newer than either is refused.
+const tzSchema = z
+  .string()
+  .min(1)
+  .max(LIMITS.tzLengthMax)
+  .regex(tzPattern)
+  .refine(isKnownZone, { message: "not a known IANA time zone" })
+  .meta({
+    description:
+      "The device's IANA time zone, e.g. America/Sao_Paulo. Calendar days are cut in it.",
+  });
+
+function isKnownZone(tz: string): boolean {
+  // Throws a RangeError on a zone the database does not hold.
+  try {
+    return new Intl.DateTimeFormat("en", { timeZone: tz }).resolvedOptions().timeZone !== "";
+  } catch {
+    return false;
+  }
+}
+
 export const manifestSchema = z
   .strictObject({
+    tz: tzSchema,
     sources: z
       .array(sourceSchema)
       .min(1)

@@ -3,6 +3,8 @@ export const LIMITS = {
   metricsPerSourceMax: 128,
   keyLengthMax: 64,
   unitLengthMax: 16,
+  // The longest IANA name is 32; the rest is headroom for a zone not yet named.
+  tzLengthMax: 64,
   exponentMin: -12,
   exponentMax: 12,
   metricValueMin: Number.MIN_SAFE_INTEGER,

@@ -158,15 +158,16 @@ Both carry a `content-length`. A body whose size the device will not declare is 
 before it is read: without a declared length there is nothing to bound the read against until the
 bytes are already spent.
 
-**Manifest** — the device's sources and their metrics, with `kind` (`gauge`, `counter`, `state`), an
-`exponent` for anything measured and an optional `unit`. A state has neither, its value being a
-code. The exponent is the metric's, so re-scaling one is a new manifest
-(`docs/adr/0002-integer-values.md`). A counter is monotonic between resets and any decrease is a
-reset; one that resets on a cadence declares `resets: "daily"`. The cadence is all it says — the
-cloud finds each reset by the decrease, so no boundary or time zone crosses the wire. The hash is
-SHA-256 over the manifest's bytes as sent; the cloud recomputes it from the body it receives and
-answers the PUT with the accepted hash in `ETag`, so the device asserts its own matches rather than
-trusting it.
+**Manifest** — the device's IANA time zone `tz`, and its sources and their metrics, with `kind`
+(`gauge`, `counter`, `state`), an `exponent` for anything measured and an optional `unit`. A state
+has neither, its value being a code. The exponent is the metric's, so re-scaling one is a new
+manifest (`docs/adr/0002-integer-values.md`). A counter is monotonic between resets and any decrease
+is a reset; one that resets on a cadence declares `resets: "daily"`. The cadence is all it says —
+the cloud finds each reset by the decrease, so no boundary crosses the wire. `tz` cuts calendar days
+for reads, never finds a reset, and never moves a timestamp off UTC
+(`docs/adr/0006-the-client-owns-presentation.md`). The hash is SHA-256 over the manifest's bytes as
+sent; the cloud recomputes it from the body it receives and answers the PUT with the accepted hash
+in `ETag`, so the device asserts its own matches rather than trusting it.
 
 **Batch** — `manifest_hash`, a `boot_id`, a `seq`, an ordered `readings[]`, and a `heartbeat`
 carrying uptime, buffer depth, battery percentage, signal percentage and firmware version. `boot_id`

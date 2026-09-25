@@ -6,6 +6,7 @@ const gauge = { key: "power_w", kind: "gauge", unit: "W", exponent: -2 };
 const counter = { key: "energy_kwh", kind: "counter", unit: "kWh", exponent: 0 };
 
 const threeKinds = {
+  tz: "UTC",
   sources: [
     {
       id: "source_1",
@@ -29,7 +30,8 @@ const batch = {
 describe("manifestSchema", () => {
   it("accepts one source with one gauge", () => {
     expect(
-      manifestSchema.safeParse({ sources: [{ id: "source_1", metrics: [gauge] }] }).success,
+      manifestSchema.safeParse({ tz: "UTC", sources: [{ id: "source_1", metrics: [gauge] }] })
+        .success,
     ).toBe(true);
   });
 
@@ -38,17 +40,18 @@ describe("manifestSchema", () => {
   });
 
   it("rejects an empty source list", () => {
-    expect(manifestSchema.safeParse({ sources: [] }).success).toBe(false);
+    expect(manifestSchema.safeParse({ tz: "UTC", sources: [] }).success).toBe(false);
   });
 
   it("rejects a source with no metrics", () => {
-    expect(manifestSchema.safeParse({ sources: [{ id: "source_1", metrics: [] }] }).success).toBe(
-      false,
-    );
+    expect(
+      manifestSchema.safeParse({ tz: "UTC", sources: [{ id: "source_1", metrics: [] }] }).success,
+    ).toBe(false);
   });
 
   it("accepts a measured metric without a unit", () => {
     const missing = {
+      tz: "UTC",
       sources: [{ id: "source_1", metrics: [{ key: "power_w", kind: "gauge", exponent: 0 }] }],
     };
     expect(manifestSchema.safeParse(missing).success).toBe(true);
@@ -56,6 +59,7 @@ describe("manifestSchema", () => {
 
   it("rejects a measured metric without an exponent", () => {
     const missing = {
+      tz: "UTC",
       sources: [{ id: "source_1", metrics: [{ key: "power_w", kind: "gauge", unit: "W" }] }],
     };
     expect(manifestSchema.safeParse(missing).success).toBe(false);
@@ -63,6 +67,7 @@ describe("manifestSchema", () => {
 
   it("rejects a unit on a state", () => {
     const state = {
+      tz: "UTC",
       sources: [{ id: "source_1", metrics: [{ key: "mode", kind: "state", unit: "x" }] }],
     };
     expect(manifestSchema.safeParse(state).success).toBe(false);
@@ -70,6 +75,7 @@ describe("manifestSchema", () => {
 
   it("rejects state labels on a gauge", () => {
     const labelled = {
+      tz: "UTC",
       sources: [{ id: "source_1", metrics: [{ ...gauge, state_labels: { "0": "off" } }] }],
     };
     expect(manifestSchema.safeParse(labelled).success).toBe(false);
@@ -77,6 +83,7 @@ describe("manifestSchema", () => {
 
   it("rejects a non-decimal state code", () => {
     const bad = {
+      tz: "UTC",
       sources: [
         {
           id: "source_1",
@@ -88,12 +95,13 @@ describe("manifestSchema", () => {
   });
 
   it("rejects a duplicate metric key within a source", () => {
-    const dup = { sources: [{ id: "source_1", metrics: [gauge, gauge] }] };
+    const dup = { tz: "UTC", sources: [{ id: "source_1", metrics: [gauge, gauge] }] };
     expect(manifestSchema.safeParse(dup).success).toBe(false);
   });
 
   it("rejects a duplicate source id", () => {
     const dup = {
+      tz: "UTC",
       sources: [
         { id: "source_1", metrics: [gauge] },
         { id: "source_1", metrics: [gauge] },
@@ -103,57 +111,110 @@ describe("manifestSchema", () => {
   });
 
   it("rejects an exponent past the bound", () => {
-    const wide = { sources: [{ id: "source_1", metrics: [{ ...gauge, exponent: 13 }] }] };
+    const wide = {
+      tz: "UTC",
+      sources: [{ id: "source_1", metrics: [{ ...gauge, exponent: 13 }] }],
+    };
     expect(manifestSchema.safeParse(wide).success).toBe(false);
   });
 
   it("rejects an exponent on a state", () => {
     const scaled = {
+      tz: "UTC",
       sources: [{ id: "source_1", metrics: [{ key: "mode", kind: "state", exponent: 0 }] }],
     };
     expect(manifestSchema.safeParse(scaled).success).toBe(false);
   });
 
   it("rejects a key a URL path would need to escape", () => {
-    const colon = { sources: [{ id: "source_1", metrics: [{ ...gauge, key: "power:w" }] }] };
+    const colon = {
+      tz: "UTC",
+      sources: [{ id: "source_1", metrics: [{ ...gauge, key: "power:w" }] }],
+    };
     expect(manifestSchema.safeParse(colon).success).toBe(false);
   });
 
   it("accepts a key of URL-unreserved characters", () => {
-    const dotted = { sources: [{ id: "source-1", metrics: [{ ...gauge, key: "power.w_1" }] }] };
+    const dotted = {
+      tz: "UTC",
+      sources: [{ id: "source-1", metrics: [{ ...gauge, key: "power.w_1" }] }],
+    };
     expect(manifestSchema.safeParse(dotted).success).toBe(true);
   });
 
   it("rejects a key past the length bound", () => {
-    const long = { sources: [{ id: "source_1", metrics: [{ ...gauge, key: "m".repeat(65) }] }] };
+    const long = {
+      tz: "UTC",
+      sources: [{ id: "source_1", metrics: [{ ...gauge, key: "m".repeat(65) }] }],
+    };
     expect(manifestSchema.safeParse(long).success).toBe(false);
   });
 
   it("accepts a counter that resets daily", () => {
-    const daily = { sources: [{ id: "source_1", metrics: [{ ...counter, resets: "daily" }] }] };
+    const daily = {
+      tz: "UTC",
+      sources: [{ id: "source_1", metrics: [{ ...counter, resets: "daily" }] }],
+    };
     expect(manifestSchema.safeParse(daily).success).toBe(true);
   });
 
   it("rejects a cadence past the enum", () => {
-    const weekly = { sources: [{ id: "source_1", metrics: [{ ...counter, resets: "weekly" }] }] };
+    const weekly = {
+      tz: "UTC",
+      sources: [{ id: "source_1", metrics: [{ ...counter, resets: "weekly" }] }],
+    };
     expect(manifestSchema.safeParse(weekly).success).toBe(false);
   });
 
   it("rejects resets on a gauge", () => {
-    const resetting = { sources: [{ id: "source_1", metrics: [{ ...gauge, resets: "daily" }] }] };
+    const resetting = {
+      tz: "UTC",
+      sources: [{ id: "source_1", metrics: [{ ...gauge, resets: "daily" }] }],
+    };
     expect(manifestSchema.safeParse(resetting).success).toBe(false);
   });
 
   it("rejects resets on a state", () => {
     const resetting = {
+      tz: "UTC",
       sources: [{ id: "source_1", metrics: [{ key: "mode", kind: "state", resets: "daily" }] }],
     };
     expect(manifestSchema.safeParse(resetting).success).toBe(false);
   });
 
   it("rejects an unknown property", () => {
-    const extra = { sources: [{ id: "source_1", metrics: [{ ...gauge, factor: 0.01 }] }] };
+    const extra = {
+      tz: "UTC",
+      sources: [{ id: "source_1", metrics: [{ ...gauge, factor: 0.01 }] }],
+    };
     expect(manifestSchema.safeParse(extra).success).toBe(false);
+  });
+});
+
+describe("manifestSchema tz", () => {
+  const withTz = (tz: unknown) => ({ ...threeKinds, tz });
+
+  it.each(["America/Sao_Paulo", "UTC", "Etc/GMT+3", "America/Argentina/Buenos_Aires"])(
+    "accepts %o",
+    (tz) => {
+      expect(manifestSchema.safeParse(withTz(tz)).success).toBe(true);
+    },
+  );
+
+  it("requires a zone", () => {
+    const { tz: _dropped, ...zoneless } = threeKinds;
+
+    expect(manifestSchema.safeParse(zoneless).success).toBe(false);
+  });
+
+  it.each([
+    ["+03:00", "is an offset, not a zone"],
+    ["America/Sao Paulo", "has a space"],
+    ["Mars/Olympus_Mons", "names no zone"],
+    ["", "is empty"],
+    [`America/${"x".repeat(64)}`, "is past the bound"],
+  ])("refuses %o, which %s", (tz) => {
+    expect(manifestSchema.safeParse(withTz(tz)).success).toBe(false);
   });
 });
 

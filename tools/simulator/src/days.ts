@@ -2,6 +2,7 @@ import type { Manifest, Reading } from "@magellan/contract";
 
 // One source with each kind, and a counter that resets daily, so a query has a reset to find.
 export const daysManifest: Manifest = {
+  tz: "UTC",
   sources: [
     {
       id: "source_1",

@@ -40,6 +40,13 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "tz": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z][A-Za-z0-9_+-]*(\\/[A-Za-z0-9_+-]+)*$",
+                    "description": "The device's IANA time zone, e.g. America/Sao_Paulo. Calendar days are cut in it."
+                  },
                   "sources": {
                     "type": "array",
                     "items": {
@@ -164,7 +171,7 @@
                     "description": "One to 8 sources, each id unique."
                   }
                 },
-                "required": ["sources"],
+                "required": ["tz", "sources"],
                 "additionalProperties": false,
                 "description": "A device's declaration of its sources and their metrics."
               }

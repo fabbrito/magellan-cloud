@@ -4,6 +4,7 @@ import { checkBatchAgainstManifest } from "./check.ts";
 import { manifestSchema } from "./schema.ts";
 
 const manifest = manifestSchema.parse({
+  tz: "UTC",
   sources: [
     {
       id: "source_1",
