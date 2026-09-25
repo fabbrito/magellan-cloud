@@ -17,7 +17,7 @@ export interface Point {
   value: number;
 }
 
-// A counter's change over one interval between two readings.
+// A counter's change between two adjacent readings.
 export interface Interval {
   start: number;
   end: number;
@@ -54,22 +54,35 @@ function resets(previous: Sample, current: Sample): boolean {
   return scale(current.value, current.exponent) < scale(previous.value, previous.exponent);
 }
 
-// The delta across a reset is the value after it: what accrued since. Under one exponent the
-// difference is taken in integers and scaled once, so a delta is as exact as the values.
+// Integers subtract exactly; scaling once keeps the delta as exact as the values.
 function delta(previous: Sample, current: Sample): number {
-  if (resets(previous, current)) return scale(current.value, current.exponent);
   if (previous.exponent === current.exponent) {
     return scale(current.value - previous.value, current.exponent);
   }
   return scale(current.value, current.exponent) - scale(previous.value, previous.exponent);
 }
 
+const silenceSpanFactor = 2;
+
+// The contract carries no reading period; a median span survives a few silences.
+function silenceSpanMs(samples: Sample[]): number {
+  const spans = pairs(samples)
+    .map(([previous, current]) => current.ts - previous.ts)
+    .toSorted((left, right) => left - right);
+  const median = spans[Math.floor(spans.length / 2)] ?? 0;
+  return silenceSpanFactor * median;
+}
+
+// None across a reset or a silence (docs/CONTEXT.md > Reset).
 export function counterIntervals(samples: Sample[]): Interval[] {
-  return pairs(samples).map(([previous, current]) => ({
-    start: previous.ts,
-    end: current.ts,
-    delta: delta(previous, current),
-  }));
+  const spanMaxMs = silenceSpanMs(samples);
+  const intervals: Interval[] = [];
+  for (const [previous, current] of pairs(samples)) {
+    if (resets(previous, current)) continue;
+    if (current.ts - previous.ts > spanMaxMs) continue;
+    intervals.push({ start: previous.ts, end: current.ts, delta: delta(previous, current) });
+  }
+  return intervals;
 }
 
 export function counterSegments(samples: Sample[]): Segment[] {

@@ -45,7 +45,8 @@ anything.
 
 **Reset** — a counter's value decreasing. Any decrease is one, declared or not: a counter restarting
 at midnight, on reboot or on wrap reads the same. **`resets`** is a counter's declared cadence
-(`daily`), never its boundary; a delta across a reset is the value after it.
+(`daily`), never its boundary. An interval across a reset or a silence has no known delta, so there
+is none; the segment total still counts what accrued.
 
 **Caution — a "value" is the integer on the wire, never the physical quantity.** The quantity is a
 value and its metric's exponent together; naming the value alone makes a reading look like a
