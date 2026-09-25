@@ -1,4 +1,4 @@
-import type { Run, Series } from "@magellan/query/api";
+import type { Metric, Run, Series } from "@magellan/query/api";
 
 import { formatValue, stateLabel } from "./format.ts";
 
@@ -22,10 +22,16 @@ export function latestOf(series: Series): string | undefined {
   }
 }
 
+// A daily counter's latest segment is today's total so far.
+export function resetsDaily(metric: Metric): boolean {
+  if (metric.kind !== "counter") return false;
+  return metric.resets === "daily";
+}
+
 export interface Span {
   run: Run;
-  // Share of the timeline, 0..1.
-  width: number;
+  // Of the timeline, 0..1.
+  share: number;
 }
 
 // Runs as shares of the time they cover. A run with no duration — a single reading — still gets a
@@ -33,10 +39,11 @@ export interface Span {
 export function spansOf(runs: Run[]): Span[] {
   const first = runs[0];
   const last = runs.at(-1);
-  if (first === undefined || last === undefined) return [];
+  if (first === undefined) return [];
+  if (last === undefined) return [];
   const totalMs = last.end - first.start;
-  if (totalMs <= 0) return runs.map((run) => ({ run, width: 1 / runs.length }));
-  return runs.map((run) => ({ run, width: Math.max(run.end - run.start, 0) / totalMs }));
+  if (totalMs <= 0) return runs.map((run) => ({ run, share: 1 / runs.length }));
+  return runs.map((run) => ({ run, share: Math.max(run.end - run.start, 0) / totalMs }));
 }
 
 // A stable colour slot per state code, so a code keeps its colour across cards and refetches.

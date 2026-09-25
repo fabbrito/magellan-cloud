@@ -1,6 +1,7 @@
 import { keySchema, type Manifest } from "@magellan/contract";
 import { z } from "zod";
 
+import { shownAs } from "./api.ts";
 import { metricOf } from "./metric.ts";
 
 // Presentation only (docs/adr/0005-the-device-owns-meaning.md).
@@ -12,7 +13,7 @@ export const layoutNameSchema = keySchema;
 const cardSchema = z.strictObject({
   source: keySchema,
   metric: keySchema,
-  as: z.enum(["tile", "chart"]),
+  as: z.enum(shownAs),
 });
 
 export const layoutBodySchema = z.strictObject({

@@ -1,19 +1,20 @@
 import type { DeviceDetail, Layout, Problem } from "@magellan/query/api";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { createQueryClient } from "./lib/api.ts";
 import { createAppRouter } from "./router.tsx";
 
 const device: DeviceDetail = {
   id: "local",
-  description: "inverter",
+  description: "test device",
   manifest: {
     hash: "a".repeat(64),
     declared_at: 1,
     body: {
-      sources: [{ id: "inverter", metrics: [{ key: "power", kind: "gauge", exponent: 0 }] }],
+      sources: [{ id: "source_1", metrics: [{ key: "power", kind: "gauge", exponent: 0 }] }],
     },
   },
   heartbeat: null,
@@ -35,7 +36,8 @@ function api(path: string): Response {
 
 function open(path: string) {
   vi.stubGlobal("fetch", (input: string) => Promise.resolve(api(input)));
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  // The app's own client: a 404 it retried would back off past the test's timeout.
+  const queryClient = createQueryClient();
   const router = createAppRouter(queryClient, createMemoryHistory({ initialEntries: [path] }));
   render(
     <QueryClientProvider client={queryClient}>

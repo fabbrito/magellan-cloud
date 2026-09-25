@@ -3,9 +3,9 @@ import { describe, expect, it } from "vitest";
 
 import { addCard, moveCard, removeCard } from "./cards.ts";
 
-const power: Card = { source: "inverter", metric: "power", as: "chart" };
-const energy: Card = { source: "inverter", metric: "energy_today", as: "tile" };
-const state: Card = { source: "inverter", metric: "state", as: "tile" };
+const power: Card = { source: "source_1", metric: "power", as: "chart" };
+const energy: Card = { source: "source_1", metric: "energy_today", as: "tile" };
+const state: Card = { source: "source_1", metric: "state", as: "tile" };
 
 describe("addCard", () => {
   it("appends", () => {

@@ -1,10 +1,16 @@
 import type { Metric, Series } from "@magellan/query/api";
 import { describe, expect, it } from "vitest";
 
-import { latestOf, spansOf, stateSlot } from "./series.ts";
+import { latestOf, resetsDaily, spansOf, stateSlot } from "./series.ts";
 
 const gauge: Metric = { key: "power", kind: "gauge", unit: "W", exponent: 0 };
-const counter: Metric = { key: "energy_today", kind: "counter", unit: "kWh", exponent: -2 };
+const counter: Metric = {
+  key: "energy_today",
+  kind: "counter",
+  unit: "kWh",
+  exponent: -2,
+  resets: "daily",
+};
 const state: Metric = { key: "mode", kind: "state", state_labels: { "1": "running" } };
 
 const series = (metric: Metric, data: Series["data"]): Series => ({ metric, declared: true, data });
@@ -50,7 +56,7 @@ describe("spansOf", () => {
       { start: 0, end: 30, code: 1 },
       { start: 30, end: 100, code: 2 },
     ]);
-    expect(spans.map((span) => span.width)).toEqual([0.3, 0.7]);
+    expect(spans.map((span) => span.share)).toEqual([0.3, 0.7]);
   });
 
   it("shares the width when no time passed", () => {
@@ -58,7 +64,7 @@ describe("spansOf", () => {
       { start: 5, end: 5, code: 1 },
       { start: 5, end: 5, code: 2 },
     ]);
-    expect(spans.map((span) => span.width)).toEqual([0.5, 0.5]);
+    expect(spans.map((span) => span.share)).toEqual([0.5, 0.5]);
   });
 
   it("has no spans without runs", () => {
@@ -67,9 +73,14 @@ describe("spansOf", () => {
 });
 
 describe("stateSlot", () => {
-  it("keeps every code within the five chart slots", () => {
-    const slots = [-7, 0, 1, 4, 5, 9, 250].map(stateSlot);
-    expect(slots.every((slot) => slot >= 1 && slot <= 5)).toBe(true);
-    expect(stateSlot(1)).not.toBe(stateSlot(2));
+  it("cycles codes through the five chart slots, negatives too", () => {
+    expect([0, 1, 4, 5, 9, -1, -7].map(stateSlot)).toEqual([1, 2, 5, 1, 5, 5, 4]);
+  });
+});
+
+describe("resetsDaily", () => {
+  it("holds for a counter declared daily, only", () => {
+    const running: Metric = { key: "energy_total", kind: "counter", exponent: -2 };
+    expect([counter, gauge, running].map(resetsDaily)).toEqual([true, false, false]);
   });
 });

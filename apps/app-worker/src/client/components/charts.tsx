@@ -14,10 +14,20 @@ import {
   formatValue,
   stateLabel,
 } from "~/client/lib/format";
-import { spansOf, stateSlot } from "~/client/lib/series";
+import { resetsDaily, spansOf, stateSlot } from "~/client/lib/series";
 
 // One series per card, always slot 1.
 const config = { value: { label: "Value", color: "var(--chart-1)" } } satisfies ChartConfig;
+
+const timeAxis = {
+  dataKey: "ts",
+  tickFormatter: formatTime,
+  tickLine: false,
+  axisLine: false,
+  minTickGap: 48,
+} as const;
+
+const stateColor = (code: number) => `var(--chart-${stateSlot(code)})`;
 
 function tooltip(metric: Metric) {
   return (
@@ -41,16 +51,7 @@ export function GaugeChart({ metric, points }: { metric: Metric; points: Point[]
     <ChartContainer config={config} className="aspect-auto h-48 w-full">
       <LineChart data={points} margin={{ left: 4, right: 12 }}>
         <CartesianGrid vertical={false} />
-        <XAxis
-          dataKey="ts"
-          type="number"
-          scale="time"
-          domain={["dataMin", "dataMax"]}
-          tickFormatter={formatTime}
-          tickLine={false}
-          axisLine={false}
-          minTickGap={48}
-        />
+        <XAxis {...timeAxis} type="number" scale="time" domain={["dataMin", "dataMax"]} />
         <YAxis tickLine={false} axisLine={false} width={48} />
         {tooltip(metric)}
         <Line
@@ -66,7 +67,7 @@ export function GaugeChart({ metric, points }: { metric: Metric; points: Point[]
   );
 }
 
-// A bar per interval between readings, then each segment's total: for a daily counter, a day's.
+// A bar per interval, then each segment's total: for a daily counter, a day's.
 export function CounterChart({
   metric,
   intervals,
@@ -77,19 +78,13 @@ export function CounterChart({
   segments: Segment[];
 }) {
   const bars = intervals.map((interval) => ({ ts: interval.end, value: interval.delta }));
-  const daily = metric.kind === "counter" && metric.resets === "daily";
+  const daily = resetsDaily(metric);
   return (
     <div className="flex flex-col gap-3">
       <ChartContainer config={config} className="aspect-auto h-48 w-full">
         <BarChart data={bars} margin={{ left: 4, right: 12 }}>
           <CartesianGrid vertical={false} />
-          <XAxis
-            dataKey="ts"
-            tickFormatter={formatTime}
-            tickLine={false}
-            axisLine={false}
-            minTickGap={48}
-          />
+          <XAxis {...timeAxis} />
           <YAxis tickLine={false} axisLine={false} width={48} />
           {tooltip(metric)}
           <Bar dataKey="value" fill="var(--color-value)" isAnimationActive={false} />
@@ -116,22 +111,19 @@ export function StateTimeline({ metric, runs }: { metric: Metric; runs: Run[] })
   return (
     <div className="flex flex-col gap-3">
       <div className="flex h-8 w-full overflow-hidden rounded-md">
-        {spans.map(({ run, width }) => (
+        {spans.map(({ run, share }) => (
           <div
             key={run.start}
             title={`${stateLabel(metric, run.code)} · ${formatDateTime(run.start)} – ${formatDateTime(run.end)}`}
             className="min-w-0.5"
-            style={{ width: `${width * 100}%`, background: `var(--chart-${stateSlot(run.code)})` }}
+            style={{ width: `${share * 100}%`, background: stateColor(run.code) }}
           />
         ))}
       </div>
       <ul className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
         {codes.map((code) => (
           <li key={code} className="flex items-center gap-1.5">
-            <span
-              className="size-2.5 rounded-sm"
-              style={{ background: `var(--chart-${stateSlot(code)})` }}
-            />
+            <span className="size-2.5 rounded-sm" style={{ background: stateColor(code) }} />
             {stateLabel(metric, code)}
           </li>
         ))}

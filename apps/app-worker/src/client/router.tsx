@@ -8,12 +8,11 @@ import {
   Outlet,
   type RouterHistory,
 } from "@tanstack/react-router";
-import { z } from "zod";
 
 import { NotFound } from "~/client/components/not-found";
 import { Alert, AlertDescription } from "~/client/components/ui/alert";
 import { ApiError, deviceQuery, devicesQuery, layoutsQuery } from "~/client/lib/api";
-import { DevicePage } from "~/client/routes/device";
+import { DevicePage, deviceSearchSchema } from "~/client/routes/device";
 import { DevicesPage } from "~/client/routes/devices";
 
 interface Context {
@@ -51,14 +50,6 @@ const devicesRoute = createRoute({
   component: DevicesPage,
 });
 
-// Unparsed search is dropped, not refused: a stale link still opens the device.
-const deviceSearchSchema = z.object({
-  layout: z.string().optional().catch(undefined),
-  source: z.string().optional().catch(undefined),
-  metric: z.string().optional().catch(undefined),
-  as: z.enum(["tile", "chart"]).optional().catch(undefined),
-});
-
 const deviceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/devices/$id",
@@ -82,7 +73,8 @@ const deviceRoute = createRoute({
       <DevicePage
         deviceId={id}
         search={search}
-        onSearch={(next) => void navigate({ search: next, replace: true })}
+        // A loader's failure renders in the route; anything else is a bug worth surfacing.
+        onSearch={(next) => navigate({ search: next, replace: true }).catch(reportError)}
       />
     );
   },

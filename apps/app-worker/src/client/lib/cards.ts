@@ -1,5 +1,10 @@
 import type { Card } from "@magellan/query/api";
 
+// One metric of one source: a card before it is shown as anything.
+export type MetricRef = Pick<Card, "source" | "metric">;
+
+export const cardKey = (card: Card) => `${card.source}/${card.metric}/${card.as}`;
+
 // A draft layout's edits. Pure, so the editor holds one array and every change replaces it.
 
 export function sameCard(a: Card, b: Card): boolean {
@@ -12,7 +17,7 @@ export function addCard(cards: Card[], card: Card): Card[] {
 }
 
 export function removeCard(cards: Card[], index: number): Card[] {
-  return cards.filter((_, each) => each !== index);
+  return cards.filter((_, at) => at !== index);
 }
 
 // Swaps with a neighbour; at either end it is a no-op, not a wrap.
@@ -20,7 +25,8 @@ export function moveCard(cards: Card[], index: number, by: -1 | 1): Card[] {
   const target = index + by;
   const card = cards[index];
   const neighbour = cards[target];
-  if (card === undefined || neighbour === undefined) return cards;
+  if (card === undefined) return cards;
+  if (neighbour === undefined) return cards;
   const moved = [...cards];
   moved[index] = neighbour;
   moved[target] = card;

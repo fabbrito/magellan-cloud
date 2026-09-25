@@ -135,7 +135,7 @@ it("refuses a reading the manifest does not declare", async () => {
 });
 
 it("refuses a batch carrying no token", async () => {
-  const response = await server.fetch("/v1/devices/inverter/batches", {
+  const response = await server.fetch("/v1/devices/device-00/batches", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(batchOf("0".repeat(64), "0")),

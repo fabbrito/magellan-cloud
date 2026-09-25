@@ -1,4 +1,4 @@
-import type { Card as LayoutCard, Series } from "@magellan/query/api";
+import type { Card as LayoutCard, Metric, Series } from "@magellan/query/api";
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 
@@ -7,7 +7,7 @@ import { Badge } from "~/client/components/ui/badge";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "~/client/components/ui/card";
 import { Skeleton } from "~/client/components/ui/skeleton";
 import { seriesQuery } from "~/client/lib/api";
-import { latestOf } from "~/client/lib/series";
+import { latestOf, resetsDaily } from "~/client/lib/series";
 
 function Chart({ series }: { series: Series }) {
   const { data, metric } = series;
@@ -41,6 +41,13 @@ function Body({ card, series }: { card: LayoutCard; series: Series }) {
   return <p className="text-3xl font-semibold tabular-nums">{latestOf(series)}</p>;
 }
 
+// A daily counter's tile is today's total, not a running one.
+function showsToday(card: LayoutCard, metric: Metric | undefined): boolean {
+  if (card.as !== "tile") return false;
+  if (metric === undefined) return false;
+  return resetsDaily(metric);
+}
+
 export function MetricCard({
   deviceId,
   card,
@@ -51,16 +58,13 @@ export function MetricCard({
   actions?: ReactNode;
 }) {
   const series = useQuery(seriesQuery(deviceId, card));
-  const metric = series.data?.metric;
   return (
     <Card className={card.as === "chart" ? "md:col-span-2" : undefined}>
       <CardHeader>
         <CardTitle className="flex flex-wrap items-center gap-2">
           {card.metric}
           <span className="text-sm font-normal text-muted-foreground">{card.source}</span>
-          {metric?.kind === "counter" && metric.resets === "daily" && card.as === "tile" && (
-            <Badge variant="secondary">today</Badge>
-          )}
+          {showsToday(card, series.data?.metric) && <Badge variant="secondary">today</Badge>}
           {series.data?.declared === false && <Badge variant="outline">no longer declared</Badge>}
         </CardTitle>
         {actions !== undefined && <CardAction className="flex gap-1">{actions}</CardAction>}

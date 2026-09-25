@@ -1,4 +1,4 @@
-import type { Card, Manifest } from "@magellan/query/api";
+import { type Card, type Manifest, shownAs } from "@magellan/query/api";
 import { PlusIcon } from "lucide-react";
 
 import { Button } from "~/client/components/ui/button";
@@ -9,26 +9,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/client/components/ui/select";
+import type { MetricRef } from "~/client/lib/cards";
 
 export interface Selection {
-  source?: string | undefined;
-  metric?: string | undefined;
-  as?: Card["as"] | undefined;
+  pick?: MetricRef | undefined;
+  as: Card["as"];
 }
 
 // Keys never hold `/` (the contract's key pattern), so it joins the two unambiguously.
-const joined = (source: string, metric: string) => `${source}/${metric}`;
+const joined = (ref: MetricRef) => `${ref.source}/${ref.metric}`;
 
-const shapes = { tile: "Tile", chart: "Chart" } satisfies Record<Card["as"], string>;
+const shownAsLabels = { tile: "Tile", chart: "Chart" } satisfies Record<Card["as"], string>;
 
 function optionsOf(manifest: Manifest) {
   return manifest.sources.flatMap((source) =>
-    source.metrics.map((metric) => ({
-      value: joined(source.id, metric.key),
-      label: `${metric.key} · ${source.id}`,
-      source: source.id,
-      metric: metric.key,
-    })),
+    source.metrics.map((metric) => {
+      const ref = { source: source.id, metric: metric.key };
+      return { ref, value: joined(ref), label: `${metric.key} · ${source.id}` };
+    }),
   );
 }
 
@@ -46,10 +44,8 @@ export function Picker({
   onAdd: (card: Card) => void;
 }) {
   const metrics = optionsOf(manifest);
-  const chosen = metrics.find(
-    (each) => each.source === selection.source && each.metric === selection.metric,
-  );
-  const as = selection.as ?? "tile";
+  const picked = selection.pick === undefined ? undefined : joined(selection.pick);
+  const chosen = metrics.find((each) => each.value === picked);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -58,7 +54,7 @@ export function Picker({
         value={chosen?.value ?? null}
         onValueChange={(value) => {
           const next = metrics.find((each) => each.value === value);
-          onSelect({ source: next?.source, metric: next?.metric, as });
+          onSelect({ ...selection, pick: next?.ref });
         }}
       >
         <SelectTrigger className="min-w-56" aria-label="Metric">
@@ -73,24 +69,28 @@ export function Picker({
         </SelectContent>
       </Select>
       <Select
-        items={shapes}
-        value={as}
+        items={shownAsLabels}
+        value={selection.as}
         onValueChange={(value) => {
-          if (value === "tile" || value === "chart") onSelect({ ...selection, as: value });
+          const as = shownAs.find((each) => each === value);
+          if (as !== undefined) onSelect({ ...selection, as });
         }}
       >
         <SelectTrigger aria-label="Shown as">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="tile">{shapes.tile}</SelectItem>
-          <SelectItem value="chart">{shapes.chart}</SelectItem>
+          {shownAs.map((as) => (
+            <SelectItem key={as} value={as}>
+              {shownAsLabels[as]}
+            </SelectItem>
+          ))}
         </SelectContent>
       </Select>
       <Button
         disabled={chosen === undefined}
         onClick={() => {
-          if (chosen !== undefined) onAdd({ source: chosen.source, metric: chosen.metric, as });
+          if (chosen !== undefined) onAdd({ ...chosen.ref, as: selection.as });
         }}
       >
         <PlusIcon />

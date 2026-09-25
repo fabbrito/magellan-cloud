@@ -5,6 +5,9 @@ import type { Interval, Point, Run, Segment } from "./series.ts";
 
 export type { Card, Interval, Manifest, Metric, Point, Run, Segment };
 
+// How a card shows its metric. Here, not in layout.ts, so a client takes it without zod.
+export const shownAs = ["tile", "chart"] as const;
+
 // A refusal's body, RFC 9457. Defined beside the bodies a client reads, not with the responder that
 // writes it, so the client imports problem bodies without the HTTP layer.
 export interface Problem {
