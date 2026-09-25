@@ -10,7 +10,7 @@ device half is `magellan-device`; the two meet only at the contract.
 
 ## Status
 
-The ingest worker is live and takes a device's manifests and batches. The app worker answers
+The ingest worker is live and takes a device's manifests and batches. The API worker answers
 devices, health and series over the same D1 for clients such as Grafana; the cloud has no UI of its
 own. The jobs worker is still scaffold.
 
@@ -29,14 +29,14 @@ the account.
 ## Running it
 
 ```bash
-bun run dev                        # local migrations, then ingest on :8787 and app on :8788
-bun run dev:ingest                 # or one of them alone: dev:ingest, dev:app
+bun run dev                        # local migrations, then ingest on :8787 and api on :8788
+bun run dev:ingest                 # or one of them alone: dev:ingest, dev:api
 bun run mint <id> <description>    # a token, and the statement that registers it
 bun run dev:reset                  # drop the local store; the next dev rebuilds it
 ```
 
 `dev` serves both workers in workerd against one local D1 and R2 under `.wrangler/state` at the
-root, so the app worker reads what ingest commits. That store persists across restarts, registered
+root, so the API worker reads what ingest commits. That store persists across restarts, registered
 devices included, and `dev:reset` is the only thing that clears it. It is not the store the tests
 use — they boot their own and throw it away, so a test run leaves it untouched.
 
@@ -67,10 +67,6 @@ make probe                                   # or probe-ceiling, with `make tail
 make sql SQL='<statement>'                   # the live D1; `$` in a JSON path reaches it intact
 ```
 
-The app worker has no auth of its own: Cloudflare Access guards it, set on the worker itself —
-Workers & Pages > `magellan-app` > Access > All traffic. The setting lives on the worker, so after
-`make takedown` the next deploy is public until Access is back on; deploy it unreachable first.
-
 ## Layout
 
 ```
@@ -79,7 +75,7 @@ packages/db/         D1 schema and migrations
 packages/query/      reads, series math, and the API body types
 packages/shared/     token auth, errors, logging
 apps/ingest-worker/  device-facing
-apps/app-worker/     client-facing read API, behind Cloudflare Access
+apps/api-worker/     client-facing read API
 apps/jobs-worker/    cron — rollups, retention, silent-device detection
 tools/simulator/     a fake device that speaks the contract
 tools/emit-openapi/  writes packages/contract/openapi.json from the worker's routes

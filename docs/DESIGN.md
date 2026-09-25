@@ -62,7 +62,7 @@ flowchart TB
     subgraph cloud["magellan-cloud"]
         direction TB
         L1["Layer 1 — Read API<br/>for clients: Grafana, scripts"]
-        L2["Layer 2 — Workers<br/>ingest · app · jobs"]
+        L2["Layer 2 — Workers<br/>ingest · api · jobs"]
         L3["Layer 3 — Storage<br/>D1 recent + rollups · R2 every raw batch"]
         L4["Layer 4 — Contract<br/>ingest protocol v1 · the seam"]
         L1 --> L2 --> L3 --> L4
@@ -203,8 +203,8 @@ never raised.
 
 - **ingest-worker** — device-facing. Verifies the token, validates against the contract, stores the
   manifest, commits readings, writes the raw batch to R2.
-- **app-worker** — client-facing, behind Cloudflare Access. The read API: device list, health,
-  time-series queries over D1. Writes nothing.
+- **api-worker** — client-facing. The read API: device list, health, time-series queries over D1.
+  Writes nothing.
 - **jobs-worker** — cron. Hourly and daily rollups, D1 retention, silent-device detection.
 - **D1** — the registry (devices, manifests, metrics), recent readings, heartbeats, rollups.
 - **R2** — every raw batch and every manifest, unchanged. The archive D1 can be rebuilt from.
@@ -246,7 +246,7 @@ flowchart TD
     H --> J[(D1: readings, heartbeat)]
     J --> K[jobs: rollups, retention]
     K --> L[(D1: rollups)]
-    J --> M[app: read API → client]
+    J --> M[api: read API → client]
     L --> M
     M -.->|rebuild if needed| I
 ```

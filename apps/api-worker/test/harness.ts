@@ -3,8 +3,8 @@ import { hashToken, mintToken } from "@magellan/shared";
 import { SimulatedDevice } from "@magellan/simulator";
 import { createTestHarness, type TestHarness } from "wrangler";
 
-// Ingest beside the app worker, one D1 between them: readings arrive as a device sends them,
-// never as rows a test wrote, so the app reads what ingest actually commits. The app worker is
+// Ingest beside the API worker, one D1 between them: readings arrive as a device sends them,
+// never as rows a test wrote, so the API reads what ingest actually commits. The API worker is
 // first, so a relative path reaches it; the device reaches ingest by its own handle.
 export async function startCloud(): Promise<TestHarness> {
   const server = createTestHarness({
