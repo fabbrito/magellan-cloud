@@ -27,6 +27,12 @@ export async function registerDevice(server: TestHarness, id: string): Promise<s
   return token;
 }
 
+// As scripts/revoke.sh does.
+export async function revokeDevice(server: TestHarness, id: string): Promise<void> {
+  const env = await server.getWorker<Env>().getEnv();
+  await env.DB.prepare("UPDATE devices SET revoked_at = ? WHERE id = ?").bind(Date.now(), id).run();
+}
+
 // Every sender states its length, as a device must: the worker answers 411 to a body whose size the
 // caller will not declare. A test that means to omit it passes `undefined` and says so.
 function headersFor(token: string | undefined, byteLength: number): Record<string, string> {

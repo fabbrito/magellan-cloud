@@ -4,12 +4,22 @@ import { daysManifest, daysReadings, energyStep } from "@magellan/simulator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { TestHarness } from "wrangler";
 
-import { bootDevice, getJson, registerDevice, startCloud } from "./harness.ts";
+import {
+  bootDevice,
+  getJson,
+  read,
+  registerClient,
+  registerDevice,
+  revokeClient,
+  startCloud,
+} from "./harness.ts";
 
 let server: TestHarness;
+let clientToken: string;
 
 beforeAll(async () => {
   server = await startCloud();
+  clientToken = await registerClient(server, "grafana");
 });
 
 afterAll(async () => {
@@ -58,6 +68,7 @@ describe("devices", () => {
 
     const devices = await getJson<{ id: string; last_seen: number | null }[]>(
       server,
+      clientToken,
       "/api/v1/devices",
     );
 
@@ -69,7 +80,11 @@ describe("devices", () => {
   it("describes a device by its current manifest and latest heartbeat", async () => {
     await sendDays("device-02");
 
-    const device = await getJson<Record<string, unknown>>(server, "/api/v1/devices/device-02");
+    const device = await getJson<Record<string, unknown>>(
+      server,
+      clientToken,
+      "/api/v1/devices/device-02",
+    );
 
     expect(device).toMatchObject({
       manifest: { body: daysManifest },
@@ -82,7 +97,7 @@ describe("devices", () => {
     ["GET", "/api/v1/devices/nobody"],
     ["GET", "/api/v1/devices/nobody/sources/source_1/metrics/power/series?from=0&to=1"],
   ])("answers 404 for a device never registered: %s %s", async (method, path) => {
-    const response = await server.fetch(path, { method });
+    const response = await read(server, clientToken, path, method);
 
     expect(response.status).toBe(404);
     expect(response.headers.get("content-type")).toBe("application/problem+json");
@@ -100,6 +115,7 @@ describe("series", () => {
 
     const series = await getJson<Series>(
       server,
+      clientToken,
       seriesPath("device-03", "source_1", "energy_today"),
     );
     const step = energyStep / 100;
@@ -122,7 +138,11 @@ describe("series", () => {
   it("holds a state's code over the readings it spans", async () => {
     await sendDays("device-04");
 
-    const series = await getJson<Series>(server, seriesPath("device-04", "source_1", "mode"));
+    const series = await getJson<Series>(
+      server,
+      clientToken,
+      seriesPath("device-04", "source_1", "mode"),
+    );
 
     expect(series.data).toEqual({
       kind: "state",
@@ -143,7 +163,11 @@ describe("series", () => {
       await device.flush(1);
     }
 
-    const series = await getJson<Series>(server, seriesPath("device-05", "source_1", "power"));
+    const series = await getJson<Series>(
+      server,
+      clientToken,
+      seriesPath("device-05", "source_1", "power"),
+    );
 
     expect(series.data).toEqual({
       kind: "gauge",
@@ -172,7 +196,11 @@ describe("series", () => {
       bootId: "00000000000000b2",
     }).declare();
 
-    const series = await getJson<Series>(server, seriesPath("device-06", "source_1", "voltage"));
+    const series = await getJson<Series>(
+      server,
+      clientToken,
+      seriesPath("device-06", "source_1", "voltage"),
+    );
 
     expect(series.declared).toBe(false);
     expect(series.data).toEqual({ kind: "gauge", points: [{ ts: firstTs, value: 230 }] });
@@ -181,12 +209,16 @@ describe("series", () => {
   it("answers 404 for a metric no manifest declared", async () => {
     await sendDays("device-07");
 
-    expect((await server.fetch(seriesPath("device-07", "source_1", "voltage"))).status).toBe(404);
+    expect(
+      (await read(server, clientToken, seriesPath("device-07", "source_1", "voltage"))).status,
+    ).toBe(404);
   });
 
   it("reads the last day when the window is left out", async () => {
     await sendDays("device-12");
-    const response = await server.fetch(
+    const response = await read(
+      server,
+      clientToken,
       "/api/v1/devices/device-12/sources/source_1/metrics/power/series",
     );
 
@@ -194,7 +226,9 @@ describe("series", () => {
   });
 
   it("refuses a window with one bound", async () => {
-    const response = await server.fetch(
+    const response = await read(
+      server,
+      clientToken,
       seriesPath("nobody", "source_1", "power", `from=${firstTs}`),
     );
 
@@ -204,15 +238,38 @@ describe("series", () => {
 
   it("refuses a range that ends before it starts", async () => {
     const path = seriesPath("device-07", "source_1", "power", `from=${lastTs}&to=${firstTs}`);
-    const response = await server.fetch(path);
+    const response = await read(server, clientToken, path);
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ detail: expect.stringContaining("to is after") });
   });
 });
 
+describe("auth", () => {
+  it("answers 401 to a read with no token, before validating anything", async () => {
+    const response = await read(server, undefined, "/api/v1/devices/Not%20An%20Id");
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get("www-authenticate")).toBe("Bearer");
+    expect(response.headers.get("content-type")).toBe("application/problem+json");
+  });
+
+  it("refuses a device token: a device never reads", async () => {
+    const deviceToken = await registerDevice(server, "device-reader");
+
+    expect((await read(server, deviceToken, "/api/v1/devices")).status).toBe(401);
+  });
+
+  it("refuses a revoked client token", async () => {
+    const revoked = await registerClient(server, "revoked");
+    await revokeClient(server, "revoked");
+
+    expect((await read(server, revoked, "/api/v1/devices")).status).toBe(401);
+  });
+});
+
 it("answers a route it does not serve as a problem", async () => {
-  const response = await server.fetch("/api/devices");
+  const response = await read(server, clientToken, "/api/devices");
 
   expect(response.status).toBe(404);
   expect(response.headers.get("content-type")).toBe("application/problem+json");

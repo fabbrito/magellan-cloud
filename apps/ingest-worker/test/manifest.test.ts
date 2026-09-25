@@ -10,6 +10,7 @@ import {
   declareManifest,
   putManifest,
   registerDevice,
+  revokeDevice,
   startIngest,
 } from "./harness.ts";
 
@@ -41,6 +42,15 @@ it("accepts a manifest from the device its token names", async () => {
 
 it("refuses a token that resolves to no device", async () => {
   const response = await putManifest(server, "device-02", mintToken(), encode(manifest));
+
+  expect(response.status).toBe(401);
+});
+
+it("refuses a revoked token", async () => {
+  const token = await registerDevice(server, "device-revoked");
+  await revokeDevice(server, "device-revoked");
+
+  const response = await putManifest(server, "device-revoked", token, encode(manifest));
 
   expect(response.status).toBe(401);
 });

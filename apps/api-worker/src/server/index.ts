@@ -18,9 +18,10 @@ import { createMiddleware } from "hono/factory";
 import { validator } from "hono/validator";
 import { z } from "zod";
 
+import { isClient } from "./auth.ts";
 import { detailOf, problem } from "./problem.ts";
 
-// Client-facing. No auth yet, so the worker has no public URL (wrangler.jsonc).
+// Client-facing. A client token is the authority on every route; the device token never reads.
 //
 // Versioned: the path is what a client keeps.
 type Device = NonNullable<Awaited<ReturnType<typeof deviceOf>>>;
@@ -29,6 +30,15 @@ type Worker = { Bindings: Env; Variables: { device: Device } };
 const app = new Hono<Worker>().basePath("/api/v1");
 
 const dayMs = 24 * 60 * 60 * 1000;
+
+// First, before any validator: a caller without a token learns nothing, not even what is malformed.
+app.use(async (context, next) => {
+  if (!(await isClient(getDb(context.env.DB), context.req.header("authorization")))) {
+    context.header("www-authenticate", "Bearer");
+    return problem(context, 401, "Unauthorized");
+  }
+  await next();
+});
 
 function validated<Target extends "param" | "query" | "json", Schema extends z.ZodType>(
   target: Target,

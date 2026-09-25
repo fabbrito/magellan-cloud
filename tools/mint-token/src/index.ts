@@ -1,21 +1,29 @@
-import { deviceIdPattern, hashToken, mintToken } from "@magellan/shared";
+import { hashToken, idPattern, mintToken } from "@magellan/shared";
 
-// Prints a token once and the statement that registers its hash. It never talks to Cloudflare.
+// Prints a token once and the statement that registers its hash — a device's, or with `--client` a
+// read API client's. It never talks to Cloudflare.
 const descriptionLengthMax = 64;
 
 // The description reaches a shell command and a SQL string literal, so quotes and backslashes are
 // out rather than escaped — this is a one-off command a person reads before running it.
 const descriptionPattern = new RegExp(`^[A-Za-z0-9 ._:()/-]{1,${descriptionLengthMax}}$`);
 
+const flags = ["--plain", "--client"];
+
 function refuse(problem: string): never {
-  console.error(`${problem}\n\nusage: bun run mint [--plain] <id> <description>`);
+  console.error(`${problem}\n\nusage: bun run mint [--plain] [--client] <id> <description>`);
   process.exit(1);
 }
 
 const commandArguments = process.argv.slice(2);
-const plain = commandArguments[0] === "--plain";
-const [deviceId, description] = plain ? commandArguments.slice(1) : commandArguments;
-if (deviceId === undefined || !deviceIdPattern.test(deviceId)) {
+const flagCount = commandArguments.findIndex((each) => !flags.includes(each));
+const given = commandArguments.slice(0, flagCount === -1 ? commandArguments.length : flagCount);
+const [id, description, ...rest] = commandArguments.slice(given.length);
+const plain = given.includes("--plain");
+const table = given.includes("--client") ? "api_clients" : "devices";
+
+if (rest.length > 0) refuse("Too many arguments; quote a description with spaces.");
+if (id === undefined || !idPattern.test(id)) {
   refuse("An id is lowercase letters, digits and dashes, starting with a letter or digit.");
 }
 if (description === undefined || !descriptionPattern.test(description)) {
@@ -25,8 +33,8 @@ if (description === undefined || !descriptionPattern.test(description)) {
 const token = mintToken();
 const tokenHash = await hashToken(token);
 const statement =
-  `INSERT INTO devices (id, description, token_hash, created_at) ` +
-  `VALUES ('${deviceId}', '${description}', '${tokenHash}', ${Date.now()})`;
+  `INSERT INTO ${table} (id, description, token_hash, created_at) ` +
+  `VALUES ('${id}', '${description}', '${tokenHash}', ${Date.now()})`;
 
 if (plain) {
   console.log(`${token}\n${statement}`);

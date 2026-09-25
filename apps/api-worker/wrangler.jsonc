@@ -3,9 +3,8 @@
   "name": "magellan-api",
   "main": "src/server/index.ts",
   "compatibility_date": "2026-09-19",
-  // Unreachable until the read routes check a client token: nothing guards them yet.
-  "workers_dev": false,
-  "preview_urls": false,
+  "workers_dev": true,
+  "preview_urls": true,
   // Beside ingest in `bun run dev`: its own port, and its own inspector, which both would otherwise
   // race for.
   "dev": {

@@ -29,10 +29,10 @@ the account.
 ## Running it
 
 ```bash
-bun run dev                        # local migrations, then ingest on :8787 and api on :8788
-bun run dev:ingest                 # or one of them alone: dev:ingest, dev:api
-bun run mint <id> <description>    # a token, and the statement that registers it
-bun run dev:reset                  # drop the local store; the next dev rebuilds it
+bun run dev                                 # local migrations, then ingest on :8787 and api on :8788
+bun run dev:ingest                          # or one of them alone: dev:ingest, dev:api
+bun run mint [--client] <id> <description>  # a device or client token, and its statement
+bun run dev:reset                           # drop the local store; the next dev rebuilds it
 ```
 
 `dev` serves both workers in workerd against one local D1 and R2 under `.wrangler/state` at the
@@ -60,11 +60,13 @@ fill it as the targets ask. Each target fetches a scoped API token from `CLOUDFL
 no `wrangler login` is left for anything else to use. `make` lists them:
 
 ```bash
-make bootstrap                               # D1 and R2; the D1 id goes in cloudflare.prod.env
-make migrate deploy                          # migrate first: a new ingest writes the new shape
-make register ID=<id> DESCRIPTION='<text>'   # a device token, printed once
-make probe                                   # or probe-ceiling, with `make tail WORKER=ingest` beside it
-make sql SQL='<statement>'                   # the live D1; `$` in a JSON path reaches it intact
+make bootstrap                                     # D1 and R2; the D1 id goes in cloudflare.prod.env
+make migrate deploy                                # migrate first: a new ingest writes the new shape
+make register ID=<id> DESCRIPTION='<text>'         # a device token, printed once
+make register-client ID=<id> DESCRIPTION='<text>'  # a client token, for Grafana
+make revoke-device ID=<id>                         # or revoke-client: the token stops resolving
+make probe                                         # or probe-ceiling, with `make tail WORKER=ingest` beside it
+make sql SQL='<statement>'                         # the live D1; `$` in a JSON path reaches it intact
 ```
 
 ## Layout
@@ -79,7 +81,7 @@ apps/api-worker/     client-facing read API
 apps/jobs-worker/    cron — rollups, retention, silent-device detection
 tools/simulator/     a fake device that speaks the contract
 tools/emit-openapi/  writes packages/contract/openapi.json from the worker's routes
-tools/mint-token/    mints a device token and the statement that registers it
+tools/mint-token/    mints a device or client token and the statement that registers it
 scripts/             the Makefile's shell, reaching the account
 ```
 

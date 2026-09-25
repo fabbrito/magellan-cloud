@@ -17,14 +17,24 @@ export const TOKEN = {
   prefix: "mgl_",
   entropyBytes: 32,
   bodyLength: 43,
-  deviceIdLengthMax: 64,
+  idLengthMax: 64,
 } as const;
 
 export const tokenPattern = new RegExp(`^${TOKEN.prefix}[A-Za-z0-9_-]{${TOKEN.bodyLength}}$`);
 
-// Narrower than the contract's key pattern: an id rides in a URL path and in SQL, so it is limited
-// to what needs no escaping in either.
-export const deviceIdPattern = new RegExp(`^[a-z0-9][a-z0-9-]{0,${TOKEN.deviceIdLengthMax - 1}}$`);
+// A device's or a client's id. Narrower than the contract's key pattern: an id rides in a URL path
+// and in SQL, so it is limited to what needs no escaping in either.
+export const idPattern = new RegExp(`^[a-z0-9][a-z0-9-]{0,${TOKEN.idLengthMax - 1}}$`);
+
+const scheme = "Bearer ";
+
+// The token an `Authorization` header carries, or undefined for any other shape. Shape before
+// work: a megabyte header costs a regex, not a hash.
+export function bearerToken(header: string | undefined): string | undefined {
+  if (header === undefined || !header.startsWith(scheme)) return undefined;
+  const token = header.slice(scheme.length);
+  return tokenPattern.test(token) ? token : undefined;
+}
 
 function base64url(bytes: Uint8Array): string {
   let binary = "";
