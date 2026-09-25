@@ -68,8 +68,8 @@ make sql SQL='<statement>'                   # the live D1; `$` in a JSON path r
 ```
 
 The app worker has no auth of its own: Cloudflare Access guards it, set on the worker itself —
-Workers & Pages > `magellan-app` > Access > All traffic. It deploys with `workers_dev` and previews
-off, so it has no public URL until Access is on and the flip is merged.
+Workers & Pages > `magellan-app` > Access > All traffic. The setting lives on the worker, so after
+`make takedown` the next deploy is public until Access is back on; deploy it unreachable first.
 
 ## Layout
 

@@ -3,11 +3,10 @@
   "name": "magellan-app",
   "main": "src/server/index.ts",
   "compatibility_date": "2026-09-19",
-  // Unreachable until Cloudflare Access guards it: with these off, the first deploy has no public
-  // URL, so Access is enabled before there is anything to reach. The `workers_dev` flip that opens
-  // it is its own change, after the maintainer turns Access on.
-  "workers_dev": false,
-  "preview_urls": false,
+  // Reachable because worker-level Cloudflare Access guards workers.dev and previews. A worker
+  // created afresh has no Access: deploy it with both off, turn Access on, then set them back.
+  "workers_dev": true,
+  "preview_urls": true,
   // Beside ingest in `bun run dev`: its own port, and its own inspector, which both would otherwise
   // race for.
   "dev": {
