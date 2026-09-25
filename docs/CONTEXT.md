@@ -75,6 +75,7 @@ time or request latency. Those are logs and live elsewhere.
 | **Device token**  | One revocable credential per device; the cloud stores only its hash          |
 | **Silent device** | A device whose last heartbeat is older than its expected cadence             |
 | **Client**        | What reads the read API — a Grafana, a script. Owns presentation             |
+| **Client token**  | One revocable read credential per client; never a device token               |
 
 **Caution — a client is not a tenant.** Many clients read one deployment's devices; none owns them.
 Presentation is the client's, never stored here.

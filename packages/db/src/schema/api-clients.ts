@@ -1,9 +1,9 @@
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
-// Only the hash is stored (docs/adr/0004-the-token-is-the-authority.md).
-// `description` is required: an id alone names nothing a person would recognize in a client.
-// Revoked, never deleted: the row keeps its readings attributed.
-export const devices = sqliteTable("devices", {
+// A reader of the read API — a Grafana, a script. Its own table, so a device token never reads and
+// a client token never ingests. Only the hash is stored; revoked, never deleted, so what was once
+// let in stays on record.
+export const apiClients = sqliteTable("api_clients", {
   id: text("id").primaryKey(),
   description: text("description").notNull(),
   tokenHash: text("token_hash").notNull().unique(),

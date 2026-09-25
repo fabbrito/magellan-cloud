@@ -26,7 +26,7 @@ export CLOUDFLARE_ACCOUNT_ID
 override SQL := $(value SQL)
 export SQL
 
-.PHONY: help bootstrap migrate deploy takedown tail sql register probe probe-ceiling
+.PHONY: help bootstrap migrate deploy takedown tail sql register register-client revoke-device revoke-client probe probe-ceiling
 
 define HELP_AWK
 BEGIN {
@@ -65,10 +65,24 @@ takedown: $(configs) ## delete both workers - D1 and R2 stay
 	$(call wrangler_in,$(api)) delete -c wrangler.prod.jsonc
 	$(wrangler) delete -c wrangler.prod.jsonc
 
-register: $(ingest_config) ## mint and register a token - ID=, DESCRIPTION=
+##@ Tokens
+register: $(ingest_config) ## mint and register a device token - ID=, DESCRIPTION=
 	$(call need,ID)
 	$(call need,DESCRIPTION)
 	$(auth) scripts/register.sh $(ID) '$(DESCRIPTION)'
+
+register-client: $(ingest_config) ## mint and register a read API client token - ID=, DESCRIPTION=
+	$(call need,ID)
+	$(call need,DESCRIPTION)
+	$(auth) scripts/register.sh --client $(ID) '$(DESCRIPTION)'
+
+revoke-device: $(ingest_config) ## revoke a device's token - ID=
+	$(call need,ID)
+	$(auth) scripts/revoke.sh device $(ID)
+
+revoke-client: $(ingest_config) ## revoke a client's token - ID=
+	$(call need,ID)
+	$(auth) scripts/revoke.sh client $(ID)
 
 ##@ Observe
 # JSON carries each invocation's CPU time. *.prod.* keeps the log out of git.

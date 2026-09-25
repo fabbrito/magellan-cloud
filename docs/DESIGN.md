@@ -218,6 +218,10 @@ A device token is minted by the cloud, returned once, and stored only as its SHA
 sends it as `Authorization: Bearer`. The token alone identifies the device, and the path id must
 match it or the request is `403`.
 
+A client token is minted the same way and kept apart: one authority per worker. A device token never
+reads, a client token never ingests. Either is revoked, never deleted — the row stays, the token
+resolves to nothing, and the refusal is `401`.
+
 ## 8. Device (Layers 5–8)
 
 What the cloud assumes of the other repository, and no more — how the device is built is

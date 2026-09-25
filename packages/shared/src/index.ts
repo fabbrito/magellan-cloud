@@ -1,1 +1,1 @@
-export { deviceIdPattern, hashToken, mintToken, TOKEN, tokenPattern } from "./token.ts";
+export { bearerToken, hashToken, idPattern, mintToken, TOKEN, tokenPattern } from "./token.ts";
