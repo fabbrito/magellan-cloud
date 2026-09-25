@@ -1,5 +1,5 @@
 {
-  "name": "@magellan/query-worker",
+  "name": "@magellan/app-worker",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -11,6 +11,7 @@
   "dependencies": {
     "@magellan/contract": "workspace:*",
     "@magellan/db": "workspace:*",
+    "@magellan/query": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.13.8",
     "zod": "^4.6.5"

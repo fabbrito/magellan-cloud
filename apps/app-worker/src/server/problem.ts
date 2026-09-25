@@ -1,15 +1,9 @@
+import type { Problem } from "@magellan/query";
 import type { Context } from "hono";
 import type { z } from "zod";
 
 // Every refusal is an RFC 9457 problem: the status, a title a person can act on, and for a
 // malformed request the detail of what was wrong. A caller branches on the status, never the text.
-export interface Problem {
-  type: "about:blank";
-  status: number;
-  title: string;
-  detail?: string;
-}
-
 export type ProblemStatus = 400 | 404 | 422 | 500;
 
 // What a refusal names past the standard members, as RFC 9457 allows.

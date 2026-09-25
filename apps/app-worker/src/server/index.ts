@@ -1,25 +1,30 @@
 import { keySchema } from "@magellan/contract";
 import { getDb, layouts } from "@magellan/db";
+import {
+  currentManifest,
+  type DeviceDetail,
+  type DeviceSummary,
+  deviceOf,
+  latestHeartbeat,
+  layoutBodySchema,
+  layoutNameSchema,
+  layoutsOf,
+  layoutsPerDeviceMax,
+  listDevices,
+  readSeries,
+  receiptsSince,
+  seqGaps,
+  seriesQuerySchema,
+  undeclaredCards,
+  windowOf,
+} from "@magellan/query";
 import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { validator } from "hono/validator";
 import { z } from "zod";
 
-import type { DeviceDetail, DeviceSummary } from "./api.ts";
-import { seqGaps } from "./health.ts";
-import { layoutBodySchema, layoutNameSchema, undeclaredCards } from "./layout.ts";
 import { detailOf, problem } from "./problem.ts";
-import { readSeries, seriesQuerySchema, windowOf } from "./query.ts";
-import {
-  currentManifest,
-  deviceOf,
-  latestHeartbeat,
-  layoutsOf,
-  layoutsPerDeviceMax,
-  listDevices,
-  receiptsSince,
-} from "./read.ts";
 
 // Dashboard-facing. No auth here: worker-level Cloudflare Access guards every way in — routes,
 // workers.dev, previews — and a Worker with static assets never receives `ctx.access`, so there is

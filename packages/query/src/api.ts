@@ -4,7 +4,15 @@ import type { Card } from "./layout.ts";
 import type { Interval, Point, Run, Segment } from "./series.ts";
 
 export type { Card, Interval, Point, Run, Segment };
-export type { Problem } from "./problem.ts";
+
+// A refusal's body, RFC 9457. Defined beside the bodies a client reads, not with the responder that
+// writes it, so the client imports problem bodies without the HTTP layer.
+export interface Problem {
+  type: "about:blank";
+  status: number;
+  title: string;
+  detail?: string;
+}
 
 // The bodies the API answers with, and the dashboard reads. Types only, free of the Workers
 // runtime and D1, so a browser build imports them without either. The routes hold theirs to these

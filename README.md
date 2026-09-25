@@ -10,8 +10,9 @@ device half is `magellan-device`; the two meet only at the contract.
 
 ## Status
 
-The ingest worker is live and takes a device's manifests and batches. The query worker answers
-devices, series and layouts over the same D1; the dashboard and the jobs worker are still scaffold.
+The ingest worker is live and takes a device's manifests and batches. The app worker answers
+devices, series and layouts over the same D1 and will serve the dashboard from the same origin; the
+dashboard is not built yet and the jobs worker is still scaffold.
 
 ## Setup
 
@@ -28,14 +29,14 @@ the account.
 ## Running it
 
 ```bash
-bun run dev                        # local migrations, then ingest on :8787 and query on :8788
-bun run dev:ingest                 # or one of them alone: dev:ingest, dev:query
+bun run dev                        # local migrations, then ingest on :8787 and app on :8788
+bun run dev:ingest                 # or one of them alone: dev:ingest, dev:app
 bun run mint <id> <description>    # a token, and the statement that registers it
 bun run dev:reset                  # drop the local store; the next dev rebuilds it
 ```
 
 `dev` serves both workers in workerd against one local D1 and R2 under `.wrangler/state` at the
-root, so the query worker reads what ingest commits. That store persists across restarts, registered
+root, so the app worker reads what ingest commits. That store persists across restarts, registered
 devices included, and `dev:reset` is the only thing that clears it. It is not the store the tests
 use — they boot their own and throw it away, so a test run leaves it untouched.
 
@@ -66,20 +67,20 @@ make probe                                   # or probe-ceiling, with `make tail
 make sql SQL='<statement>'                   # the live D1; `$` in a JSON path reaches it intact
 ```
 
-The query worker has no auth of its own: Cloudflare Access guards it, set on the worker itself —
-Workers & Pages > `magellan-query` > Access > All traffic. Until that is on, its workers.dev URL is
-public, so it is the step right after the first deploy.
+The app worker has no auth of its own: Cloudflare Access guards it, set on the worker itself —
+Workers & Pages > `magellan-app` > Access > All traffic. It deploys with `workers_dev` and previews
+off, so it has no public URL until Access is on and the flip is merged.
 
 ## Layout
 
 ```
 packages/contract/   the contract: Zod schemas, and openapi.json emitted from the routes
 packages/db/         D1 schema and migrations
+packages/query/      reads, series math and the layout schema; `./api` types for the client
 packages/shared/     token auth, errors, logging
 apps/ingest-worker/  device-facing
-apps/query-worker/   dashboard-facing, behind Cloudflare Access
+apps/app-worker/     dashboard-facing, behind Cloudflare Access; the SPA and its API
 apps/jobs-worker/    cron — rollups, retention, silent-device detection
-apps/dashboard/      static SPA
 tools/simulator/     a fake device that speaks the contract
 tools/emit-openapi/  writes packages/contract/openapi.json from the worker's routes
 tools/mint-token/    mints a device token and the statement that registers it
