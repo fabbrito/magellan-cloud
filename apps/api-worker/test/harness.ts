@@ -18,31 +18,27 @@ export async function startCloud(): Promise<TestHarness> {
   return server;
 }
 
-// Registers a device as tools/mint-token does; the token exists only here.
-export async function registerDevice(server: TestHarness, deviceId: string): Promise<string> {
-  const token = await mintToken();
+// Registers a token as tools/token mint does; the token exists only here.
+async function register(server: TestHarness, table: "devices" | "api_clients", id: string) {
+  const token = mintToken();
   const env = await server.getWorker<Env>().getEnv();
   await env.DB.prepare(
-    "INSERT INTO devices (id, description, token_hash, created_at) VALUES (?, ?, ?, ?)",
+    `INSERT INTO ${table} (id, description, token_hash, created_at) VALUES (?, ?, ?, ?)`,
   )
-    .bind(deviceId, `device ${deviceId}`, await hashToken(token), Date.now())
+    .bind(id, `${table} ${id}`, await hashToken(token), Date.now())
     .run();
   return token;
 }
 
-// Registers a client as tools/mint-token --client does; the token exists only here.
-export async function registerClient(server: TestHarness, clientId: string): Promise<string> {
-  const token = await mintToken();
-  const env = await server.getWorker<Env>().getEnv();
-  await env.DB.prepare(
-    "INSERT INTO api_clients (id, description, token_hash, created_at) VALUES (?, ?, ?, ?)",
-  )
-    .bind(clientId, `client ${clientId}`, await hashToken(token), Date.now())
-    .run();
-  return token;
+export function registerDevice(server: TestHarness, deviceId: string): Promise<string> {
+  return register(server, "devices", deviceId);
 }
 
-// As scripts/revoke.sh does.
+export function registerClient(server: TestHarness, clientId: string): Promise<string> {
+  return register(server, "api_clients", clientId);
+}
+
+// As tools/token revoke does.
 export async function revokeClient(server: TestHarness, clientId: string): Promise<void> {
   const env = await server.getWorker<Env>().getEnv();
   await env.DB.prepare("UPDATE api_clients SET revoked_at = ? WHERE id = ?")

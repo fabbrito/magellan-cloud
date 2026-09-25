@@ -29,10 +29,10 @@ the account.
 ## Running it
 
 ```bash
-bun run dev                                 # local migrations, then ingest on :8787 and api on :8788
-bun run dev:ingest                          # or one of them alone: dev:ingest, dev:api
-bun run mint [--client] <id> <description>  # a device or client token, and its statement
-bun run dev:reset                           # drop the local store; the next dev rebuilds it
+bun run dev                                      # local migrations, then ingest on :8787 and api on :8788
+bun run dev:ingest                               # or one of them alone: dev:ingest, dev:api
+bun run mint <device|client> <id> <description>  # a token, and the statement that registers it
+bun run dev:reset                                # drop the local store; the next dev rebuilds it
 ```
 
 `dev` serves both workers in workerd against one local D1 and R2 under `.wrangler/state` at the
@@ -49,7 +49,7 @@ use — they boot their own and throw it away, so a test run leaves it untouched
 endpoint = "http://127.0.0.1:8787/v1"
 ```
 
-`MAGELLAN_DEVICE_ID` and `MAGELLAN_TOKEN` come from `bun run mint`, whose printed statement
+`MAGELLAN_DEVICE_ID` and `MAGELLAN_TOKEN` come from `bun run mint device`, whose printed statement
 registers the hash here. The device refuses plain http unless it is loopback, so one running on
 another host wants a tunnel to this one rather than a LAN address.
 
@@ -81,7 +81,7 @@ apps/api-worker/     client-facing read API
 apps/jobs-worker/    cron — rollups, retention, silent-device detection
 tools/simulator/     a fake device that speaks the contract
 tools/emit-openapi/  writes packages/contract/openapi.json from the worker's routes
-tools/mint-token/    mints a device or client token and the statement that registers it
+tools/token/         mints or revokes a device or client token, as the statement to run
 scripts/             the Makefile's shell, reaching the account
 ```
 
