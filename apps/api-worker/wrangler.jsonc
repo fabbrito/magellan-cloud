@@ -1,12 +1,11 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "magellan-app",
+  "name": "magellan-api",
   "main": "src/server/index.ts",
   "compatibility_date": "2026-09-19",
-  // Reachable because worker-level Cloudflare Access guards workers.dev and previews. A worker
-  // created afresh has no Access: deploy it with both off, turn Access on, then set them back.
-  "workers_dev": true,
-  "preview_urls": true,
+  // Unreachable until the read routes check a client token: nothing guards them yet.
+  "workers_dev": false,
+  "preview_urls": false,
   // Beside ingest in `bun run dev`: its own port, and its own inspector, which both would otherwise
   // race for.
   "dev": {

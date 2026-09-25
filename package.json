@@ -22,7 +22,7 @@
     "dev:migrate": "bun --cwd=apps/ingest-worker run dev:migrate",
     "dev:exec": "bun --cwd=apps/ingest-worker run dev:exec",
     "dev:reset": "rm -rf .wrangler/state",
-    "dev:app": "bun run dev:migrate && bun --cwd=apps/app-worker run dev",
+    "dev:api": "bun run dev:migrate && bun --cwd=apps/api-worker run dev",
     "db:generate": "bun --cwd=packages/db run db:generate",
     "mint": "bun --cwd=tools/mint-token run mint",
     "sim": "bun --cwd=tools/simulator run sim",

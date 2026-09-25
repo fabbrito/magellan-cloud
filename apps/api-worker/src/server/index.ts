@@ -20,9 +20,7 @@ import { z } from "zod";
 
 import { detailOf, problem } from "./problem.ts";
 
-// Client-facing. No auth here: worker-level Cloudflare Access guards every way in — routes,
-// workers.dev, previews — and a Worker with static assets never receives `ctx.access`, so there is
-// nothing the worker could check. A stopgap until the platform has its own auth.
+// Client-facing. No auth yet, so the worker has no public URL (wrangler.jsonc).
 //
 // Versioned: the path is what a client keeps.
 type Device = NonNullable<Awaited<ReturnType<typeof deviceOf>>>;
