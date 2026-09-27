@@ -7,11 +7,11 @@ import {
   manifestSchema,
 } from "@magellan/contract";
 import { getDb, manifests, type Db } from "@magellan/db";
+import { resolveToken } from "@magellan/token";
 import { and, eq } from "drizzle-orm";
 import type { Context, Next } from "hono";
 
 import { archiveKey, manifestKey } from "./archive.ts";
-import { authorize } from "./auth.ts";
 import { commitBatch } from "./commit.ts";
 
 // Under /v1 because the device's configured endpoint already carries it (docs/DESIGN.md §6).
@@ -24,8 +24,12 @@ app.use("/v1/devices/:id/*", async (context, next) => {
   const db = getDb(context.env.DB);
   const header = context.req.header("authorization");
 
-  const authorization = await authorize(db, header, context.req.param("id"));
-  if (!authorization.ok) return context.body(null, authorization.status);
+  // The token is the authority, the path id a claim checked against it
+  // (docs/adr/0004-the-token-is-the-authority.md). Both refusals are retried, not dropped
+  // (docs/DESIGN.md §6).
+  const deviceId = await resolveToken(db, "device", header);
+  if (deviceId === undefined) return context.body(null, 401);
+  if (deviceId !== context.req.param("id")) return context.body(null, 403);
 
   context.set("db", db);
   await next();

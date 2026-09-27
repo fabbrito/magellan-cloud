@@ -9,6 +9,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
   },
+  "dependencies": {
+    "@magellan/db": "workspace:*",
+    "drizzle-orm": "^0.45.2"
+  },
   "devDependencies": {
     "vitest": "^5.0.1"
   }

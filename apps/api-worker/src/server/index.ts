@@ -13,12 +13,12 @@ import {
   seriesQuerySchema,
   windowOf,
 } from "@magellan/query";
+import { resolveToken } from "@magellan/token";
 import { Hono } from "hono";
 import { createMiddleware } from "hono/factory";
 import { validator } from "hono/validator";
 import { z } from "zod";
 
-import { isClient } from "./auth.ts";
 import { detailOf, problem } from "./problem.ts";
 
 // Client-facing. A client token is the authority on every route; the device token never reads.
@@ -32,8 +32,10 @@ const app = new Hono<Worker>().basePath("/api/v1");
 const dayMs = 24 * 60 * 60 * 1000;
 
 // First, before any validator: a caller without a token learns nothing, not even what is malformed.
+// Only a client token reads; a device token resolves to no client, like any unknown one.
 app.use(async (context, next) => {
-  if (!(await isClient(getDb(context.env.DB), context.req.header("authorization")))) {
+  const header = context.req.header("authorization");
+  if ((await resolveToken(getDb(context.env.DB), "client", header)) === undefined) {
     context.header("www-authenticate", "Bearer");
     return problem(context, 401, "Unauthorized");
   }

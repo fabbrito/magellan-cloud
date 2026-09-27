@@ -79,6 +79,10 @@ time or request latency. Those are logs and live elsewhere.
 | **Silent device** | A device whose last heartbeat is older than its expected cadence             |
 | **Client**        | What reads the read API — a Grafana, a script. Owns presentation             |
 | **Client token**  | One revocable read credential per client; never a device token               |
+| **Token**         | A device token or a client token; its **kind** says which                    |
+
+**Caution — a Cloudflare API token is never a Token here.** It is the maintainer's credential to the
+account, and no code in the workers or packages ever holds one.
 
 **Caution — a client is not a tenant.** Many clients read one deployment's devices; none owns them.
 Presentation is the client's, never stored here.

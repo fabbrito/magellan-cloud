@@ -1,1 +1,11 @@
-export { bearerToken, hashToken, idPattern, mintToken, TOKEN, tokenPattern } from "./token.ts";
+export {
+  isTokenKind,
+  mintStatement,
+  resolveToken,
+  revokeStatement,
+  type Minted,
+  type Refusal,
+  type Statement,
+  type TokenKind,
+} from "./store.ts";
+export { mintToken } from "./token.ts";
