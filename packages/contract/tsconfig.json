@@ -1,6 +1,10 @@
-// `types: []`: the schemas stay browser-safe. Node globals are tsconfig.test.json's.
+// Workers, where ingest runs it. The simulator's and the tests' projects compile it too, each under
+// its own runtime, so what it uses is what all of them share.
 {
   "extends": "../../tsconfig.base.json",
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.test.ts"]
+  "exclude": ["src/**/*.test.ts"],
+  "compilerOptions": {
+    "types": ["@cloudflare/workers-types"]
+  }
 }

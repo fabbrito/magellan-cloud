@@ -53,6 +53,9 @@
         "@magellan/db": "workspace:*",
         "@magellan/token": "workspace:*",
       },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260919.1",
+      },
     },
     "packages/contract": {
       "name": "@magellan/contract",
@@ -61,6 +64,7 @@
         "zod": "^4.6.5",
       },
       "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260919.1",
         "@types/node": "^26.6.2",
         "vitest": "^5.0.1",
       },
@@ -86,7 +90,9 @@
         "zod": "^4.6.5",
       },
       "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260919.1",
         "@magellan/simulator": "workspace:*",
+        "@types/node": "^26.6.2",
         "vitest": "^5.0.1",
       },
     },
@@ -98,6 +104,8 @@
         "drizzle-orm": "^0.45.2",
       },
       "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260919.1",
+        "@types/node": "^26.6.2",
         "vitest": "^5.0.1",
       },
     },
@@ -119,6 +127,7 @@
       },
       "devDependencies": {
         "@types/bun": "^1.4.2",
+        "@types/node": "^26.6.2",
         "vitest": "^5.0.1",
       },
     },

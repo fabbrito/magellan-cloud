@@ -1,4 +1,4 @@
-// `["node"]` for the tests' `TextEncoder`.
+// Node, where vitest runs the tests.
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {

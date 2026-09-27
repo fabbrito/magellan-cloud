@@ -9,6 +9,7 @@
   "rules": {
     // Circular imports. Requires `--tsconfig ./tsconfig.base.json`
     "import/no-cycle": "error",
+    "no-restricted-globals": ["error", "globalThis"],
     "no-unused-vars": [
       "error",
       {

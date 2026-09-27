@@ -9,5 +9,8 @@
   "dependencies": {
     "@magellan/db": "workspace:*",
     "@magellan/token": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260919.1"
   }
 }
