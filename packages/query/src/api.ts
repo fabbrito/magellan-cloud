@@ -12,8 +12,15 @@ export interface Problem {
   detail?: string;
 }
 
-// The bodies the API answers with. The routes hold theirs to these with `satisfies`, so the two
-// cannot drift.
+// What a read answers: the body, or the refusal a route turns into a problem.
+export type Answer<Body> =
+  | { ok: true; body: Body }
+  | { ok: false; status: 404 | 422; title: string };
+
+// Every read under a device answers this for one never registered, before it reads anything else.
+export const noDevice = { ok: false, status: 404, title: "No such device" } as const;
+
+// The bodies the API answers with. The reads build them typed, so a route cannot drift from them.
 
 export interface DeviceSummary {
   id: string;
