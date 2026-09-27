@@ -20,7 +20,7 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
 
-    // No ambient types are inherited. A package declares its own, which is what keeps
+    // No ambient types are inherited. A project names the runtime it runs on, which is what keeps
     // Bun APIs out of code that runs on the Workers runtime (AGENTS.md).
     "types": []
   }

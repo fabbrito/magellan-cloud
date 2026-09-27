@@ -1,2 +1,2 @@
 export * from "@magellan/db";
-export * from "@magellan/shared";
+export * from "@magellan/token";

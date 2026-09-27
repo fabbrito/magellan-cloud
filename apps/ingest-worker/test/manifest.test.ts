@@ -1,5 +1,5 @@
 import { LIMITS, manifestHash } from "@magellan/contract";
-import { mintToken } from "@magellan/shared";
+import { mintToken } from "@magellan/token";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import type { TestHarness } from "wrangler";
 

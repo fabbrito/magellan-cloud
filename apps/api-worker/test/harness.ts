@@ -1,6 +1,6 @@
 import type { Manifest } from "@magellan/contract";
-import { hashToken, mintToken } from "@magellan/shared";
 import { SimulatedDevice } from "@magellan/simulator";
+import { mintStatement, revokeStatement, type TokenKind } from "@magellan/token";
 import { createTestHarness, type TestHarness } from "wrangler";
 
 // Ingest beside the API worker, one D1 between them: readings arrive as a device sends them,
@@ -18,32 +18,28 @@ export async function startCloud(): Promise<TestHarness> {
   return server;
 }
 
-// Registers a token as tools/token mint does; the token exists only here.
-async function register(server: TestHarness, table: "devices" | "api_clients", id: string) {
-  const token = mintToken();
+// Registers a token through the statement tools/token prints; the token exists only here.
+async function register(server: TestHarness, kind: TokenKind, id: string): Promise<string> {
+  const minted = await mintStatement(kind, id, `${kind} ${id}`, Date.now());
+  if (!minted.ok) throw new Error(minted.problem);
   const env = await server.getWorker<Env>().getEnv();
-  await env.DB.prepare(
-    `INSERT INTO ${table} (id, description, token_hash, created_at) VALUES (?, ?, ?, ?)`,
-  )
-    .bind(id, `${table} ${id}`, await hashToken(token), Date.now())
-    .run();
-  return token;
+  await env.DB.prepare(minted.statement).run();
+  return minted.token;
 }
 
 export function registerDevice(server: TestHarness, deviceId: string): Promise<string> {
-  return register(server, "devices", deviceId);
+  return register(server, "device", deviceId);
 }
 
 export function registerClient(server: TestHarness, clientId: string): Promise<string> {
-  return register(server, "api_clients", clientId);
+  return register(server, "client", clientId);
 }
 
-// As tools/token revoke does.
 export async function revokeClient(server: TestHarness, clientId: string): Promise<void> {
+  const revoked = revokeStatement("client", clientId, Date.now());
+  if (!revoked.ok) throw new Error(revoked.problem);
   const env = await server.getWorker<Env>().getEnv();
-  await env.DB.prepare("UPDATE api_clients SET revoked_at = ? WHERE id = ?")
-    .bind(Date.now(), clientId)
-    .run();
+  await env.DB.prepare(revoked.statement).run();
 }
 
 // A read as a client makes it: `token` undefined sends none.

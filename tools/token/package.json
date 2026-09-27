@@ -1,5 +1,5 @@
 {
-  "name": "@magellan/token",
+  "name": "@magellan/token-cli",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,7 +7,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@magellan/shared": "workspace:*"
+    "@magellan/token": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2"

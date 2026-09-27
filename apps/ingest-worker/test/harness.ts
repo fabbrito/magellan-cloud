@@ -1,5 +1,5 @@
 import type { Batch } from "@magellan/contract";
-import { hashToken, mintToken } from "@magellan/shared";
+import { mintStatement, revokeStatement } from "@magellan/token";
 import { createTestHarness, type TestHarness } from "wrangler";
 
 import { manifestBytes } from "./fixtures.ts";
@@ -15,22 +15,20 @@ export async function startIngest(): Promise<TestHarness> {
   return server;
 }
 
-// Registers a device as tools/token mint does; the token exists only here.
+// Registers a device through the statement tools/token prints; the token exists only here.
 export async function registerDevice(server: TestHarness, id: string): Promise<string> {
-  const token = await mintToken();
+  const minted = await mintStatement("device", id, `device ${id}`, Date.now());
+  if (!minted.ok) throw new Error(minted.problem);
   const env = await server.getWorker<Env>().getEnv();
-  await env.DB.prepare(
-    "INSERT INTO devices (id, description, token_hash, created_at) VALUES (?, ?, ?, ?)",
-  )
-    .bind(id, `device ${id}`, await hashToken(token), Date.now())
-    .run();
-  return token;
+  await env.DB.prepare(minted.statement).run();
+  return minted.token;
 }
 
-// As tools/token revoke does.
 export async function revokeDevice(server: TestHarness, id: string): Promise<void> {
+  const revoked = revokeStatement("device", id, Date.now());
+  if (!revoked.ok) throw new Error(revoked.problem);
   const env = await server.getWorker<Env>().getEnv();
-  await env.DB.prepare("UPDATE devices SET revoked_at = ? WHERE id = ?").bind(Date.now(), id).run();
+  await env.DB.prepare(revoked.statement).run();
 }
 
 // Every sender states its length, as a device must: the worker answers 411 to a body whose size the

@@ -26,9 +26,11 @@ an important decision that stays cheap to reverse still defers.
 ## Bun is the package manager, never the runtime
 
 Workers deploy to the Cloudflare runtime, so Bun-only APIs never appear under `packages/` or
-`apps/`. `tsconfig.base.json` sets `types: []`, so nothing is inherited and every package declares
-its own: a package that never declares `["bun"]` cannot see `Bun.file`, and the mistake fails at
-typecheck rather than in production.
+`apps/`. `tsconfig.base.json` sets `types: []`, so nothing is inherited and every project names the
+runtime it runs on — Workers for `packages/` and `apps/`, Bun for `tools/`, Node for tests. A
+package that never names Bun cannot see `Bun.file`, and the mistake fails at typecheck rather than
+in production. Naming none is not neutral: it leaves a global to be cast from `globalThis`, which
+the compiler cannot check, so the linter refuses it.
 
 ## Cloudflare is the maintainer's to run
 

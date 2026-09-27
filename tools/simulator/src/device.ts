@@ -3,14 +3,6 @@ import { manifestHash, type Batch, type Manifest, type Reading } from "@magellan
 import { etagHash } from "./etag.ts";
 import { classify, type Outcome } from "./outcome.ts";
 
-// Compiled inside whatever runs it, so it names the one host global it needs rather than inheriting
-// a runtime's (as packages/shared/src/token.ts does).
-interface HostGlobals {
-  TextEncoder: new () => { encode(input: string): Uint8Array };
-}
-
-const host = globalThis as unknown as HostGlobals;
-
 // Only what an answer is read for. Structural, so a harness's `fetch` and a runtime's both fit
 // without this naming either one's `Response`.
 export interface CloudResponse {
@@ -44,7 +36,7 @@ export class SimulatedDevice {
   constructor(options: DeviceOptions) {
     this.options = options;
     // The bytes are what the hash is over, so they are serialized once and kept.
-    this.bytes = new host.TextEncoder().encode(JSON.stringify(options.manifest));
+    this.bytes = new TextEncoder().encode(JSON.stringify(options.manifest));
   }
 
   get bufferDepth(): number {
@@ -80,7 +72,7 @@ export class SimulatedDevice {
       heartbeat: { uptime_seconds: uptimeSeconds, buffer_depth: this.buffer.length },
     };
 
-    const body = new host.TextEncoder().encode(JSON.stringify(batch));
+    const body = new TextEncoder().encode(JSON.stringify(batch));
     const response = await this.send("POST", "batches", body);
     const outcome = classify(response.status);
 

@@ -12,12 +12,11 @@
     "@magellan/contract": "workspace:*",
     "@magellan/db": "workspace:*",
     "@magellan/query": "workspace:*",
-    "drizzle-orm": "^0.45.2",
+    "@magellan/token": "workspace:*",
     "hono": "^4.13.8",
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@magellan/shared": "workspace:*",
     "@magellan/simulator": "workspace:*",
     "@types/node": "^26.6.2"
   }
