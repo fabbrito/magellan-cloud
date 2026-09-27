@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "@magellan/db": "workspace:*",
-    "@magellan/shared": "workspace:*"
+    "@magellan/token": "workspace:*"
   }
 }

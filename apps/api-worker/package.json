@@ -17,8 +17,8 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@magellan/shared": "workspace:*",
     "@magellan/simulator": "workspace:*",
+    "@magellan/token": "workspace:*",
     "@types/node": "^26.6.2"
   }
 }

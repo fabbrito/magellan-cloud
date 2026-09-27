@@ -1,4 +1,4 @@
-import { hashToken, idPattern, mintToken } from "@magellan/shared";
+import { hashToken, idPattern, mintToken } from "@magellan/token";
 
 // Prints the SQL that changes the token registry — minting prints the token once beside it. It
 // never talks to Cloudflare: scripts/ run what it prints against the live store.

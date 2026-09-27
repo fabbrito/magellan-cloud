@@ -1,6 +1,6 @@
 import type { Manifest } from "@magellan/contract";
-import { hashToken, mintToken } from "@magellan/shared";
 import { SimulatedDevice } from "@magellan/simulator";
+import { hashToken, mintToken } from "@magellan/token";
 import { createTestHarness, type TestHarness } from "wrangler";
 
 // Ingest beside the API worker, one D1 between them: readings arrive as a device sends them,

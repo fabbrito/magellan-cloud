@@ -1,5 +1,5 @@
 import type { Batch } from "@magellan/contract";
-import { hashToken, mintToken } from "@magellan/shared";
+import { hashToken, mintToken } from "@magellan/token";
 import { createTestHarness, type TestHarness } from "wrangler";
 
 import { manifestBytes } from "./fixtures.ts";

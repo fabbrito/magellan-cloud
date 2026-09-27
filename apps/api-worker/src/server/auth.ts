@@ -1,5 +1,5 @@
 import { apiClients, type Db } from "@magellan/db";
-import { bearerToken, hashToken } from "@magellan/shared";
+import { bearerToken, hashToken } from "@magellan/token";
 import { and, eq, isNull } from "drizzle-orm";
 
 // Only a client token reads. A device token is refused like any unknown one: it lives in another

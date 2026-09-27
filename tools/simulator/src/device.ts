@@ -4,7 +4,7 @@ import { etagHash } from "./etag.ts";
 import { classify, type Outcome } from "./outcome.ts";
 
 // Compiled inside whatever runs it, so it names the one host global it needs rather than inheriting
-// a runtime's (as packages/shared/src/token.ts does).
+// a runtime's (as packages/token/src/token.ts does).
 interface HostGlobals {
   TextEncoder: new () => { encode(input: string): Uint8Array };
 }

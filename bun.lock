@@ -25,8 +25,8 @@
         "zod": "^4.6.5",
       },
       "devDependencies": {
-        "@magellan/shared": "workspace:*",
         "@magellan/simulator": "workspace:*",
+        "@magellan/token": "workspace:*",
         "@types/node": "^26.6.2",
       },
     },
@@ -37,7 +37,7 @@
         "@hono/zod-openapi": "^1.6.3",
         "@magellan/contract": "workspace:*",
         "@magellan/db": "workspace:*",
-        "@magellan/shared": "workspace:*",
+        "@magellan/token": "workspace:*",
         "drizzle-orm": "^0.45.2",
         "hono": "^4.13.8",
         "zod": "^4.6.5",
@@ -52,7 +52,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@magellan/db": "workspace:*",
-        "@magellan/shared": "workspace:*",
+        "@magellan/token": "workspace:*",
       },
     },
     "packages/contract": {
@@ -91,8 +91,8 @@
         "vitest": "^5.0.1",
       },
     },
-    "packages/shared": {
-      "name": "@magellan/shared",
+    "packages/token": {
+      "name": "@magellan/token",
       "version": "0.0.0",
       "devDependencies": {
         "vitest": "^5.0.1",
@@ -120,10 +120,10 @@
       },
     },
     "tools/token": {
-      "name": "@magellan/token",
+      "name": "@magellan/token-cli",
       "version": "0.0.0",
       "dependencies": {
-        "@magellan/shared": "workspace:*",
+        "@magellan/token": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "^1.4.2",
@@ -289,11 +289,11 @@
 
     "@magellan/query": ["@magellan/query@workspace:packages/query"],
 
-    "@magellan/shared": ["@magellan/shared@workspace:packages/shared"],
-
     "@magellan/simulator": ["@magellan/simulator@workspace:tools/simulator"],
 
-    "@magellan/token": ["@magellan/token@workspace:tools/token"],
+    "@magellan/token": ["@magellan/token@workspace:packages/token"],
+
+    "@magellan/token-cli": ["@magellan/token-cli@workspace:tools/token"],
 
     "@oxc-project/types": ["@oxc-project/types@0.150.0", "", {}, "sha512-rDS5/31E9HfPl/CIzGrn0DOlvBbXFseQ5URJ9sYMfstbKLD/c6Gm9vmRzRGDdAXyOIL4zmO37lc9RIwYqVruZw=="],
 

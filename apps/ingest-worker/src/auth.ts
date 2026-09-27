@@ -1,5 +1,5 @@
 import { devices, type Db } from "@magellan/db";
-import { bearerToken, hashToken } from "@magellan/shared";
+import { bearerToken, hashToken } from "@magellan/token";
 import { and, eq, isNull } from "drizzle-orm";
 
 // The token is the authority, the path id a claim checked against it
