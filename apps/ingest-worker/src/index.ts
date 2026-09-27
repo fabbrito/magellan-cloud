@@ -1,21 +1,13 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import {
-  batchSchema,
-  LIMITS,
-  checkBatchAgainstManifest,
-  manifestHash,
-  manifestSchema,
-} from "@magellan/contract";
-import { getDb, manifests, type Db } from "@magellan/db";
+import { batchSchema, LIMITS, manifestSchema } from "@magellan/contract";
+import { getDb } from "@magellan/db";
 import { resolveToken } from "@magellan/token";
-import { and, eq } from "drizzle-orm";
 import type { Context, Next } from "hono";
 
-import { archiveKey, manifestKey } from "./archive.ts";
-import { commitBatch } from "./commit.ts";
+import { declareManifest, ingestBatch, type Store } from "./ingest.ts";
 
 // Under /v1 because the device's configured endpoint already carries it (docs/DESIGN.md §6).
-const app = new OpenAPIHono<{ Bindings: Env; Variables: { db: Db } }>();
+const app = new OpenAPIHono<{ Bindings: Env; Variables: { store: Store } }>();
 
 // Before the route validators: a rejected credential answers 401, never 4xx about a body the
 // caller was never entitled to send.
@@ -31,7 +23,7 @@ app.use("/v1/devices/:id/*", async (context, next) => {
   if (deviceId === undefined) return context.body(null, 401);
   if (deviceId !== context.req.param("id")) return context.body(null, 403);
 
-  context.set("db", db);
+  context.set("store", { db, archive: context.env.ARCHIVE });
   await next();
 });
 
@@ -95,31 +87,8 @@ const manifestRoute = createRoute({
 
 app.openapi(manifestRoute, async (context) => {
   const { id } = context.req.valid("param");
-
-  // The hash is over the bytes as received: a re-serialized copy hashes differently (DESIGN §6).
   const bytes = new Uint8Array(await context.req.arrayBuffer());
-  const hash = await manifestHash(bytes);
-
-  // R2 before D1, as for a batch: D1's manifests table is a derived index, and without this object
-  // it is the only copy — every archived batch naming this hash would be unrebuildable
-  // (docs/DESIGN.md invariant 7).
-  const declaredAt = Date.now();
-  await context.env.ARCHIVE.put(manifestKey(id, hash), bytes, {
-    customMetadata: { declared_at: String(declaredAt) },
-  });
-
-  // Decoding round-trips: the validator already parsed these bytes as JSON, so they are UTF-8.
-  await context
-    .get("db")
-    .insert(manifests)
-    .values({
-      deviceId: id,
-      hash,
-      body: new TextDecoder().decode(bytes),
-      declaredAt,
-    })
-    .onConflictDoNothing();
-
+  const hash = await declareManifest(context.get("store"), id, bytes, Date.now());
   return context.body(null, 200, { ETag: `"${hash}"` });
 });
 
@@ -151,33 +120,25 @@ const batchesRoute = createRoute({
 app.openapi(batchesRoute, async (context) => {
   const { id } = context.req.valid("param");
   const batch = context.req.valid("json");
-  const db = context.get("db");
+  const bytes = await context.req.arrayBuffer();
 
-  // R2 before D1, so 2xx means both (docs/DESIGN.md §6). Every batch that parses is archived,
-  // including one naming a manifest that has not arrived — that archive is what rebuilds D1 when it
-  // does. The received time rides in metadata, where it is not part of identity.
-  const receivedAt = new Date();
-  await context.env.ARCHIVE.put(
-    archiveKey(id, batch.boot_id, batch.seq, receivedAt),
-    await context.req.arrayBuffer(),
-    { customMetadata: { received_at: String(receivedAt.getTime()) } },
-  );
+  const outcome = await ingestBatch(context.get("store"), id, batch, bytes, new Date());
+  switch (outcome) {
+    case "committed":
+      return context.body(null, 204);
+    case "manifest_absent":
+      return context.body(null, 503);
+    case "undeclared":
+      return context.body(null, 422);
+  }
+});
 
-  const [declared] = await db
-    .select({ body: manifests.body })
-    .from(manifests)
-    .where(and(eq(manifests.deviceId, id), eq(manifests.hash, batch.manifest_hash)))
-    .limit(1);
-
-  if (declared === undefined) return context.body(null, 503);
-
-  // Throws on a row this cloud wrote and can no longer read: that is a bug here, not a device's.
-  const manifest = manifestSchema.parse(JSON.parse(declared.body));
-  if (!checkBatchAgainstManifest(manifest, batch).ok) return context.body(null, 422);
-
-  await commitBatch(db, id, batch, receivedAt);
-
-  return context.body(null, 204);
+// Chosen, not inherited: a fault here is never the device's, so it answers the class that keeps the
+// buffer and retries (docs/DESIGN.md §6). A batch that reached the archive stays there. Logged for
+// the tail.
+app.onError((error, context) => {
+  console.error(error);
+  return context.body(null, 500);
 });
 
 export default app;

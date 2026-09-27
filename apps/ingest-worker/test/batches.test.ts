@@ -134,6 +134,21 @@ it("refuses a reading the manifest does not declare", async () => {
   expect(response.status).toBe(422);
 });
 
+it("answers a manifest it stored and can no longer read as its own fault", async () => {
+  const token = await registerDevice(server, "device-08");
+  const manifestHash = await declareManifest(server, "device-08", token);
+  // What a contract that tightened past a stored manifest would leave behind.
+  await query(server, "UPDATE manifests SET body = '{}' WHERE device_id = ?", "device-08");
+
+  const response = await postBatch(server, "device-08", token, batchOf(manifestHash, "0"));
+
+  // 5xx: the device keeps the buffer and retries, and the archive already holds the batch
+  // (docs/DESIGN.md §6).
+  expect(response.status).toBe(500);
+  expect(await response.text()).toBe("");
+  expect(await archiveOf(server, "device-08/batches/")).toHaveLength(1);
+});
+
 it("refuses a batch carrying no token", async () => {
   const response = await server.fetch("/v1/devices/inverter/batches", {
     method: "POST",
