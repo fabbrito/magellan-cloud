@@ -1,0 +1,38 @@
+# The commit gate: repokit's templates, copied into .config/lefthook/ and owned
+# here. Message policy is .config/commit-msg.conf. No job reaches Cloudflare:
+# anything that authenticates there is the maintainer's, never a hook's.
+#
+# This repo's own jobs go below - never a name a template uses: the extended
+# job wins.
+extends:
+  - .config/lefthook/base.yml
+  - .config/lefthook/shell.yml
+  - .config/lefthook/ts.yml
+
+# AGENTS.md names tests in the commit rule, so the gate runs them: a green
+# typecheck over a red contract test is the red tree that rule forbids. Whole
+# tree: a contract change breaks a consumer's test from a file the commit never
+# touched. No fix - a failing test is a decision, never a rewrite.
+pre-commit:
+  jobs:
+    - name: test
+      glob:
+        &test [
+          "**/*.{ts,tsx,mts,cts,js,mjs,cjs}",
+          "**/tsconfig*.json",
+          "vitest.config.ts",
+          "**/package.json",
+          "bun.lock",
+        ]
+      file_types: &file [not symlink]
+      run: bun run test
+
+check:
+  jobs:
+    - name: test
+      glob: *test
+      file_types: *file
+      files:
+        "sh -c 'git diff --name-only --diff-filter=ACMR HEAD 2>/dev/null || git diff --cached
+        --name-only --diff-filter=ACMR; git ls-files --others --exclude-standard'"
+      run: bun run test

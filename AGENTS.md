@@ -118,6 +118,11 @@ separate tsconfig projects, so what a test may import is not what the code may.
 ## Commits
 
 - Never a red tree: every commit passes formatting, lint, typecheck and tests.
+- The gate is lefthook's: `lefthook.yml` extends copies of `fabbrito/repokit`'s templates in
+  `.config/lefthook/`, owned here; this repo's own jobs sit beside them, never under a template's
+  job name. Message policy is `.config/commit-msg.conf`. Run it with `bun run check` /
+  `bun run fix`, never bare `lefthook run` — only git hooks get the `rc:` guard that puts mise's
+  pins on `PATH`.
 - `type(scope): subject`, scope the semantic area rather than the directory. Subject-only by
   default; cut every word the diff already says.
 - AI co-authored: `Co-Authored-By:` naming the model. Never a session link — history is permanent.
