@@ -7,7 +7,7 @@
     "suspicious": "warn"
   },
   "rules": {
-    // Circular imports. Requires `--tsconfig ./tsconfig.base.json`
+    // Circular imports.
     "import/no-cycle": "error",
     "no-restricted-globals": ["error", "globalThis"],
     "no-unused-vars": [

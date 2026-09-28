@@ -1,0 +1,72 @@
+# templates/ts: copy to .config/lefthook/ts.yml, list it under `extends:`.
+#
+# oxfmt formats the staged paths. A change to .oxfmtrc.json redefines
+# "formatted" for the whole tree, so that job checks everything, and only
+# checks on commit: stage_fixed re-stages staged paths only.
+#
+# oxlint and tsc read the whole graph - a formatted file can still close an
+# import cycle or break a type against an unformatted one - so they run on
+# the tree. No lint fix on commit: oxlint --fix rewrites code, not whitespace.
+# Tests are not a lane here; add one if they are fast enough to sit between
+# you and a commit.
+pre-commit:
+  jobs:
+    - name: oxfmt
+      glob: &fmt ["**/*.{ts,tsx,mts,cts,js,mjs,cjs,json,md,yml,yaml}"]
+      file_types: &file [not symlink]
+      run: bun oxfmt --no-error-on-unmatched-pattern {staged_files}
+      stage_fixed: true
+    - name: oxfmt-config
+      glob: &fmtconfig [".oxfmtrc.json"]
+      run: bun oxfmt --check
+    - name: oxlint
+      glob:
+        &ts [
+          "**/*.{ts,tsx,mts,cts,js,mjs,cjs}",
+          ".oxlintrc.json",
+          "**/tsconfig*.json",
+          "**/package.json",
+          "bun.lock",
+        ]
+      file_types: *file
+      run: bun oxlint --deny-warnings
+    - name: typecheck
+      glob: *ts
+      file_types: *file
+      run: bun --filter '*' typecheck
+
+check:
+  jobs:
+    - name: oxfmt
+      glob: *fmt
+      file_types: *file
+      files:
+        &changed "sh -c 'git diff --name-only --diff-filter=ACMR HEAD 2>/dev/null || git diff
+        --cached --name-only --diff-filter=ACMR; git ls-files --others --exclude-standard'"
+      run: bun oxfmt --check --no-error-on-unmatched-pattern {files}
+    - name: oxfmt-config
+      glob: *fmtconfig
+      files: *changed
+      run: bun oxfmt --check
+    - name: oxlint
+      glob: *ts
+      file_types: *file
+      files: *changed
+      run: bun oxlint --deny-warnings
+    - name: typecheck
+      glob: *ts
+      file_types: *file
+      files: *changed
+      run: bun --filter '*' typecheck
+
+fix:
+  jobs:
+    - name: oxfmt
+      glob: *fmt
+      file_types: *file
+      files: *changed
+      run: bun oxfmt --no-error-on-unmatched-pattern {files}
+    - name: oxfmt-config
+      glob: *fmtconfig
+      files: *changed
+      run: bun oxfmt

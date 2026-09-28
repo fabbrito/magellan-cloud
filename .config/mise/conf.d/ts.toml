@@ -1,0 +1,4 @@
+# templates/ts: copy to .config/mise/conf.d/ts.toml. bun only: oxfmt, oxlint
+# and tsc are devDependencies, pinned by bun.lock.
+[tools]
+bun = "1.4.2"

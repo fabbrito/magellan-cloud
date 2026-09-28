@@ -16,8 +16,11 @@ own. The jobs worker is still scaffold.
 
 ## Setup
 
+Needs [mise](https://mise.jdx.dev); bun and the gate's tools are pinned in `.config/mise/conf.d/`.
+
 ```bash
 bun install
+bun run hooks   # once per clone: the pinned tools, then lefthook's hooks
 ```
 
 `bun run` lists the scripts, so they are not copied here to rot.
