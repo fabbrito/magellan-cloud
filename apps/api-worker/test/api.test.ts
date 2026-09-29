@@ -1,5 +1,5 @@
 import type { Manifest } from "@magellan/contract";
-import type { Series } from "@magellan/query";
+import type { DeviceRow, HealthRow, MetricRow, Series, ValueRow } from "@magellan/query";
 import { daysManifest, daysReadings, energyStep } from "@magellan/simulator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { TestHarness } from "wrangler";
@@ -11,6 +11,7 @@ import {
   registerClient,
   registerDevice,
   revokeClient,
+  revokeDevice,
   startCloud,
 } from "./harness.ts";
 
@@ -35,10 +36,10 @@ const seriesPath = (
   source: string,
   metric: string,
   window = `from=${firstTs}&to=${lastTs}`,
-) => `/api/v1/devices/${deviceId}/sources/${source}/metrics/${metric}/series?${window}`;
+) => `/v1/devices/${deviceId}/sources/${source}/metrics/${metric}/series?${window}`;
 
 // Two days of the simulator's daily counter, sent as one batch through ingest.
-async function sendDays(deviceId: string): Promise<void> {
+async function sendDays(deviceId: string, fromTs = firstTs): Promise<void> {
   const token = await registerDevice(server, deviceId);
   const device = bootDevice(server, {
     deviceId,
@@ -47,9 +48,8 @@ async function sendDays(deviceId: string): Promise<void> {
     bootId: "0123456789abcdef",
   });
   await device.declare();
-  for (const reading of daysReadings({ firstTs, periodMs, readingsPerDay: 4, days: 2 })) {
-    device.poll(reading.source, reading.ts, reading.values);
-  }
+  const readings = daysReadings({ firstTs: fromTs, periodMs, readingsPerDay: 4, days: 2 });
+  for (const reading of readings) device.poll(reading.source, reading.ts, reading.values);
   if ((await device.flush(60)) !== "committed") throw new Error("the days did not commit");
 }
 
@@ -63,42 +63,111 @@ const withPower = (exponent: number, extra: Manifest["sources"][number]["metrics
   ],
 });
 
+const instant = expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+
 describe("devices", () => {
-  it("lists a device with when it was last seen", async () => {
+  it("lists a device, and a revoked one with when it was revoked", async () => {
     await sendDays("device-01");
+    await registerDevice(server, "device-gone");
+    await revokeDevice(server, "device-gone");
 
-    const devices = await getJson<{ id: string; last_seen: number | null }[]>(
-      server,
-      clientToken,
-      "/api/v1/devices",
-    );
+    const devices = await getJson<DeviceRow[]>(server, clientToken, "/v1/devices");
 
+    expect(devices).toContainEqual({
+      id: "device-01",
+      description: "device device-01",
+      revoked_at: null,
+    });
     expect(devices).toContainEqual(
-      expect.objectContaining({ id: "device-01", last_seen: expect.any(Number) }),
+      expect.objectContaining({ id: "device-gone", revoked_at: instant }),
     );
   });
 
-  it("describes a device by its current manifest and latest heartbeat", async () => {
+  it("lists the current manifest's metrics, one row each", async () => {
     await sendDays("device-02");
 
-    const device = await getJson<Record<string, unknown>>(
+    const metrics = await getJson<MetricRow[]>(
       server,
       clientToken,
-      "/api/v1/devices/device-02",
+      "/v1/devices/device-02/metrics",
     );
 
-    expect(device).toMatchObject({
-      manifest: { body: daysManifest },
-      heartbeat: { uptime_seconds: 60, buffer_depth: 8 },
-      seq_gaps: 0,
-    });
+    expect(metrics).toEqual([
+      { source: "source_1", metric: "power", kind: "gauge", unit: "W", exponent: 0 },
+      {
+        source: "source_1",
+        metric: "energy_today",
+        kind: "counter",
+        unit: "kWh",
+        exponent: -2,
+        resets: "daily",
+      },
+      {
+        source: "source_1",
+        metric: "mode",
+        kind: "state",
+        state_labels: { "0": "idle", "1": "running" },
+      },
+    ]);
+  });
+
+  it("lists no metrics for a device yet to declare", async () => {
+    await registerDevice(server, "device-mute");
+
+    expect(await getJson(server, clientToken, "/v1/devices/device-mute/metrics")).toEqual([]);
+  });
+
+  it("answers each metric's latest value, scaled, a counter raw", async () => {
+    await sendDays("device-08", Date.now() - 8 * periodMs);
+
+    const latest = await getJson<ValueRow[]>(server, clientToken, "/v1/devices/device-08/latest");
+
+    expect(latest).toEqual([
+      { time: instant, source: "source_1", metric: "power", value: 600 },
+      { time: instant, source: "source_1", metric: "energy_today", value: (4 * energyStep) / 100 },
+      { time: instant, source: "source_1", metric: "mode", value: 1 },
+    ]);
+  });
+
+  it("answers null for a source silent past the lookback", async () => {
+    await sendDays("device-09");
+
+    const latest = await getJson<ValueRow[]>(server, clientToken, "/v1/devices/device-09/latest");
+
+    expect(latest).toContainEqual({ time: null, source: "source_1", metric: "power", value: null });
+  });
+
+  it("answers health from the latest heartbeat", async () => {
+    await sendDays("device-10");
+
+    const health = await getJson<HealthRow[]>(server, clientToken, "/v1/devices/device-10/health");
+
+    expect(health).toEqual([
+      expect.objectContaining({
+        last_seen: instant,
+        seq_gaps: 0,
+        boot_id: "0123456789abcdef",
+        uptime_seconds: 60,
+        buffer_depth: 8,
+      }),
+    ]);
+  });
+
+  it("answers health with nulls before a first batch", async () => {
+    await registerDevice(server, "device-new");
+
+    const health = await getJson<HealthRow[]>(server, clientToken, "/v1/devices/device-new/health");
+
+    expect(health).toEqual([expect.objectContaining({ last_seen: null, seq: null, seq_gaps: 0 })]);
   });
 
   it.each([
-    ["GET", "/api/v1/devices/nobody"],
-    ["GET", "/api/v1/devices/nobody/sources/source_1/metrics/power/series?from=0&to=1"],
-  ])("answers 404 for a device never registered: %s %s", async (method, path) => {
-    const response = await read(server, clientToken, path, method);
+    "/v1/devices/nobody/metrics",
+    "/v1/devices/nobody/latest",
+    "/v1/devices/nobody/health",
+    "/v1/devices/nobody/sources/source_1/metrics/power/series?from=0&to=1",
+  ])("answers 404 for a device never registered: %s", async (path) => {
+    const response = await read(server, clientToken, path);
 
     expect(response.status).toBe(404);
     expect(response.headers.get("content-type")).toBe("application/problem+json");
@@ -220,7 +289,7 @@ describe("series", () => {
     const response = await read(
       server,
       clientToken,
-      "/api/v1/devices/device-12/sources/source_1/metrics/power/series",
+      "/v1/devices/device-12/sources/source_1/metrics/power/series",
     );
 
     expect(response.status).toBe(200);
@@ -248,7 +317,7 @@ describe("series", () => {
 
 describe("auth", () => {
   it("answers 401 to a read with no token, before validating anything", async () => {
-    const response = await read(server, undefined, "/api/v1/devices/Not%20An%20Id");
+    const response = await read(server, undefined, "/v1/devices/Not%20An%20Id/health");
 
     expect(response.status).toBe(401);
     expect(response.headers.get("www-authenticate")).toBe("Bearer");
@@ -258,14 +327,14 @@ describe("auth", () => {
   it("refuses a device token: a device never reads", async () => {
     const deviceToken = await registerDevice(server, "device-reader");
 
-    expect((await read(server, deviceToken, "/api/v1/devices")).status).toBe(401);
+    expect((await read(server, deviceToken, "/v1/devices")).status).toBe(401);
   });
 
   it("refuses a revoked client token", async () => {
     const revoked = await registerClient(server, "revoked");
     await revokeClient(server, "revoked");
 
-    expect((await read(server, revoked, "/api/v1/devices")).status).toBe(401);
+    expect((await read(server, revoked, "/v1/devices")).status).toBe(401);
   });
 });
 

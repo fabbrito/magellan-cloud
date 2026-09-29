@@ -1,4 +1,4 @@
-import type { Manifest, Metric } from "@magellan/contract";
+import type { Metric } from "@magellan/contract";
 
 import type { Interval, Point, Run, Segment } from "./series.ts";
 
@@ -21,31 +21,44 @@ export type Answer<Body> =
 export const noDevice = { ok: false, status: 404, title: "No such device" } as const;
 
 // The bodies the API answers with. The reads build them typed, so a route cannot drift from them.
+// Every body is a flat array of rows, the shape a client splits into series or table columns without
+// a parser of its own. Every instant is RFC 3339 UTC.
 
-export interface DeviceSummary {
+export interface DeviceRow {
   id: string;
   description: string;
-  last_seen: number | null;
+  // Revoked, still read: the row keeps its history attributed.
+  revoked_at: string | null;
 }
 
-export interface Heartbeat {
-  boot_id: string;
-  seq: string;
-  uptime_seconds: number;
-  buffer_depth: number;
+// What the current manifest declares, one row a metric. Units live here, never on a value row.
+// Distributed over the kinds, so each keeps its own fields.
+export type MetricRow = Metric extends infer Kind
+  ? Kind extends Metric
+    ? { source: string; metric: string } & Omit<Kind, "key">
+    : never
+  : never;
+
+// A value row: the physical quantity, or null where there is none to give.
+export interface ValueRow {
+  time: string | null;
+  source: string;
+  metric: string;
+  value: number | null;
+}
+
+// The heartbeat fields are null until a first batch commits.
+export interface HealthRow {
+  last_seen: string | null;
+  // Batches missing within a boot over the last day.
+  seq_gaps: number;
+  boot_id: string | null;
+  seq: string | null;
+  uptime_seconds: number | null;
+  buffer_depth: number | null;
   battery_percent: number | null;
   signal_percent: number | null;
   firmware_version: string | null;
-  received_at: number;
-}
-
-export interface DeviceDetail {
-  id: string;
-  description: string;
-  manifest: { hash: string; declared_at: number; body: Manifest } | null;
-  heartbeat: Heartbeat | null;
-  // Batches missing within a boot over the last day.
-  seq_gaps: number;
 }
 
 export type SeriesData =

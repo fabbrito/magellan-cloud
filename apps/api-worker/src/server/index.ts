@@ -1,6 +1,13 @@
 import { keySchema } from "@magellan/contract";
 import { getDb } from "@magellan/db";
-import { deviceDetail, deviceSummaries, readSeries, seriesQuerySchema } from "@magellan/query";
+import {
+  listDevices,
+  readHealth,
+  readLatest,
+  readMetrics,
+  readSeries,
+  seriesQuerySchema,
+} from "@magellan/query";
 import { resolveToken } from "@magellan/token";
 import { Hono } from "hono";
 import { validator } from "hono/validator";
@@ -13,7 +20,7 @@ import { detailOf, problem } from "./problem.ts";
 // Versioned: the path is what a client keeps.
 type Worker = { Bindings: Env };
 
-const app = new Hono<Worker>().basePath("/api/v1");
+const app = new Hono<Worker>().basePath("/v1");
 
 // First, before any validator: a caller without a token learns nothing, not even what is malformed.
 // Only a client token reads; a device token resolves to no client, like any unknown one.
@@ -47,11 +54,25 @@ const seriesParam = validated(
 const seriesQuery = validated("query", seriesQuerySchema);
 
 // Validators run first, so a malformed request is a 400 before any read can answer 404.
-app.get("/devices", async (context) => context.json(await deviceSummaries(getDb(context.env.DB))));
+app.get("/devices", async (context) => context.json(await listDevices(getDb(context.env.DB))));
 
-app.get("/devices/:id", deviceParam, async (context) => {
+app.get("/devices/:id/metrics", deviceParam, async (context) => {
   const { id } = context.req.valid("param");
-  const answer = await deviceDetail(getDb(context.env.DB), id, Date.now());
+  const answer = await readMetrics(getDb(context.env.DB), id);
+  if (!answer.ok) return problem(context, answer.status, answer.title);
+  return context.json(answer.body);
+});
+
+app.get("/devices/:id/latest", deviceParam, async (context) => {
+  const { id } = context.req.valid("param");
+  const answer = await readLatest(getDb(context.env.DB), id, Date.now());
+  if (!answer.ok) return problem(context, answer.status, answer.title);
+  return context.json(answer.body);
+});
+
+app.get("/devices/:id/health", deviceParam, async (context) => {
+  const { id } = context.req.valid("param");
+  const answer = await readHealth(getDb(context.env.DB), id, Date.now());
   if (!answer.ok) return problem(context, answer.status, answer.title);
   return context.json(answer.body);
 });

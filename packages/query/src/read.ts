@@ -2,7 +2,6 @@ import { manifestSchema } from "@magellan/contract";
 import { devices, heartbeats, manifests, readings, type Db } from "@magellan/db";
 import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 
-import type { Heartbeat } from "./api.ts";
 import type { Declaration } from "./metric.ts";
 
 // Row reads, left unawaited so a caller batches the independent ones into one round trip. Every read
@@ -24,30 +23,9 @@ export function declarationOf(row: {
   };
 }
 
-export function heartbeatOf(row: typeof heartbeats.$inferSelect): Heartbeat {
-  return {
-    boot_id: row.bootId,
-    seq: row.seq,
-    uptime_seconds: row.uptimeSeconds,
-    buffer_depth: row.bufferDepth,
-    battery_percent: row.batteryPercent,
-    signal_percent: row.signalPercent,
-    firmware_version: row.firmwareVersion,
-    received_at: row.receivedAt,
-  };
-}
-
-// A correlated MAX per device rides the (device_id, received_at) index rather than a join over
-// every heartbeat.
 export function selectDevices(db: Db) {
   return db
-    .select({
-      id: devices.id,
-      description: devices.description,
-      lastSeen: sql<
-        number | null
-      >`(SELECT MAX(${heartbeats.receivedAt}) FROM ${heartbeats} WHERE ${heartbeats.deviceId} = ${devices.id})`,
-    })
+    .select({ id: devices.id, description: devices.description, revokedAt: devices.revokedAt })
     .from(devices)
     .orderBy(asc(devices.id))
     .limit(devicesMax);
@@ -99,6 +77,18 @@ export function selectReceipts(db: Db, deviceId: string, sinceMs: number) {
     .from(heartbeats)
     .where(and(eq(heartbeats.deviceId, deviceId), gte(heartbeats.receivedAt, sinceMs)))
     .limit(receiptsMax);
+}
+
+// The key's descending walk stops at the first row, so this reads one row however long the history.
+export function selectLatestReading(db: Db, deviceId: string, source: string, sinceMs: number) {
+  return db
+    .select({ ts: readings.ts, manifestHash: readings.manifestHash, values: readings.values })
+    .from(readings)
+    .where(
+      and(eq(readings.deviceId, deviceId), eq(readings.source, source), gte(readings.ts, sinceMs)),
+    )
+    .orderBy(desc(readings.ts))
+    .limit(1);
 }
 
 export interface SampleQuery {
