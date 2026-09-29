@@ -678,7 +678,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Each asked metric's values, a reading or a bucket each.",
+            "description": "Each asked metric's values, a reading or a bucket each, ascending by time.",
             "content": {
               "application/json": {
                 "schema": {

@@ -7,7 +7,7 @@ import { bucketingOf, dayMs, type Bucketing, type Rollup } from "./bucket.ts";
 import { readDeclaration } from "./devices.ts";
 import { describeMetric, exponentLookup, type Declaration } from "./metric.ts";
 import { manifestsOf, sampleValuesOf, selectSamples } from "./read.ts";
-import { pointsOf } from "./rollup.ts";
+import { pointsOf, type Point } from "./rollup.ts";
 import type { Sample } from "./series.ts";
 import { instantOf } from "./time.ts";
 
@@ -164,7 +164,7 @@ export async function readSeries(
   }
   const declarations = await manifestsOf(db, deviceId, [...hashes]);
 
-  const body: ValueRow[] = [];
+  const labelled: { point: Point; ref: MetricRef }[] = [];
   for (const ref of query.metric) {
     const metric = describeMetric(declarations, ref.source, ref.key);
     if (metric === undefined) {
@@ -173,19 +173,22 @@ export async function readSeries(
     const source = readsBySource.get(ref.source);
     if (source === undefined) throw new Error(`source ${ref.source} was not read`);
     const points = pointsOf(metric, samplesOf(declarations, source, ref), bucketing);
-    if (body.length + points.length > rowsMax) {
+    if (labelled.length + points.length > rowsMax) {
       const coarser = coarserThan(bucketing.rollup);
       return { ok: false, status: 422, title: `More than ${rowsMax} rows; ${coarser}` };
     }
-    for (const point of points) {
-      body.push({
-        time: instantOf(point.ts),
-        source: ref.source,
-        metric: ref.key,
-        value: point.value,
-      });
-    }
+    for (const point of points) labelled.push({ point, ref });
   }
+  // Time order across metrics, asked order within a time: a long table only splits into series
+  // (Grafana's long-to-wide) when its times ascend. The sort is stable.
+  const body: ValueRow[] = labelled
+    .toSorted((left, right) => left.point.ts - right.point.ts)
+    .map(({ point, ref }) => ({
+      time: instantOf(point.ts),
+      source: ref.source,
+      metric: ref.key,
+      value: point.value,
+    }));
   return { ok: true, body };
 }
 

@@ -205,23 +205,27 @@ describe("series", () => {
     );
   });
 
-  it("answers several metrics as one long table", async () => {
+  it("answers several metrics as one long table, in time order", async () => {
     await sendDays("device-04");
 
     const rows = await getJson<ValueRow[]>(
       server,
       clientToken,
-      seriesPath("device-04", "source_1:mode,source_1:power"),
+      seriesPath("device-04", "source_1:power,source_1:mode"),
     );
 
     expect(rows).toHaveLength(16);
-    expect(rows[0]).toEqual({ time: readingTs(0), source: "source_1", metric: "mode", value: 1 });
-    expect(rows[8]).toEqual({
+    expect(rows[0]).toEqual({
       time: readingTs(0),
       source: "source_1",
       metric: "power",
       value: 600,
     });
+    expect(rows[1]).toEqual({ time: readingTs(0), source: "source_1", metric: "mode", value: 1 });
+    expect(rows.slice(2, 4).map((row) => [row.time, row.metric])).toEqual([
+      [readingTs(1), "power"],
+      [readingTs(1), "mode"],
+    ]);
   });
 
   it("scales each reading by the manifest it was read under", async () => {
