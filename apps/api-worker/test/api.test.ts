@@ -293,7 +293,7 @@ describe("series", () => {
         time: at(firstTs),
         source: "source_1",
         metric: "energy_today",
-        value: expect.closeTo(6 * step, 9),
+        value: 0.3,
       },
     ]);
   });

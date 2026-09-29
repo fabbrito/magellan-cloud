@@ -3,7 +3,7 @@ import { daysReadings, energyStep } from "@magellan/simulator";
 import { describe, expect, it } from "vitest";
 
 import { bucketsOf, hourMs } from "./bucket.ts";
-import { bucketPoints, readingPoints } from "./rollup.ts";
+import { pointsOf, type Point } from "./rollup.ts";
 import { scale, type Sample } from "./series.ts";
 
 const firstTs = Date.UTC(2026, 0, 1);
@@ -17,45 +17,51 @@ const daily: Metric = { key: "energy_today", kind: "counter", exponent: -2, rese
 const samplesOf = (values: number[], exponent: number, periodMs = quarterMs): Sample[] =>
   values.map((value, index) => ({ ts: firstTs + index * periodMs, exponent, value }));
 
-const hours = bucketsOf("UTC", "hour");
-const days = bucketsOf("UTC", "day");
+const byReading = { rollup: "reading" } as const;
+const hours = { rollup: "hour", buckets: bucketsOf("UTC", "hour") } as const;
+const days = { rollup: "day", buckets: bucketsOf("UTC", "day") } as const;
 
-describe("readingPoints", () => {
+// What a row answers: the time and value, not the precision the sum was rounded at.
+const valuesOf = (points: Point[]) => points.map(({ ts, value }) => ({ ts, value }));
+
+describe("by reading", () => {
   it("scales a gauge each reading", () => {
-    expect(readingPoints(gauge, samplesOf([215, 220], -1))).toEqual([
+    expect(valuesOf(pointsOf(gauge, samplesOf([215, 220], -1), byReading))).toEqual([
       { ts: firstTs, value: 21.5 },
       { ts: firstTs + quarterMs, value: 22 },
     ]);
   });
 
   it("answers a counter's delta at the reading that ends it, null across a reset", () => {
-    expect(readingPoints(counter, samplesOf([10, 15, 3], 0))).toEqual([
+    expect(valuesOf(pointsOf(counter, samplesOf([10, 15, 3], 0), byReading))).toEqual([
       { ts: firstTs + quarterMs, value: 5 },
       { ts: firstTs + 2 * quarterMs, value: null },
     ]);
   });
 
   it("passes a state's code through", () => {
-    expect(readingPoints(state, samplesOf([3], 0))).toEqual([{ ts: firstTs, value: 3 }]);
+    expect(valuesOf(pointsOf(state, samplesOf([3], 0), byReading))).toEqual([
+      { ts: firstTs, value: 3 },
+    ]);
   });
 });
 
-describe("bucketPoints", () => {
+describe("by bucket", () => {
   it("averages a gauge over its hour", () => {
-    expect(bucketPoints(gauge, samplesOf([10, 20, 30, 40, 50], -1), "hour", hours)).toEqual([
+    expect(valuesOf(pointsOf(gauge, samplesOf([10, 20, 30, 40, 50], -1), hours))).toEqual([
       { ts: firstTs, value: 2.5 },
       { ts: firstTs + hourMs, value: 5 },
     ]);
   });
 
   it("keeps a state's last code in its hour", () => {
-    expect(bucketPoints(state, samplesOf([1, 2, 1, 3], 0), "hour", hours)).toEqual([
+    expect(valuesOf(pointsOf(state, samplesOf([1, 2, 1, 3], 0), hours))).toEqual([
       { ts: firstTs, value: 3 },
     ]);
   });
 
   it("sums a counter's deltas into the hour each ends in", () => {
-    expect(bucketPoints(counter, samplesOf([0, 1, 2, 3, 4, 5], 0), "hour", hours)).toEqual([
+    expect(valuesOf(pointsOf(counter, samplesOf([0, 1, 2, 3, 4, 5], 0), hours))).toEqual([
       { ts: firstTs, value: 3 },
       { ts: firstTs + hourMs, value: 2 },
     ]);
@@ -64,7 +70,7 @@ describe("bucketPoints", () => {
   it("answers null for an hour holding only a reset", () => {
     const readings = samplesOf([5, 6, 7, 8, 1], 0, quarterMs);
 
-    expect(bucketPoints(counter, readings, "hour", hours)).toEqual([
+    expect(valuesOf(pointsOf(counter, readings, hours))).toEqual([
       { ts: firstTs, value: 3 },
       { ts: firstTs + hourMs, value: null },
     ]);
@@ -77,19 +83,25 @@ describe("bucketPoints", () => {
     );
     const dayTotal = scale(4 * energyStep, -2);
 
-    expect(bucketPoints(daily, readings, "day", days)).toEqual([
+    expect(valuesOf(pointsOf(daily, readings, days))).toEqual([
       { ts: firstTs, value: dayTotal },
       { ts: firstTs + 4 * periodMs, value: dayTotal },
     ]);
   });
 
   it("sums a daily counter's deltas by the hour", () => {
-    expect(bucketPoints(daily, samplesOf([100, 200], -2), "hour", hours)).toEqual([
+    expect(valuesOf(pointsOf(daily, samplesOf([100, 200], -2), hours))).toEqual([
       { ts: firstTs, value: 1 },
     ]);
   });
 
+  it("sums without float error: 0.1 + 0.2 is 0.3", () => {
+    const tenths = samplesOf([0, 1, 3], -1);
+
+    expect(valuesOf(pointsOf(counter, tenths, hours))).toEqual([{ ts: firstTs, value: 0.3 }]);
+  });
+
   it("has no bucket without readings", () => {
-    expect(bucketPoints(gauge, [], "day", days)).toEqual([]);
+    expect(valuesOf(pointsOf(gauge, [], days))).toEqual([]);
   });
 });

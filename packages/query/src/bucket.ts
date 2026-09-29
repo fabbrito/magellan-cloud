@@ -16,6 +16,15 @@ export interface Buckets {
   endOf(start: number): number;
 }
 
+// A rollup and, for a bucketed one, its buckets: built together, so neither answers without the
+// other.
+export type Bucketing = { rollup: "reading" } | { rollup: "hour" | "day"; buckets: Buckets };
+
+export function bucketingOf(tz: string, rollup: Rollup): Bucketing {
+  if (rollup === "reading") return { rollup };
+  return { rollup, buckets: bucketsOf(tz, rollup) };
+}
+
 // The wall clock at `ms`, read as if it were UTC, less `ms`. Whole seconds: no zone offsets by less.
 function offsetMs(format: Intl.DateTimeFormat, ms: number): number {
   const fields = new Map(format.formatToParts(ms).map((part) => [part.type, Number(part.value)]));

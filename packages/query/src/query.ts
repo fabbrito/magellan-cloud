@@ -1,19 +1,13 @@
-import { keySchema, type Metric } from "@magellan/contract";
+import { keySchema } from "@magellan/contract";
 import type { Db } from "@magellan/db";
 import { z } from "zod";
 
-import { noDevice, type Answer, type ValueRow } from "./api.ts";
-import { bucketsOf, dayMs, type Buckets, type Rollup } from "./bucket.ts";
+import type { Answer, ValueRow } from "./api.ts";
+import { bucketingOf, dayMs, type Bucketing, type Rollup } from "./bucket.ts";
+import { readDeclaration } from "./devices.ts";
 import { describeMetric, exponentLookup, type Declaration } from "./metric.ts";
-import {
-  declarationOf,
-  manifestsOf,
-  sampleValuesOf,
-  selectCurrentManifest,
-  selectDevice,
-  selectSamples,
-} from "./read.ts";
-import { bucketPoints, readingPoints } from "./rollup.ts";
+import { manifestsOf, sampleValuesOf, selectSamples } from "./read.ts";
+import { pointsOf } from "./rollup.ts";
 import type { Sample } from "./series.ts";
 import { instantOf } from "./time.ts";
 
@@ -43,11 +37,16 @@ const metricRefSchema = z
 
 export type MetricRef = z.infer<typeof metricRefSchema>;
 
+// A metric as a query names it: the form `metricRefSchema` parses.
+export function refName(ref: MetricRef): string {
+  return `${ref.source}:${ref.key}`;
+}
+
 const metricRefsSchema = z
   .string()
   .transform((refs) => refs.split(","))
   .pipe(z.array(metricRefSchema).min(1).max(metricsMax))
-  .refine((refs) => new Set(refs.map((ref) => `${ref.source}:${ref.key}`)).size === refs.length, {
+  .refine((refs) => new Set(refs.map(refName)).size === refs.length, {
     message: "a metric asked twice",
   });
 
@@ -91,8 +90,9 @@ export function rollupOf(query: SeriesQuery, window: Window): Rollup {
 }
 
 // Widened to whole buckets, so no bucket answers for part of itself.
-function spanOf(window: Window, buckets: Buckets | undefined): Window {
-  if (buckets === undefined) return window;
+function spanOf(window: Window, bucketing: Bucketing): Window {
+  if (bucketing.rollup === "reading") return window;
+  const { buckets } = bucketing;
   return {
     fromMs: buckets.startOf(window.fromMs),
     toMs: buckets.endOf(buckets.startOf(window.toMs - 1)),
@@ -111,20 +111,15 @@ interface SourceRows {
   rows: { ts: number; manifestHash: string; values: (number | null)[] }[];
 }
 
-function samplesOf(declarations: Declaration[], found: SourceRows, ref: MetricRef): Sample[] {
-  const index = found.keys.indexOf(ref.key);
+function samplesOf(declarations: Declaration[], source: SourceRows, ref: MetricRef): Sample[] {
+  const index = source.keys.indexOf(ref.key);
   const exponentOf = exponentLookup(declarations, ref.source, ref.key);
-  return found.rows.flatMap((row) => {
+  return source.rows.flatMap((row) => {
     const value = row.values[index];
     if (value === undefined) throw new Error("a key past the values array");
     if (value === null) return [];
     return [{ ts: row.ts, exponent: exponentOf(row.manifestHash), value }];
   });
-}
-
-function pointsOf(metric: Metric, samples: Sample[], rollup: Rollup, buckets: Buckets | undefined) {
-  if (rollup === "reading" || buckets === undefined) return readingPoints(metric, samples);
-  return bucketPoints(metric, samples, rollup, buckets);
 }
 
 export interface SeriesRequest {
@@ -140,28 +135,22 @@ export async function readSeries(
   nowMs: number,
 ): Promise<Answer<ValueRow[]>> {
   const { deviceId, query } = request;
-  const [[device], [currentRow]] = await db.batch([
-    selectDevice(db, deviceId),
-    selectCurrentManifest(db, deviceId),
-  ]);
-  if (device === undefined) return noDevice;
-  const current = currentRow === undefined ? undefined : declarationOf(currentRow);
+  const declared = await readDeclaration(db, deviceId);
+  if (!declared.ok) return declared;
+  const current = declared.body;
 
   const window = windowOf(query, nowMs);
-  const rollup = rollupOf(query, window);
   // Calendar days are cut in the device's zone; a device yet to declare has no readings to cut.
-  const buckets =
-    rollup === "reading" ? undefined : bucketsOf(current?.manifest.tz ?? "UTC", rollup);
+  const bucketing = bucketingOf(current?.manifest.tz ?? "UTC", rollupOf(query, window));
 
-  const found = await readSources(db, deviceId, query.metric, spanOf(window, buckets));
-  const readCount = [...found.values()].reduce((count, source) => count + source.rows.length, 0);
+  const readsBySource = await readSources(db, deviceId, query.metric, spanOf(window, bucketing));
+  const sources = [...readsBySource.values()];
+  const readCount = sources.reduce((count, source) => count + source.rows.length, 0);
   if (readCount > readingsMax) {
     return { ok: false, status: 422, title: `More than ${readingsMax} readings; narrow the range` };
   }
 
-  const hashes = new Set(
-    [...found.values()].flatMap((source) => source.rows.map((row) => row.manifestHash)),
-  );
+  const hashes = new Set(sources.flatMap((source) => source.rows.map((row) => row.manifestHash)));
   if (current !== undefined) hashes.add(current.hash);
   if (hashes.size > manifestsPerRangeMax) {
     return { ok: false, status: 422, title: "Too many manifests in range; narrow it" };
@@ -172,13 +161,14 @@ export async function readSeries(
   for (const ref of query.metric) {
     const metric = describeMetric(declarations, ref.source, ref.key);
     if (metric === undefined) {
-      return { ok: false, status: 404, title: `No manifest declares ${ref.source}:${ref.key}` };
+      return { ok: false, status: 404, title: `No manifest declares ${refName(ref)}` };
     }
-    const source = found.get(ref.source);
+    const source = readsBySource.get(ref.source);
     if (source === undefined) throw new Error(`source ${ref.source} was not read`);
-    const points = pointsOf(metric, samplesOf(declarations, source, ref), rollup, buckets);
+    const points = pointsOf(metric, samplesOf(declarations, source, ref), bucketing);
     if (body.length + points.length > rowsMax) {
-      return { ok: false, status: 422, title: `More than ${rowsMax} rows; ${coarserThan(rollup)}` };
+      const coarser = coarserThan(bucketing.rollup);
+      return { ok: false, status: 422, title: `More than ${rowsMax} rows; ${coarser}` };
     }
     for (const point of points) {
       body.push({

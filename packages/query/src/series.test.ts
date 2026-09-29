@@ -45,7 +45,7 @@ describe("counterIntervals", () => {
 
   it("spans the readings it is between", () => {
     expect(counterIntervals(samplesOf([1, 3], 0))).toEqual([
-      { start: firstTs, end: firstTs + periodMs, delta: 2 },
+      { start: firstTs, end: firstTs + periodMs, delta: 2, exponent: 0 },
     ]);
   });
 
@@ -100,14 +100,14 @@ describe("counterSegments", () => {
     const dayTotal = scale(4 * energyStep, -2);
 
     expect(counterSegments(days)).toEqual([
-      { end: firstTs + 3 * periodMs, total: dayTotal },
-      { end: firstTs + 7 * periodMs, total: dayTotal },
+      { end: firstTs + 3 * periodMs, total: dayTotal, exponent: -2 },
+      { end: firstTs + 7 * periodMs, total: dayTotal, exponent: -2 },
     ]);
   });
 
   it("ends with the running value", () => {
     expect(counterSegments(samplesOf([1, 2, 3], 0))).toEqual([
-      { end: firstTs + 2 * periodMs, total: 3 },
+      { end: firstTs + 2 * periodMs, total: 3, exponent: 0 },
     ]);
   });
 
