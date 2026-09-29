@@ -26,16 +26,21 @@ export function describeMetric(
 }
 
 // Each reading scales by the manifest it was read under. A state has no exponent: its code is 0.
-export function exponentsOf(
+// Ingest refuses a value its manifest does not declare, so a hash with no exponent is a bug here.
+export function exponentLookup(
   declarations: Declaration[],
   source: string,
   key: string,
-): Map<string, number> {
+): (hash: string) => number {
   const exponents = new Map<string, number>();
   for (const declaration of declarations) {
     const metric = metricOf(declaration.manifest, source, key);
     if (metric === undefined) continue;
     exponents.set(declaration.hash, metric.kind === "state" ? 0 : metric.exponent);
   }
-  return exponents;
+  return (hash) => {
+    const exponent = exponents.get(hash);
+    if (exponent === undefined) throw new Error(`manifest ${hash} lacks ${source}:${key}`);
+    return exponent;
+  };
 }

@@ -3,6 +3,7 @@ import type { Db } from "@magellan/db";
 
 import { noDevice, type Answer, type DeviceRow, type HealthRow, type MetricRow } from "./api.ts";
 import { seqGaps } from "./health.ts";
+import type { Declaration } from "./metric.ts";
 import { dayMs } from "./query.ts";
 import {
   declarationOf,
@@ -29,15 +30,26 @@ export function metricRows(manifest: Manifest): MetricRow[] {
   );
 }
 
-// A device yet to declare has no metrics, not a missing resource.
-export async function readMetrics(db: Db, deviceId: string): Promise<Answer<MetricRow[]>> {
+// The device's current declaration, undefined until it declares one; 404 for a device never
+// registered. One round trip, whichever a read goes on to need.
+export async function readDeclaration(
+  db: Db,
+  deviceId: string,
+): Promise<Answer<Declaration | undefined>> {
   const [[device], [manifest]] = await db.batch([
     selectDevice(db, deviceId),
     selectCurrentManifest(db, deviceId),
   ]);
   if (device === undefined) return noDevice;
-  if (manifest === undefined) return { ok: true, body: [] };
-  return { ok: true, body: metricRows(declarationOf(manifest).manifest) };
+  return { ok: true, body: manifest === undefined ? undefined : declarationOf(manifest) };
+}
+
+// A device yet to declare has no metrics, not a missing resource.
+export async function readMetrics(db: Db, deviceId: string): Promise<Answer<MetricRow[]>> {
+  const current = await readDeclaration(db, deviceId);
+  if (!current.ok) return current;
+  if (current.body === undefined) return { ok: true, body: [] };
+  return { ok: true, body: metricRows(current.body.manifest) };
 }
 
 // One round trip: each read names the device, so none waits on another.

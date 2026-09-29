@@ -1,7 +1,7 @@
 import type { Manifest } from "@magellan/contract";
 import { expect, it } from "vitest";
 
-import { describeMetric, exponentsOf } from "./metric.ts";
+import { describeMetric, exponentLookup } from "./metric.ts";
 
 const withPower = (exponent: number): Manifest => ({
   tz: "UTC",
@@ -38,10 +38,9 @@ it("scales each manifest's readings by that manifest's exponent", () => {
     { hash: "none", declaredAt: 3, manifest: withoutPower },
   ];
 
-  expect(exponentsOf(declarations, "source_1", "power")).toEqual(
-    new Map([
-      ["old", 0],
-      ["new", -1],
-    ]),
-  );
+  const exponentOf = exponentLookup(declarations, "source_1", "power");
+
+  expect(exponentOf("old")).toBe(0);
+  expect(exponentOf("new")).toBe(-1);
+  expect(() => exponentOf("none")).toThrow("lacks source_1:power");
 });

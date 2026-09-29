@@ -3,7 +3,7 @@ import type { Db } from "@magellan/db";
 import { z } from "zod";
 
 import { noDevice, type Answer, type Series, type SeriesData } from "./api.ts";
-import { describeMetric, exponentsOf, metricOf } from "./metric.ts";
+import { describeMetric, exponentLookup, metricOf } from "./metric.ts";
 import {
   declarationOf,
   manifestsOf,
@@ -119,13 +119,10 @@ export async function readSeries(
     return { ok: false, status: 404, title: "No manifest declares this metric" };
   }
 
-  // Ingest refuses a value its manifest does not declare, so every row's hash declares this key.
-  const exponents = exponentsOf(declarations, source, key);
+  const exponentOf = exponentLookup(declarations, source, key);
   const samples = rows.map((row) => {
-    const exponent = exponents.get(row.manifestHash);
-    if (exponent === undefined) throw new Error(`manifest ${row.manifestHash} lacks the metric`);
     if (row.value === null) throw new Error("a null the query excludes");
-    return { ts: row.ts, exponent, value: row.value };
+    return { ts: row.ts, exponent: exponentOf(row.manifestHash), value: row.value };
   });
 
   const declared = current !== undefined && metricOf(current.manifest, source, key) !== undefined;

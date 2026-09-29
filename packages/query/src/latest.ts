@@ -1,15 +1,10 @@
 import type { Db } from "@magellan/db";
 
-import { noDevice, type Answer, type ValueRow } from "./api.ts";
-import { exponentsOf } from "./metric.ts";
+import type { Answer, ValueRow } from "./api.ts";
+import { readDeclaration } from "./devices.ts";
+import { exponentLookup } from "./metric.ts";
 import { dayMs } from "./query.ts";
-import {
-  declarationOf,
-  manifestsOf,
-  selectCurrentManifest,
-  selectDevice,
-  selectLatestReading,
-} from "./read.ts";
+import { manifestsOf, selectLatestReading } from "./read.ts";
 import { scale } from "./series.ts";
 import { instantOf } from "./time.ts";
 
@@ -21,14 +16,11 @@ export async function readLatest(
   deviceId: string,
   nowMs: number,
 ): Promise<Answer<ValueRow[]>> {
-  const [[device], [currentRow]] = await db.batch([
-    selectDevice(db, deviceId),
-    selectCurrentManifest(db, deviceId),
-  ]);
-  if (device === undefined) return noDevice;
-  if (currentRow === undefined) return { ok: true, body: [] };
+  const current = await readDeclaration(db, deviceId);
+  if (!current.ok) return current;
+  if (current.body === undefined) return { ok: true, body: [] };
 
-  const { sources } = declarationOf(currentRow).manifest;
+  const { sources } = current.body.manifest;
   const [first, ...rest] = sources.map((source) =>
     selectLatestReading(db, deviceId, source.id, nowMs - dayMs),
   );
@@ -45,9 +37,7 @@ export async function readLatest(
       if (row === undefined || value === undefined) {
         return { time: null, source: source.id, metric: metric.key, value: null };
       }
-      // Ingest refuses a value its manifest does not declare, so the row's manifest declares it.
-      const exponent = exponentsOf(declarations, source.id, metric.key).get(row.manifestHash);
-      if (exponent === undefined) throw new Error(`manifest ${row.manifestHash} lacks the metric`);
+      const exponent = exponentLookup(declarations, source.id, metric.key)(row.manifestHash);
       return {
         time: instantOf(row.ts),
         source: source.id,
