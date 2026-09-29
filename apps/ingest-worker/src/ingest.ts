@@ -3,6 +3,7 @@ import {
   manifestHash,
   manifestSchema,
   type Batch,
+  type BatchCheck,
 } from "@magellan/contract";
 import { manifests, type Db } from "@magellan/db";
 import { and, eq } from "drizzle-orm";
@@ -43,8 +44,12 @@ export async function declareManifest(
 }
 
 // `manifest_absent`: the named manifest has not arrived — not the device's fault, so it keeps the
-// batch. `undeclared`: a reading names what the manifest does not declare — it never will.
-export type BatchOutcome = "committed" | "manifest_absent" | "undeclared";
+// batch. `undeclared`: a reading names what the manifest does not declare — it never will, and the
+// rejection says what, for the log.
+export type BatchOutcome =
+  | { kind: "committed" }
+  | { kind: "manifest_absent" }
+  | { kind: "undeclared"; rejection: Exclude<BatchCheck, { ok: true }> };
 
 export async function ingestBatch(
   store: Store,
@@ -65,12 +70,13 @@ export async function ingestBatch(
     .from(manifests)
     .where(and(eq(manifests.deviceId, deviceId), eq(manifests.hash, batch.manifest_hash)))
     .limit(1);
-  if (declared === undefined) return "manifest_absent";
+  if (declared === undefined) return { kind: "manifest_absent" };
 
   // Throws on a row this cloud wrote and can no longer read: that is a bug here, not a device's.
   const manifest = manifestSchema.parse(JSON.parse(declared.body));
-  if (!checkBatchAgainstManifest(manifest, batch).ok) return "undeclared";
+  const check = checkBatchAgainstManifest(manifest, batch);
+  if (!check.ok) return { kind: "undeclared", rejection: check };
 
   await commitBatch(store.db, deviceId, batch, receivedAt);
-  return "committed";
+  return { kind: "committed" };
 }

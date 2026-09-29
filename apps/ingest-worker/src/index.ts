@@ -6,8 +6,35 @@ import type { Context, Next } from "hono";
 
 import { declareManifest, ingestBatch, type Store } from "./ingest.ts";
 
+type RefusalStatus = 400 | 401 | 403 | 411 | 413 | 422 | 503;
+
+// The status is the device's policy; the reason is the maintainer's, warned to Workers Logs beside
+// the request's trace, where every device's refusals are read in one place. The body stays empty:
+// a device never branches on why (docs/DESIGN.md §6). Never the token.
+function refuse(
+  context: Context,
+  status: RefusalStatus,
+  reason: string,
+  fields: Record<string, unknown> = {},
+) {
+  console.warn({ event: "refused", status, reason, ...fields });
+  return context.body(null, status);
+}
+
+// One entry per issue, bounded: a batch of thousands of bad values warns with its first few.
+const issuesMax = 8;
+
 // Under /v1 because the device's configured endpoint already carries it (docs/DESIGN.md §6).
-const app = new OpenAPIHono<{ Bindings: Env; Variables: { store: Store } }>();
+const app = new OpenAPIHono<{ Bindings: Env; Variables: { store: Store } }>({
+  // Chosen, not inherited: the validator's own would answer the parse result as the body.
+  defaultHook: (result, context) => {
+    if (result.success) return undefined;
+    const issues = result.error.issues
+      .slice(0, issuesMax)
+      .map((issue) => ({ path: issue.path.join("."), message: issue.message }));
+    return refuse(context, 400, `malformed ${result.target}`, { issues });
+  },
+});
 
 // Before the route validators: a rejected credential answers 401, never 4xx about a body the
 // caller was never entitled to send.
@@ -20,8 +47,11 @@ app.use("/v1/devices/:id/*", async (context, next) => {
   // (docs/adr/0004-the-token-is-the-authority.md). Both refusals are retried, not dropped
   // (docs/DESIGN.md §6).
   const deviceId = await resolveToken(db, "device", header);
-  if (deviceId === undefined) return context.body(null, 401);
-  if (deviceId !== context.req.param("id")) return context.body(null, 403);
+  const claimed = context.req.param("id");
+  if (deviceId === undefined) return refuse(context, 401, "no device for the token", { claimed });
+  if (deviceId !== claimed) {
+    return refuse(context, 403, "the token names another device", { device_id: deviceId, claimed });
+  }
 
   context.set("store", { db, archive: context.env.ARCHIVE });
   await next();
@@ -42,9 +72,11 @@ const contentLengthPattern = /^\d{1,15}$/;
 async function refuseOversized(context: Context, next: Next, bytesMax: number) {
   const declared = context.req.header("content-length");
   if (declared === undefined || !contentLengthPattern.test(declared)) {
-    return context.body(null, 411);
+    return refuse(context, 411, "no parseable content-length", { declared });
   }
-  if (Number(declared) > bytesMax) return context.body(null, 413);
+  if (Number(declared) > bytesMax) {
+    return refuse(context, 413, "body past its bound", { declared, bytes_max: bytesMax });
+  }
   await next();
 }
 
@@ -123,19 +155,22 @@ app.openapi(batchesRoute, async (context) => {
   const bytes = await context.req.arrayBuffer();
 
   const outcome = await ingestBatch(context.get("store"), id, batch, bytes, new Date());
-  switch (outcome) {
+  const fields = { device_id: id, manifest_hash: batch.manifest_hash };
+  switch (outcome.kind) {
     case "committed":
       return context.body(null, 204);
     case "manifest_absent":
-      return context.body(null, 503);
-    case "undeclared":
-      return context.body(null, 422);
+      return refuse(context, 503, "manifest not declared", fields);
+    case "undeclared": {
+      const { reason, source, metric } = outcome.rejection;
+      return refuse(context, 422, reason, { ...fields, source, metric });
+    }
   }
 });
 
 // Chosen, not inherited: a fault here is never the device's, so it answers the class that keeps the
-// buffer and retries (docs/DESIGN.md §6). A batch that reached the archive stays there. Logged for
-// the tail.
+// buffer and retries (docs/DESIGN.md §6). A batch that reached the archive stays there. An error,
+// not a warning: a fault is a bug here, never the caller's.
 app.onError((error, context) => {
   console.error(error);
   return context.body(null, 500);

@@ -71,7 +71,9 @@ it("answers with the hash of the bytes it received", async () => {
   expect(acceptedHash(response)).toBe(await manifestHash(manifestBytes));
 });
 
-it("refuses a manifest the contract does not accept", async () => {
+// Regression: the validator's default answered its whole parse result as the body. The reason is
+// warned to the maintainer's logs; the device, which never branches on it, gets the status alone.
+it("refuses a manifest the contract does not accept, with an empty body", async () => {
   const token = await registerDevice(server, "device-05");
 
   const response = await putManifest(
@@ -82,6 +84,7 @@ it("refuses a manifest the contract does not accept", async () => {
   );
 
   expect(response.status).toBe(400);
+  expect(await response.text()).toBe("");
 });
 
 it("refuses a manifest that declares no length", async () => {
