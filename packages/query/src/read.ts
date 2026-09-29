@@ -94,17 +94,19 @@ export function selectLatestReading(db: Db, deviceId: string, source: string, si
 export interface SampleQuery {
   deviceId: string;
   source: string;
-  key: string;
+  keys: string[];
   fromMs: number;
   toMs: number;
 }
 
-// One metric out of each reading's JSON. The key pattern admits `.`, so the path quotes it; it
-// admits no `"`, so the quoting cannot be broken out of.
+// The asked metrics out of each reading's JSON, as one array in the keys' order: a metric the
+// reading left out is null in it. The key pattern admits `.`, so each path quotes its key; it admits
+// no `"`, so the quoting cannot be broken out of.
 export function selectSamples(db: Db, query: SampleQuery, limit: number) {
-  const value = sql<number | null>`json_extract(${readings.values}, ${`$."${query.key}"`})`;
+  const paths = query.keys.map((key) => sql`json_extract(${readings.values}, ${`$."${key}"`})`);
+  const values = sql<string>`json_array(${sql.join(paths, sql`, `)})`;
   return db
-    .select({ ts: readings.ts, manifestHash: readings.manifestHash, value })
+    .select({ ts: readings.ts, manifestHash: readings.manifestHash, values })
     .from(readings)
     .where(
       and(
@@ -112,9 +114,19 @@ export function selectSamples(db: Db, query: SampleQuery, limit: number) {
         eq(readings.source, query.source),
         gte(readings.ts, query.fromMs),
         lt(readings.ts, query.toMs),
-        sql`${value} IS NOT NULL`,
       ),
     )
     .orderBy(asc(readings.ts))
     .limit(limit);
+}
+
+// Throws on what `selectSamples` did not build: a bug here, never the caller's.
+export function sampleValuesOf(json: string, count: number): (number | null)[] {
+  const parsed: unknown = JSON.parse(json);
+  if (!Array.isArray(parsed) || parsed.length !== count)
+    throw new Error("a malformed values array");
+  return parsed.map((value: unknown) => {
+    if (value === null || typeof value === "number") return value;
+    throw new Error("a value neither a number nor null");
+  });
 }

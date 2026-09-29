@@ -1,5 +1,5 @@
 import type { Manifest } from "@magellan/contract";
-import type { DeviceRow, HealthRow, MetricRow, Series, ValueRow } from "@magellan/query";
+import type { DeviceRow, HealthRow, MetricRow, ValueRow } from "@magellan/query";
 import { daysManifest, daysReadings, energyStep } from "@magellan/simulator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { TestHarness } from "wrangler";
@@ -31,12 +31,10 @@ const periodMs = 300_000;
 const firstTs = Date.UTC(2026, 0, 1);
 const lastTs = firstTs + 8 * periodMs;
 
-const seriesPath = (
-  deviceId: string,
-  source: string,
-  metric: string,
-  window = `from=${firstTs}&to=${lastTs}`,
-) => `/v1/devices/${deviceId}/sources/${source}/metrics/${metric}/series?${window}`;
+const seriesPath = (deviceId: string, metric: string, window = `from=${firstTs}&to=${lastTs}`) =>
+  `/v1/devices/${deviceId}/series?metric=${metric}&${window}`;
+
+const at = (ts: number) => new Date(ts).toISOString();
 
 // Two days of the simulator's daily counter, sent as one batch through ingest.
 async function sendDays(deviceId: string, fromTs = firstTs): Promise<void> {
@@ -53,8 +51,12 @@ async function sendDays(deviceId: string, fromTs = firstTs): Promise<void> {
   if ((await device.flush(60)) !== "committed") throw new Error("the days did not commit");
 }
 
-const withPower = (exponent: number, extra: Manifest["sources"][number]["metrics"] = []) => ({
-  tz: "UTC",
+const withPower = (
+  exponent: number,
+  extra: Manifest["sources"][number]["metrics"] = [],
+  tz = "UTC",
+) => ({
+  tz,
   sources: [
     {
       id: "source_1",
@@ -165,7 +167,7 @@ describe("devices", () => {
     "/v1/devices/nobody/metrics",
     "/v1/devices/nobody/latest",
     "/v1/devices/nobody/health",
-    "/v1/devices/nobody/sources/source_1/metrics/power/series?from=0&to=1",
+    "/v1/devices/nobody/series?metric=source_1:power&from=0&to=1",
   ])("answers 404 for a device never registered: %s", async (path) => {
     const response = await read(server, clientToken, path);
 
@@ -180,43 +182,44 @@ describe("devices", () => {
 });
 
 describe("series", () => {
-  it("takes a daily counter's deltas, none across the reset, and totals each day", async () => {
+  const step = energyStep / 100;
+  const readingTs = (index: number) => at(firstTs + index * periodMs);
+
+  it("answers a daily counter's deltas a reading, null across the reset", async () => {
     await sendDays("device-03");
 
-    const series = await getJson<Series>(
+    const rows = await getJson<ValueRow[]>(
       server,
       clientToken,
-      seriesPath("device-03", "source_1", "energy_today"),
+      seriesPath("device-03", "source_1:energy_today"),
     );
-    const step = energyStep / 100;
 
-    expect(series.declared).toBe(true);
-    expect(series.data).toEqual({
-      kind: "counter",
-      intervals: [0, 1, 2, 4, 5, 6].map((index) => ({
-        start: firstTs + index * periodMs,
-        end: firstTs + (index + 1) * periodMs,
-        delta: step,
+    expect(rows).toEqual(
+      [1, 2, 3, 4, 5, 6, 7].map((index) => ({
+        time: readingTs(index),
+        source: "source_1",
+        metric: "energy_today",
+        value: index === 4 ? null : step,
       })),
-      segments: [
-        { end: firstTs + 3 * periodMs, total: 4 * step },
-        { end: firstTs + 7 * periodMs, total: 4 * step },
-      ],
-    });
+    );
   });
 
-  it("holds a state's code over the readings it spans", async () => {
+  it("answers several metrics as one long table", async () => {
     await sendDays("device-04");
 
-    const series = await getJson<Series>(
+    const rows = await getJson<ValueRow[]>(
       server,
       clientToken,
-      seriesPath("device-04", "source_1", "mode"),
+      seriesPath("device-04", "source_1:mode,source_1:power"),
     );
 
-    expect(series.data).toEqual({
-      kind: "state",
-      runs: [{ start: firstTs, end: firstTs + 7 * periodMs, code: 1 }],
+    expect(rows).toHaveLength(16);
+    expect(rows[0]).toEqual({ time: readingTs(0), source: "source_1", metric: "mode", value: 1 });
+    expect(rows[8]).toEqual({
+      time: readingTs(0),
+      source: "source_1",
+      metric: "power",
+      value: 600,
     });
   });
 
@@ -233,22 +236,16 @@ describe("series", () => {
       await device.flush(1);
     }
 
-    const series = await getJson<Series>(
+    const rows = await getJson<ValueRow[]>(
       server,
       clientToken,
-      seriesPath("device-05", "source_1", "power"),
+      seriesPath("device-05", "source_1:power"),
     );
 
-    expect(series.data).toEqual({
-      kind: "gauge",
-      points: [
-        { ts: firstTs, value: 215 },
-        { ts: firstTs + periodMs, value: 215 },
-      ],
-    });
+    expect(rows.map((row) => row.value)).toEqual([215, 215]);
   });
 
-  it("charts a metric the current manifest dropped, and says so", async () => {
+  it("answers a metric the current manifest dropped", async () => {
     const token = await registerDevice(server, "device-06");
     const first = bootDevice(server, {
       deviceId: "device-06",
@@ -266,22 +263,100 @@ describe("series", () => {
       bootId: "00000000000000b2",
     }).declare();
 
-    const series = await getJson<Series>(
+    const rows = await getJson<ValueRow[]>(
       server,
       clientToken,
-      seriesPath("device-06", "source_1", "voltage"),
+      seriesPath("device-06", "source_1:voltage"),
     );
 
-    expect(series.declared).toBe(false);
-    expect(series.data).toEqual({ kind: "gauge", points: [{ ts: firstTs, value: 230 }] });
+    expect(rows).toEqual([
+      { time: at(firstTs), source: "source_1", metric: "voltage", value: 230 },
+    ]);
+  });
+
+  it("rolls readings into the hour: a gauge averaged, a counter's deltas summed", async () => {
+    await sendDays("device-11");
+
+    const rows = await getJson<ValueRow[]>(
+      server,
+      clientToken,
+      seriesPath(
+        "device-11",
+        "source_1:power,source_1:energy_today",
+        `from=${firstTs}&to=${lastTs}&rollup=hour`,
+      ),
+    );
+
+    expect(rows).toEqual([
+      { time: at(firstTs), source: "source_1", metric: "power", value: 600 },
+      {
+        time: at(firstTs),
+        source: "source_1",
+        metric: "energy_today",
+        value: expect.closeTo(6 * step, 9),
+      },
+    ]);
+  });
+
+  it("totals a daily counter's day by its segments", async () => {
+    await sendDays("device-13");
+
+    const rows = await getJson<ValueRow[]>(
+      server,
+      clientToken,
+      seriesPath("device-13", "source_1:energy_today", `from=${firstTs}&to=${lastTs}&rollup=day`),
+    );
+
+    expect(rows).toEqual([
+      { time: at(firstTs), source: "source_1", metric: "energy_today", value: 8 * step },
+    ]);
+  });
+
+  it("cuts buckets in the device's zone", async () => {
+    const token = await registerDevice(server, "device-14");
+    const device = bootDevice(server, {
+      deviceId: "device-14",
+      token,
+      manifest: withPower(0, [], "Asia/Kolkata"),
+      bootId: "00000000000000c1",
+    });
+    await device.declare();
+    device.poll("source_1", firstTs, { power: 10 });
+    await device.flush(1);
+
+    const rows = await getJson<ValueRow[]>(
+      server,
+      clientToken,
+      seriesPath("device-14", "source_1:power", `from=${firstTs}&to=${lastTs}&rollup=hour`),
+    );
+
+    expect(rows).toEqual([
+      { time: at(firstTs - 30 * 60 * 1000), source: "source_1", metric: "power", value: 10 },
+    ]);
+  });
+
+  it("takes bounds as RFC 3339", async () => {
+    await sendDays("device-15");
+    const window = `from=${at(firstTs)}&to=${at(lastTs)}`;
+
+    const rows = await getJson<ValueRow[]>(
+      server,
+      clientToken,
+      seriesPath("device-15", "source_1:power", window),
+    );
+
+    expect(rows).toHaveLength(8);
   });
 
   it("answers 404 for a metric no manifest declared", async () => {
     await sendDays("device-07");
 
-    expect(
-      (await read(server, clientToken, seriesPath("device-07", "source_1", "voltage"))).status,
-    ).toBe(404);
+    const response = await read(server, clientToken, seriesPath("device-07", "source_1:voltage"));
+
+    expect(response.status).toBe(404);
+    expect(await response.json()).toMatchObject({
+      title: expect.stringContaining("source_1:voltage"),
+    });
   });
 
   it("reads the last day when the window is left out", async () => {
@@ -289,17 +364,23 @@ describe("series", () => {
     const response = await read(
       server,
       clientToken,
-      "/v1/devices/device-12/sources/source_1/metrics/power/series",
+      "/v1/devices/device-12/series?metric=source_1:power",
     );
 
     expect(response.status).toBe(200);
+  });
+
+  it("refuses a series with no metric", async () => {
+    const response = await read(server, clientToken, `/v1/devices/device-12/series?from=0&to=1`);
+
+    expect(response.status).toBe(400);
   });
 
   it("refuses a window with one bound", async () => {
     const response = await read(
       server,
       clientToken,
-      seriesPath("nobody", "source_1", "power", `from=${firstTs}`),
+      seriesPath("nobody", "source_1:power", `from=${firstTs}`),
     );
 
     expect(response.status).toBe(400);
@@ -307,7 +388,7 @@ describe("series", () => {
   });
 
   it("refuses a range that ends before it starts", async () => {
-    const path = seriesPath("device-07", "source_1", "power", `from=${lastTs}&to=${firstTs}`);
+    const path = seriesPath("device-07", "source_1:power", `from=${lastTs}&to=${firstTs}`);
     const response = await read(server, clientToken, path);
 
     expect(response.status).toBe(400);

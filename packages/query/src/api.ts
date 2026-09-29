@@ -1,9 +1,5 @@
 import type { Metric } from "@magellan/contract";
 
-import type { Interval, Point, Run, Segment } from "./series.ts";
-
-export type { Interval, Point, Run, Segment };
-
 // A refusal's body, RFC 9457.
 export interface Problem {
   type: "about:blank";
@@ -59,16 +55,4 @@ export interface HealthRow {
   battery_percent: number | null;
   signal_percent: number | null;
   firmware_version: string | null;
-}
-
-export type SeriesData =
-  | { kind: "gauge"; points: Point[] }
-  | { kind: "counter"; intervals: Interval[]; segments: Segment[] }
-  | { kind: "state"; runs: Run[] };
-
-export interface Series {
-  metric: Metric;
-  // Whether the current manifest still declares it; a dropped metric charts its history.
-  declared: boolean;
-  data: SeriesData;
 }

@@ -2,9 +2,9 @@ import type { Manifest } from "@magellan/contract";
 import type { Db } from "@magellan/db";
 
 import { noDevice, type Answer, type DeviceRow, type HealthRow, type MetricRow } from "./api.ts";
+import { dayMs } from "./bucket.ts";
 import { seqGaps } from "./health.ts";
 import type { Declaration } from "./metric.ts";
-import { dayMs } from "./query.ts";
 import {
   declarationOf,
   selectCurrentManifest,

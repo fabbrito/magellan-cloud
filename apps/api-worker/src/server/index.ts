@@ -47,10 +47,6 @@ function validated<Target extends "param" | "query" | "json", Schema extends z.Z
 }
 
 const deviceParam = validated("param", z.object({ id: keySchema }));
-const seriesParam = validated(
-  "param",
-  z.object({ id: keySchema, source: keySchema, key: keySchema }),
-);
 const seriesQuery = validated("query", seriesQuerySchema);
 
 // Validators run first, so a malformed request is a 400 before any read can answer 404.
@@ -77,22 +73,13 @@ app.get("/devices/:id/health", deviceParam, async (context) => {
   return context.json(answer.body);
 });
 
-app.get(
-  "/devices/:id/sources/:source/metrics/:key/series",
-  seriesParam,
-  seriesQuery,
-  async (context) => {
-    const { id, source, key } = context.req.valid("param");
-    const query = context.req.valid("query");
-    const answer = await readSeries(
-      getDb(context.env.DB),
-      { deviceId: id, source, key, query },
-      Date.now(),
-    );
-    if (!answer.ok) return problem(context, answer.status, answer.title);
-    return context.json(answer.body);
-  },
-);
+app.get("/devices/:id/series", deviceParam, seriesQuery, async (context) => {
+  const { id } = context.req.valid("param");
+  const query = context.req.valid("query");
+  const answer = await readSeries(getDb(context.env.DB), { deviceId: id, query }, Date.now());
+  if (!answer.ok) return problem(context, answer.status, answer.title);
+  return context.json(answer.body);
+});
 
 app.notFound((context) => problem(context, 404, "No such route"));
 

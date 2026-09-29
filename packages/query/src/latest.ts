@@ -1,9 +1,9 @@
 import type { Db } from "@magellan/db";
 
 import type { Answer, ValueRow } from "./api.ts";
+import { dayMs } from "./bucket.ts";
 import { readDeclaration } from "./devices.ts";
 import { exponentLookup } from "./metric.ts";
-import { dayMs } from "./query.ts";
 import { manifestsOf, selectLatestReading } from "./read.ts";
 import { scale } from "./series.ts";
 import { instantOf } from "./time.ts";

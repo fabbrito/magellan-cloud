@@ -1,14 +1,7 @@
 import { daysReadings, energyStep } from "@magellan/simulator";
 import { describe, expect, it } from "vitest";
 
-import {
-  counterIntervals,
-  counterSegments,
-  gaugePoints,
-  scale,
-  stateRuns,
-  type Sample,
-} from "./series.ts";
+import { counterIntervals, counterSegments, scale, type Sample } from "./series.ts";
 
 const periodMs = 300_000;
 const firstTs = Date.UTC(2026, 0, 1);
@@ -35,25 +28,19 @@ describe("scale", () => {
   });
 });
 
-describe("gaugePoints", () => {
-  it("scales each value by its own exponent", () => {
-    const rescaled = [
-      ...samplesOf([215], -1),
-      { ts: firstTs + periodMs, exponent: -2, value: 2150 },
-    ];
-
-    expect(gaugePoints(rescaled).map((point) => point.value)).toEqual([21.5, 21.5]);
-  });
-});
-
 describe("counterIntervals", () => {
-  it("takes one step a reading, with no interval across the daily reset", () => {
-    const intervals = counterIntervals(days);
+  it("takes one step a reading, with no delta across the daily reset", () => {
+    const step = scale(energyStep, -2);
 
-    expect(intervals.map((interval) => interval.delta)).toEqual(
-      Array.from({ length: 6 }, () => scale(energyStep, -2)),
-    );
-    expect(intervals.map((interval) => interval.end)).not.toContain(firstTs + 4 * periodMs);
+    expect(counterIntervals(days).map((interval) => interval.delta)).toEqual([
+      step,
+      step,
+      step,
+      null,
+      step,
+      step,
+      step,
+    ]);
   });
 
   it("spans the readings it is between", () => {
@@ -65,14 +52,14 @@ describe("counterIntervals", () => {
   it("reads an undeclared decrease as a reset", () => {
     expect(
       counterIntervals(samplesOf([900, 950, 20, 30], 0)).map((interval) => interval.delta),
-    ).toEqual([50, 10]);
+    ).toEqual([50, null, 10]);
   });
 
   // Regression: a device up mid-day drew its whole morning as one bar.
-  it("has no interval across a silence in the readings", () => {
+  it("has no delta across a silence in the readings", () => {
     const resumed = [...samplesOf([0, 5, 10], 0), ...samplesOf([2000, 2005], 0).map(later)];
 
-    expect(counterIntervals(resumed).map((interval) => interval.delta)).toEqual([5, 5, 5]);
+    expect(counterIntervals(resumed).map((interval) => interval.delta)).toEqual([5, 5, null, 5]);
   });
 
   it("takes a sparse device's usual span for usual, not for a silence", () => {
@@ -100,7 +87,7 @@ describe("counterIntervals", () => {
       { ts: firstTs + periodMs, exponent: -2, value: 1040 },
     ];
 
-    expect(counterIntervals(rescaled)).toEqual([]);
+    expect(counterIntervals(rescaled).map((interval) => interval.delta)).toEqual([null]);
   });
 
   it("has nothing to say about one reading", () => {
@@ -126,15 +113,5 @@ describe("counterSegments", () => {
 
   it("has no segment without readings", () => {
     expect(counterSegments([])).toEqual([]);
-  });
-});
-
-describe("stateRuns", () => {
-  it("holds a code until the reading that changes it", () => {
-    expect(stateRuns(samplesOf([1, 1, 2, 1], 0))).toEqual([
-      { start: firstTs, end: firstTs + 2 * periodMs, code: 1 },
-      { start: firstTs + 2 * periodMs, end: firstTs + 3 * periodMs, code: 2 },
-      { start: firstTs + 3 * periodMs, end: firstTs + 3 * periodMs, code: 1 },
-    ]);
   });
 });
