@@ -191,9 +191,9 @@ describe("manifestSchema", () => {
   });
 });
 
-describe("manifestSchema tz", () => {
-  const withTz = (tz: unknown) => ({ ...threeKinds, tz });
+const withTz = (tz: unknown) => ({ ...threeKinds, tz });
 
+describe("manifestSchema tz", () => {
   it.each(["America/Sao_Paulo", "UTC", "Etc/GMT+3", "America/Argentina/Buenos_Aires"])(
     "accepts %o",
     (tz) => {

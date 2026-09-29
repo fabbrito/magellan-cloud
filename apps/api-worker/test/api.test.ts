@@ -181,9 +181,10 @@ describe("devices", () => {
   });
 });
 
+const readingTs = (index: number) => at(firstTs + index * periodMs);
+
 describe("series", () => {
   const step = energyStep / 100;
-  const readingTs = (index: number) => at(firstTs + index * periodMs);
 
   it("answers a daily counter's deltas a reading, null across the reset", async () => {
     await sendDays("device-03");

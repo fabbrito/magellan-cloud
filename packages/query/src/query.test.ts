@@ -61,12 +61,12 @@ describe("metric", () => {
   });
 });
 
-describe("rollup", () => {
-  const rollupFor = (spanMs: number) => {
-    const query = seriesQuerySchema.parse({ metric, from: "0", to: String(spanMs) });
-    return rollupOf(query, windowOf(query, nowMs));
-  };
+const rollupFor = (spanMs: number) => {
+  const query = seriesQuerySchema.parse({ metric, from: "0", to: String(spanMs) });
+  return rollupOf(query, windowOf(query, nowMs));
+};
 
+describe("rollup", () => {
   it.each([
     [2 * dayMs, "reading"],
     [2 * dayMs + 1, "hour"],
