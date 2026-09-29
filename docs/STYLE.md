@@ -52,6 +52,8 @@ Nothing restarts, so any rule that assumes a fresh process does not transfer.
 - A failure the caller can act on is a value; an exception is for what cannot be handled here.
 - Handle every error. Most catastrophic failures are error paths that were never exercised.
 - A log is not a report. A bug that must be noticed needs a signal someone reads.
+- A refusal warns with its reason, a fault errors, a success logs nothing: the trace has it. A
+  logged object is indexed and tied to its trace, so there is no logging library.
 
 ## Bound everything
 

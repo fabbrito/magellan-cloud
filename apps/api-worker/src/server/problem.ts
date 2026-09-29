@@ -16,6 +16,9 @@ export function problem<Status extends ProblemStatus>(
   extensions: Extensions & { detail?: string } = {},
 ) {
   const body: Problem & Extensions = { type: "about:blank", status, title, ...extensions };
+  // The client reads the body; the maintainer reads this, every client's refusals in one place
+  // beside each request's trace. A 500 is `onError`'s to report, as an error.
+  if (status < 500) console.warn({ event: "refused", status, title, ...extensions });
   // Spelled as Hono spells it, so it replaces the default rather than sitting beside it.
   return context.json(body, status, { "Content-Type": "application/problem+json" });
 }
