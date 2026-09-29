@@ -36,15 +36,15 @@ export const deviceRowSchema = z.object({
     .meta({ description: "Revoked, still read: the device keeps its history." }),
 });
 
-const labels = { source: keySchema, metric: keySchema };
+const rowLabels = { source: keySchema, metric: keySchema };
 const [gaugeSchema, counterSchema, stateSchema] = metricSchema.options;
 
 // What the current manifest declares, one row a metric, each kind with its own fields. Units live
 // here, never on a value row.
 export const metricRowSchema = z.discriminatedUnion("kind", [
-  gaugeSchema.omit({ key: true }).extend(labels),
-  counterSchema.omit({ key: true }).extend(labels),
-  stateSchema.omit({ key: true }).extend(labels),
+  gaugeSchema.omit({ key: true }).extend(rowLabels),
+  counterSchema.omit({ key: true }).extend(rowLabels),
+  stateSchema.omit({ key: true }).extend(rowLabels),
 ]);
 
 export const valueRowSchema = z
@@ -52,7 +52,7 @@ export const valueRowSchema = z
     time: instantSchema
       .nullable()
       .meta({ description: "A reading's, or a bucket's start. Null with a null value." }),
-    ...labels,
+    ...rowLabels,
     value: z.number().nullable().meta({
       description:
         "The physical quantity: scaled, a counter's delta, a state's code. Null where none is known.",

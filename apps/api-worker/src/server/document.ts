@@ -9,5 +9,7 @@ export function openApiDocument() {
   return app.getOpenAPI31Document({
     openapi: "3.1.0",
     info: { title: "Magellan read", version: "0" },
+    // Every route reads, and every read takes a client token.
+    security: [{ clientToken: [] }],
   });
 }

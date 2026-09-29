@@ -62,10 +62,7 @@ const rows = <Schema extends z.ZodType>(schema: Schema, description: string) => 
 const deviceParams = z.object({ id: keySchema });
 
 // The read's answer, or its refusal as a problem.
-function answered<Body, Refusal extends 404 | 422>(
-  context: Context,
-  answer: Answer<Body, Refusal>,
-) {
+function respond<Body, Refusal extends 404 | 422>(context: Context, answer: Answer<Body, Refusal>) {
   if (!answer.ok) return problem(context, answer.status, answer.title);
   return context.json(answer.body, 200);
 }
@@ -73,7 +70,6 @@ function answered<Body, Refusal extends 404 | 422>(
 const devicesRoute = createRoute({
   method: "get",
   path: "/v1/devices",
-  security: [{ clientToken: [] }],
   responses: {
     200: rows(deviceRowSchema, "Every device, revoked ones too."),
     401: refusals[401],
@@ -87,20 +83,18 @@ app.openapi(devicesRoute, async (context) =>
 const metricsRoute = createRoute({
   method: "get",
   path: "/v1/devices/{id}/metrics",
-  security: [{ clientToken: [] }],
   request: { params: deviceParams },
   responses: { 200: rows(metricRowSchema, "What the current manifest declares."), ...refusals },
 });
 
 app.openapi(metricsRoute, async (context) => {
   const { id } = context.req.valid("param");
-  return answered(context, await readMetrics(getDb(context.env.DB), id));
+  return respond(context, await readMetrics(getDb(context.env.DB), id));
 });
 
 const latestRoute = createRoute({
   method: "get",
   path: "/v1/devices/{id}/latest",
-  security: [{ clientToken: [] }],
   request: { params: deviceParams },
   responses: {
     200: rows(valueRowSchema, "Each current metric in its source's latest reading, raw."),
@@ -110,26 +104,24 @@ const latestRoute = createRoute({
 
 app.openapi(latestRoute, async (context) => {
   const { id } = context.req.valid("param");
-  return answered(context, await readLatest(getDb(context.env.DB), id, Date.now()));
+  return respond(context, await readLatest(getDb(context.env.DB), id, Date.now()));
 });
 
 const healthRoute = createRoute({
   method: "get",
   path: "/v1/devices/{id}/health",
-  security: [{ clientToken: [] }],
   request: { params: deviceParams },
   responses: { 200: rows(healthRowSchema, "One row: the latest heartbeat and gaps."), ...refusals },
 });
 
 app.openapi(healthRoute, async (context) => {
   const { id } = context.req.valid("param");
-  return answered(context, await readHealth(getDb(context.env.DB), id, Date.now()));
+  return respond(context, await readHealth(getDb(context.env.DB), id, Date.now()));
 });
 
 const seriesRoute = createRoute({
   method: "get",
   path: "/v1/devices/{id}/series",
-  security: [{ clientToken: [] }],
   request: { params: deviceParams, query: seriesQuerySchema },
   responses: {
     200: rows(valueRowSchema, "Each asked metric's values, a reading or a bucket each."),
@@ -145,7 +137,7 @@ const seriesRoute = createRoute({
 app.openapi(seriesRoute, async (context) => {
   const { id } = context.req.valid("param");
   const query = context.req.valid("query");
-  return answered(
+  return respond(
     context,
     await readSeries(getDb(context.env.DB), { deviceId: id, query }, Date.now()),
   );
