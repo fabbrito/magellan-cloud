@@ -384,7 +384,7 @@ describe("series", () => {
     );
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ detail: expect.stringContaining("together") });
+    expect(await response.json()).toMatchObject({ detail: "query: from and to come together" });
   });
 
   it("refuses a range that ends before it starts", async () => {
@@ -392,7 +392,7 @@ describe("series", () => {
     const response = await read(server, clientToken, path);
 
     expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ detail: expect.stringContaining("to is after") });
+    expect(await response.json()).toMatchObject({ detail: "query: to is after from" });
   });
 });
 

@@ -27,7 +27,9 @@ const app = new OpenAPIHono<{ Bindings: Env }>({
   // Validators run before any read, so a malformed request is a 400 before a read can answer 404.
   defaultHook: (result, context) => {
     if (!result.success) {
-      return problem(context, 400, "Malformed request", { detail: detailOf(result.error) });
+      return problem(context, 400, "Malformed request", {
+        detail: detailOf(result.error, result.target),
+      });
     }
     return undefined;
   },

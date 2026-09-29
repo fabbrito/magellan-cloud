@@ -20,12 +20,14 @@ export function problem<Status extends ProblemStatus>(
   return context.json(body, status, { "Content-Type": "application/problem+json" });
 }
 
-// One line per issue, bounded: a body of thousands of bad values answers with its first few.
+// One line per issue, bounded: a request of thousands of bad values answers with its first few.
 const issuesMax = 8;
 
-export function detailOf(error: z.ZodError): string {
+// An issue about the whole of what was validated has no path, so it names the part instead: the
+// query string or the path parameters, never a body the request did not send.
+export function detailOf(error: z.ZodError, target: string): string {
   return error.issues
     .slice(0, issuesMax)
-    .map((issue) => `${issue.path.join(".") || "body"}: ${issue.message}`)
+    .map((issue) => `${issue.path.join(".") || target}: ${issue.message}`)
     .join("; ");
 }
