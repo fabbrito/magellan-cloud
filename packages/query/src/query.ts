@@ -28,6 +28,9 @@ const instantSchema = z.union([
   z.iso.datetime({ offset: true }).transform((iso) => Date.parse(iso)),
 ]);
 
+const boundDescription =
+  "Epoch milliseconds or RFC 3339. With the other bound, or neither: the last day.";
+
 // `source:key`: the key pattern admits no `:`, so the first one splits.
 const metricRefSchema = z
   .string()
@@ -48,16 +51,20 @@ const metricRefsSchema = z
   .pipe(z.array(metricRefSchema).min(1).max(metricsMax))
   .refine((refs) => new Set(refs.map(refName)).size === refs.length, {
     message: "a metric asked twice",
-  });
+  })
+  .meta({ description: `Comma-separated \`source:key\`, 1 to ${metricsMax}, each once.` });
 
 // Both bounds or neither: half a window would be a guess. Neither is the last day, resolved against
 // the clock by `windowOf`, so the schema stays pure.
 export const seriesQuerySchema = z
   .object({
     metric: metricRefsSchema,
-    from: instantSchema.optional(),
-    to: instantSchema.optional(),
-    rollup: z.enum(["reading", "hour", "day"]).optional(),
+    from: instantSchema.optional().meta({ description: `${boundDescription} Inclusive.` }),
+    to: instantSchema.optional().meta({ description: `${boundDescription} Exclusive.` }),
+    rollup: z.enum(["reading", "hour", "day"]).optional().meta({
+      description:
+        "Hour and day buckets are cut in the device's zone. Left out: reading to 2 days, hour to 90, day past.",
+    }),
   })
   .refine((query) => (query.from === undefined) === (query.to === undefined), {
     message: "from and to come together",
@@ -133,7 +140,7 @@ export async function readSeries(
   db: Db,
   request: SeriesRequest,
   nowMs: number,
-): Promise<Answer<ValueRow[]>> {
+): Promise<Answer<ValueRow[], 404 | 422>> {
   const { deviceId, query } = request;
   const declared = await readDeclaration(db, deviceId);
   if (!declared.ok) return declared;

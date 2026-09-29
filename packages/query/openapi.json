@@ -1,0 +1,851 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Magellan read",
+    "version": "0"
+  },
+  "components": {
+    "securitySchemes": {
+      "clientToken": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {},
+    "parameters": {}
+  },
+  "paths": {
+    "/v1/devices": {
+      "get": {
+        "security": [
+          {
+            "clientToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Every device, revoked ones too.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "revoked_at": {
+                        "type": ["string", "null"],
+                        "format": "date-time",
+                        "description": "Revoked, still read: the device keeps its history."
+                      }
+                    },
+                    "required": ["id", "description", "revoked_at"]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No client token, or one revoked.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/devices/{id}/metrics": {
+      "get": {
+        "security": [
+          {
+            "clientToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "What the current manifest declares.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "unit": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 16
+                          },
+                          "exponent": {
+                            "type": "integer",
+                            "minimum": -12,
+                            "maximum": 12,
+                            "description": "Decimal exponent of this metric's values: the value is scaled by 10^exponent."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": ["gauge"]
+                          },
+                          "source": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                          },
+                          "metric": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                          }
+                        },
+                        "required": ["exponent", "kind", "source", "metric"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "unit": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 16
+                          },
+                          "exponent": {
+                            "type": "integer",
+                            "minimum": -12,
+                            "maximum": 12,
+                            "description": "Decimal exponent of this metric's values: the value is scaled by 10^exponent."
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": ["counter"]
+                          },
+                          "resets": {
+                            "type": "string",
+                            "enum": ["daily"],
+                            "description": "The cadence this counter resets on. The boundary is not sent; a decrease marks it."
+                          },
+                          "source": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                          },
+                          "metric": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                          }
+                        },
+                        "required": ["exponent", "kind", "source", "metric"],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "properties": {
+                          "kind": {
+                            "type": "string",
+                            "enum": ["state"]
+                          },
+                          "state_labels": {
+                            "type": "object",
+                            "additionalProperties": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 32
+                            },
+                            "maxProperties": 32,
+                            "propertyNames": {
+                              "type": "string",
+                              "pattern": "^\\d{1,9}$"
+                            },
+                            "description": "At most 32 labels, keyed by decimal codes of at most 9 digits."
+                          },
+                          "source": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                          },
+                          "metric": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                          }
+                        },
+                        "required": ["kind", "source", "metric"],
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No client token, or one revoked.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such device.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/devices/{id}/latest": {
+      "get": {
+        "security": [
+          {
+            "clientToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each current metric in its source's latest reading, raw.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "time": {
+                        "type": ["string", "null"],
+                        "format": "date-time",
+                        "description": "A reading's, or a bucket's start. Null with a null value."
+                      },
+                      "source": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                      },
+                      "metric": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                      },
+                      "value": {
+                        "type": ["number", "null"],
+                        "description": "The physical quantity: scaled, a counter's delta, a state's code. Null where none is known."
+                      }
+                    },
+                    "required": ["time", "source", "metric", "value"],
+                    "description": "One value, labelled by source and metric."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No client token, or one revoked.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such device.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/devices/{id}/health": {
+      "get": {
+        "security": [
+          {
+            "clientToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One row: the latest heartbeat and gaps.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "last_seen": {
+                        "type": ["string", "null"],
+                        "format": "date-time",
+                        "description": "RFC 3339, UTC, to the millisecond."
+                      },
+                      "seq_gaps": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "description": "Batches missing within a boot over the last day."
+                      },
+                      "boot_id": {
+                        "type": ["string", "null"]
+                      },
+                      "seq": {
+                        "type": ["string", "null"]
+                      },
+                      "uptime_seconds": {
+                        "type": ["integer", "null"]
+                      },
+                      "buffer_depth": {
+                        "type": ["integer", "null"]
+                      },
+                      "battery_percent": {
+                        "type": ["integer", "null"]
+                      },
+                      "signal_percent": {
+                        "type": ["integer", "null"]
+                      },
+                      "firmware_version": {
+                        "type": ["string", "null"]
+                      }
+                    },
+                    "required": [
+                      "last_seen",
+                      "seq_gaps",
+                      "boot_id",
+                      "seq",
+                      "uptime_seconds",
+                      "buffer_depth",
+                      "battery_percent",
+                      "signal_percent",
+                      "firmware_version"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No client token, or one revoked.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such device.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/devices/{id}/series": {
+      "get": {
+        "security": [
+          {
+            "clientToken": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "description": "Comma-separated `source:key`, 1 to 20, each once."
+            },
+            "required": true,
+            "description": "Comma-separated `source:key`, 1 to 20, each once.",
+            "name": "metric",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{1,15}$"
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              ],
+              "description": "Epoch milliseconds or RFC 3339. With the other bound, or neither: the last day. Inclusive."
+            },
+            "required": false,
+            "description": "Epoch milliseconds or RFC 3339. With the other bound, or neither: the last day. Inclusive.",
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^\\d{1,15}$"
+                },
+                {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              ],
+              "description": "Epoch milliseconds or RFC 3339. With the other bound, or neither: the last day. Exclusive."
+            },
+            "required": false,
+            "description": "Epoch milliseconds or RFC 3339. With the other bound, or neither: the last day. Exclusive.",
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": ["reading", "hour", "day"],
+              "description": "Hour and day buckets are cut in the device's zone. Left out: reading to 2 days, hour to 90, day past."
+            },
+            "required": false,
+            "description": "Hour and day buckets are cut in the device's zone. Left out: reading to 2 days, hour to 90, day past.",
+            "name": "rollup",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Each asked metric's values, a reading or a bucket each.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "time": {
+                        "type": ["string", "null"],
+                        "format": "date-time",
+                        "description": "A reading's, or a bucket's start. Null with a null value."
+                      },
+                      "source": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                      },
+                      "metric": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                      },
+                      "value": {
+                        "type": ["number", "null"],
+                        "description": "The physical quantity: scaled, a counter's delta, a state's code. Null where none is known."
+                      }
+                    },
+                    "required": ["time", "source", "metric", "value"],
+                    "description": "One value, labelled by source and metric."
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No client token, or one revoked.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such device, or no manifest declares a metric.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Too many readings or rows for one read.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

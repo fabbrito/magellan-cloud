@@ -77,13 +77,13 @@ make sql SQL='<statement>'                         # the live D1; `$` in a JSON 
 ```
 packages/contract/   the contract: Zod schemas, and openapi.json emitted from the routes
 packages/db/         D1 schema and migrations
-packages/query/      reads, series math, and the API body types
+packages/query/      reads, rollups, row schemas, and the read openapi.json
 packages/token/      tokens: minted, hashed, resolved to a device or client, revoked
 apps/ingest-worker/  device-facing
 apps/api-worker/     client-facing read API
 apps/jobs-worker/    cron — rollups, retention, silent-device detection
 tools/simulator/     a fake device that speaks the contract
-tools/emit-openapi/  writes packages/contract/openapi.json from the worker's routes
+tools/emit-openapi/  writes both openapi.json files from the workers' routes
 tools/token/         mints or revokes a device or client token, as the statement to run
 scripts/             the Makefile's shell, reaching the account
 ```
