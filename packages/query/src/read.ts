@@ -2,7 +2,6 @@ import { manifestSchema } from "@magellan/contract";
 import { devices, heartbeats, manifests, readings, type Db } from "@magellan/db";
 import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 
-import type { Heartbeat } from "./api.ts";
 import type { Declaration } from "./metric.ts";
 
 // Row reads, left unawaited so a caller batches the independent ones into one round trip. Every read
@@ -24,30 +23,9 @@ export function declarationOf(row: {
   };
 }
 
-export function heartbeatOf(row: typeof heartbeats.$inferSelect): Heartbeat {
-  return {
-    boot_id: row.bootId,
-    seq: row.seq,
-    uptime_seconds: row.uptimeSeconds,
-    buffer_depth: row.bufferDepth,
-    battery_percent: row.batteryPercent,
-    signal_percent: row.signalPercent,
-    firmware_version: row.firmwareVersion,
-    received_at: row.receivedAt,
-  };
-}
-
-// A correlated MAX per device rides the (device_id, received_at) index rather than a join over
-// every heartbeat.
 export function selectDevices(db: Db) {
   return db
-    .select({
-      id: devices.id,
-      description: devices.description,
-      lastSeen: sql<
-        number | null
-      >`(SELECT MAX(${heartbeats.receivedAt}) FROM ${heartbeats} WHERE ${heartbeats.deviceId} = ${devices.id})`,
-    })
+    .select({ id: devices.id, description: devices.description, revokedAt: devices.revokedAt })
     .from(devices)
     .orderBy(asc(devices.id))
     .limit(devicesMax);
@@ -101,20 +79,34 @@ export function selectReceipts(db: Db, deviceId: string, sinceMs: number) {
     .limit(receiptsMax);
 }
 
+// The key's descending walk stops at the first row, so this reads one row however long the history.
+export function selectLatestReading(db: Db, deviceId: string, source: string, sinceMs: number) {
+  return db
+    .select({ ts: readings.ts, manifestHash: readings.manifestHash, values: readings.values })
+    .from(readings)
+    .where(
+      and(eq(readings.deviceId, deviceId), eq(readings.source, source), gte(readings.ts, sinceMs)),
+    )
+    .orderBy(desc(readings.ts))
+    .limit(1);
+}
+
 export interface SampleQuery {
   deviceId: string;
   source: string;
-  key: string;
+  keys: string[];
   fromMs: number;
   toMs: number;
 }
 
-// One metric out of each reading's JSON. The key pattern admits `.`, so the path quotes it; it
-// admits no `"`, so the quoting cannot be broken out of.
+// The asked metrics out of each reading's JSON, as one array in the keys' order: a metric the
+// reading left out is null in it. The key pattern admits `.`, so each path quotes its key; it admits
+// no `"`, so the quoting cannot be broken out of.
 export function selectSamples(db: Db, query: SampleQuery, limit: number) {
-  const value = sql<number | null>`json_extract(${readings.values}, ${`$."${query.key}"`})`;
+  const paths = query.keys.map((key) => sql`json_extract(${readings.values}, ${`$."${key}"`})`);
+  const values = sql<string>`json_array(${sql.join(paths, sql`, `)})`;
   return db
-    .select({ ts: readings.ts, manifestHash: readings.manifestHash, value })
+    .select({ ts: readings.ts, manifestHash: readings.manifestHash, values })
     .from(readings)
     .where(
       and(
@@ -122,9 +114,19 @@ export function selectSamples(db: Db, query: SampleQuery, limit: number) {
         eq(readings.source, query.source),
         gte(readings.ts, query.fromMs),
         lt(readings.ts, query.toMs),
-        sql`${value} IS NOT NULL`,
       ),
     )
     .orderBy(asc(readings.ts))
     .limit(limit);
+}
+
+// Throws on what `selectSamples` did not build: a bug here, never the caller's.
+export function sampleValuesOf(json: string, count: number): (number | null)[] {
+  const parsed: unknown = JSON.parse(json);
+  if (!Array.isArray(parsed) || parsed.length !== count)
+    throw new Error("a malformed values array");
+  return parsed.map((value: unknown) => {
+    if (value === null || typeof value === "number") return value;
+    throw new Error("a value neither a number nor null");
+  });
 }

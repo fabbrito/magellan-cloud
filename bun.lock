@@ -17,6 +17,7 @@
       "name": "@magellan/api-worker",
       "version": "0.0.0",
       "dependencies": {
+        "@hono/zod-openapi": "^1.6.3",
         "@magellan/contract": "workspace:*",
         "@magellan/db": "workspace:*",
         "@magellan/query": "workspace:*",
@@ -113,6 +114,7 @@
       "name": "@magellan/emit-openapi",
       "version": "0.0.0",
       "dependencies": {
+        "@magellan/api-worker": "workspace:*",
         "@magellan/ingest-worker": "workspace:*",
       },
       "devDependencies": {

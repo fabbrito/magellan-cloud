@@ -35,11 +35,19 @@ export function registerClient(server: TestHarness, clientId: string): Promise<s
   return register(server, "client", clientId);
 }
 
-export async function revokeClient(server: TestHarness, clientId: string): Promise<void> {
-  const revoked = revokeStatement("client", clientId, Date.now());
+async function revoke(server: TestHarness, kind: TokenKind, id: string): Promise<void> {
+  const revoked = revokeStatement(kind, id, Date.now());
   if (!revoked.ok) throw new Error(revoked.problem);
   const env = await server.getWorker<Env>().getEnv();
   await env.DB.prepare(revoked.statement).run();
+}
+
+export function revokeDevice(server: TestHarness, deviceId: string): Promise<void> {
+  return revoke(server, "device", deviceId);
+}
+
+export function revokeClient(server: TestHarness, clientId: string): Promise<void> {
+  return revoke(server, "client", clientId);
 }
 
 // A read as a client makes it: `token` undefined sends none.

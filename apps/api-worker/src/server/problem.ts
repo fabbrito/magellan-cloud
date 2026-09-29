@@ -9,16 +9,15 @@ export type ProblemStatus = 400 | 401 | 404 | 422 | 500;
 // What a refusal names past the standard members, as RFC 9457 allows.
 export type Extensions = Record<string, unknown>;
 
-export function problem(
+export function problem<Status extends ProblemStatus>(
   context: Context,
-  status: ProblemStatus,
+  status: Status,
   title: string,
   extensions: Extensions & { detail?: string } = {},
-): Response {
+) {
   const body: Problem & Extensions = { type: "about:blank", status, title, ...extensions };
-  return context.body(JSON.stringify(body), status, {
-    "content-type": "application/problem+json",
-  });
+  // Spelled as Hono spells it, so it replaces the default rather than sitting beside it.
+  return context.json(body, status, { "Content-Type": "application/problem+json" });
 }
 
 // One line per issue, bounded: a body of thousands of bad values answers with its first few.

@@ -1,61 +1,82 @@
-import type { Manifest, Metric } from "@magellan/contract";
-
-import type { Interval, Point, Run, Segment } from "./series.ts";
-
-export type { Interval, Point, Run, Segment };
+import { keySchema, metricSchema } from "@magellan/contract";
+import { z } from "zod";
 
 // A refusal's body, RFC 9457.
-export interface Problem {
-  type: "about:blank";
-  status: number;
-  title: string;
-  detail?: string;
-}
+export const problemSchema = z
+  .object({
+    type: z.literal("about:blank"),
+    status: z.int(),
+    title: z.string(),
+    detail: z.string().optional(),
+  })
+  .meta({ description: "RFC 9457. A client branches on the status, never the text." });
 
-// What a read answers: the body, or the refusal a route turns into a problem.
-export type Answer<Body> =
+export type Problem = z.infer<typeof problemSchema>;
+
+// What a read answers: the body, or the refusal a route turns into a problem. The statuses are the
+// read's, so a route declares exactly the ones it can answer.
+export type Answer<Body, Refusal extends 404 | 422 = 404> =
   | { ok: true; body: Body }
-  | { ok: false; status: 404 | 422; title: string };
+  | { ok: false; status: Refusal; title: string };
 
 // Every read under a device answers this for one never registered, before it reads anything else.
 export const noDevice = { ok: false, status: 404, title: "No such device" } as const;
 
-// The bodies the API answers with. The reads build them typed, so a route cannot drift from them.
+// The bodies the API answers with, schemas so the document is emitted from what the reads build and
+// a route cannot drift from either. Every body is a flat array of rows, the shape a client splits
+// into series or table columns without a parser of its own.
 
-export interface DeviceSummary {
-  id: string;
-  description: string;
-  last_seen: number | null;
-}
+const instantSchema = z.iso.datetime().meta({ description: "RFC 3339, UTC, to the millisecond." });
 
-export interface Heartbeat {
-  boot_id: string;
-  seq: string;
-  uptime_seconds: number;
-  buffer_depth: number;
-  battery_percent: number | null;
-  signal_percent: number | null;
-  firmware_version: string | null;
-  received_at: number;
-}
+export const deviceRowSchema = z.object({
+  id: keySchema,
+  description: z.string(),
+  revoked_at: instantSchema
+    .nullable()
+    .meta({ description: "Revoked, still read: the device keeps its history." }),
+});
 
-export interface DeviceDetail {
-  id: string;
-  description: string;
-  manifest: { hash: string; declared_at: number; body: Manifest } | null;
-  heartbeat: Heartbeat | null;
-  // Batches missing within a boot over the last day.
-  seq_gaps: number;
-}
+const rowLabels = { source: keySchema, metric: keySchema };
+const [gaugeSchema, counterSchema, stateSchema] = metricSchema.options;
 
-export type SeriesData =
-  | { kind: "gauge"; points: Point[] }
-  | { kind: "counter"; intervals: Interval[]; segments: Segment[] }
-  | { kind: "state"; runs: Run[] };
+// What the current manifest declares, one row a metric, each kind with its own fields. Units live
+// here, never on a value row.
+export const metricRowSchema = z.discriminatedUnion("kind", [
+  gaugeSchema.omit({ key: true }).extend(rowLabels),
+  counterSchema.omit({ key: true }).extend(rowLabels),
+  stateSchema.omit({ key: true }).extend(rowLabels),
+]);
 
-export interface Series {
-  metric: Metric;
-  // Whether the current manifest still declares it; a dropped metric charts its history.
-  declared: boolean;
-  data: SeriesData;
-}
+export const valueRowSchema = z
+  .object({
+    time: instantSchema
+      .nullable()
+      .meta({ description: "A reading's, or a bucket's start. Null with a null value." }),
+    ...rowLabels,
+    value: z.number().nullable().meta({
+      description:
+        "The physical quantity: scaled, a counter's delta, a state's code. Null where none is known.",
+    }),
+  })
+  .meta({ description: "One value, labelled by source and metric." });
+
+// The heartbeat fields are null until a first batch commits.
+export const healthRowSchema = z.object({
+  last_seen: instantSchema.nullable(),
+  seq_gaps: z
+    .int()
+    .min(0)
+    .meta({ description: "Batches missing within a boot over the last day." }),
+  boot_id: z.string().nullable(),
+  seq: z.string().nullable(),
+  uptime_seconds: z.int().nullable(),
+  buffer_depth: z.int().nullable(),
+  battery_percent: z.int().nullable(),
+  signal_percent: z.int().nullable(),
+  firmware_version: z.string().nullable(),
+});
+
+export type DeviceRow = z.infer<typeof deviceRowSchema>;
+export type MetricRow = z.infer<typeof metricRowSchema>;
+export type ValueRow = z.infer<typeof valueRowSchema>;
+export type HealthRow = z.infer<typeof healthRowSchema>;
