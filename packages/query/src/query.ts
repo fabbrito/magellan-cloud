@@ -1,20 +1,30 @@
-import { keySchema } from "@magellan/contract";
+import { keySchema, type Metric } from "@magellan/contract";
 import type { Db } from "@magellan/db";
 import { z } from "zod";
 
 import type { Answer, ValueRow } from "./api.ts";
-import { bucketingOf, dayMs, type Bucketing, type Rollup } from "./bucket.ts";
+import { bucketsOf, dayMs, spansOf, type Rollup } from "./bucket.ts";
 import { readDeclaration } from "./devices.ts";
 import { describeMetric, exponentLookup, type Declaration } from "./metric.ts";
-import { manifestsOf, sampleValuesOf, selectSamples } from "./read.ts";
-import { pointsOf, type Point } from "./rollup.ts";
+import {
+  bucketRowOf,
+  manifestsOf,
+  sampleValuesOf,
+  selectBuckets,
+  selectSamples,
+  type BucketRow,
+} from "./read.ts";
+import { bucketPoints, readingPoints, type Point } from "./rollup.ts";
 import type { Sample } from "./series.ts";
 import { instantOf } from "./time.ts";
 
-// Rollups are computed from readings as they are read, so the bound is on readings read — a coarser
-// rollup reads as many — and a range past it is narrowed, not paged. A week of one reading a minute
-// fits. Rows answered are bounded apart: readings of many metrics can answer more rows than read.
+// Readings pass through, so the bound is on readings read, and a range past it is narrowed, not
+// paged: a week of one reading a minute fits. Buckets are aggregated in D1, so the bound is on
+// buckets — the Worker cuts each in the device's zone — and 90 days of hours fits, the longest
+// range the default answers by hour. Rows answered are bounded apart: many metrics answer more
+// rows than readings or buckets read.
 const readingsMax = 10_000;
+const bucketsMax = 2_400;
 const rowsMax = 10_000;
 const metricsMax = 20;
 // D1 binds at most 100 parameters a statement, and the manifest read binds each hash plus the id.
@@ -96,37 +106,33 @@ export function rollupOf(query: SeriesQuery, window: Window): Rollup {
   return "day";
 }
 
-// Widened to whole buckets, so no bucket answers for part of itself.
-function spanOf(window: Window, bucketing: Bucketing): Window {
-  if (bucketing.rollup === "reading") return window;
-  const { buckets } = bucketing;
-  return {
-    fromMs: buckets.startOf(window.fromMs),
-    toMs: buckets.endOf(buckets.startOf(window.toMs - 1)),
-  };
-}
-
 function coarserThan(rollup: Rollup): string {
   if (rollup === "reading") return "ask rollup=hour";
   if (rollup === "hour") return "ask rollup=day";
   return "narrow the range";
 }
 
-// One source's readings, each asked metric's value beside its reading's manifest.
-interface SourceRows {
-  keys: string[];
-  rows: { ts: number; manifestHash: string; values: (number | null)[] }[];
+// What a read found before its manifests resolve: the hashes it names, and an asked metric's points
+// once they have.
+interface Found {
+  hashes: Set<string>;
+  pointsOf(metric: Metric, ref: MetricRef, declarations: Declaration[]): Point[];
 }
 
-function samplesOf(declarations: Declaration[], source: SourceRows, ref: MetricRef): Sample[] {
-  const index = source.keys.indexOf(ref.key);
-  const exponentOf = exponentLookup(declarations, ref.source, ref.key);
-  return source.rows.flatMap((row) => {
-    const value = row.values[index];
-    if (value === undefined) throw new Error("a key past the values array");
-    if (value === null) return [];
-    return [{ ts: row.ts, exponent: exponentOf(row.manifestHash), value }];
-  });
+type Refusal = { ok: false; status: 422; title: string };
+
+function keysBySourceOf(refs: MetricRef[]): [string, string[]][] {
+  const keysBySource = new Map<string, string[]>();
+  for (const ref of refs)
+    keysBySource.set(ref.source, [...(keysBySource.get(ref.source) ?? []), ref.key]);
+  return [...keysBySource];
+}
+
+// Each source's rows, looked up by the source a ref names: a source asked is a source read.
+function rowsOf<Rows>(bySource: Map<string, Rows>, ref: MetricRef): Rows {
+  const rows = bySource.get(ref.source);
+  if (rows === undefined) throw new Error(`source ${ref.source} was not read`);
+  return rows;
 }
 
 export interface SeriesRequest {
@@ -147,17 +153,18 @@ export async function readSeries(
   const current = declared.body;
 
   const window = windowOf(query, nowMs);
-  // Calendar days are cut in the device's zone; a device yet to declare has no readings to cut.
-  const bucketing = bucketingOf(current?.manifest.tz ?? "UTC", rollupOf(query, window));
+  const rollup = rollupOf(query, window);
+  const found =
+    rollup === "reading"
+      ? await readReadings(db, deviceId, query.metric, window)
+      : // Calendar days are cut in the device's zone; a device yet to declare has none to cut.
+        await readBuckets(db, deviceId, query.metric, window, {
+          rollup,
+          tz: current?.manifest.tz ?? "UTC",
+        });
+  if ("ok" in found) return found;
 
-  const readsBySource = await readSources(db, deviceId, query.metric, spanOf(window, bucketing));
-  const sources = [...readsBySource.values()];
-  const readCount = sources.reduce((count, source) => count + source.rows.length, 0);
-  if (readCount > readingsMax) {
-    return { ok: false, status: 422, title: `More than ${readingsMax} readings; narrow the range` };
-  }
-
-  const hashes = new Set(sources.flatMap((source) => source.rows.map((row) => row.manifestHash)));
+  const hashes = new Set(found.hashes);
   if (current !== undefined) hashes.add(current.hash);
   if (hashes.size > manifestsPerRangeMax) {
     return { ok: false, status: 422, title: "Too many manifests in range; narrow it" };
@@ -170,12 +177,9 @@ export async function readSeries(
     if (metric === undefined) {
       return { ok: false, status: 404, title: `No manifest declares ${refName(ref)}` };
     }
-    const source = readsBySource.get(ref.source);
-    if (source === undefined) throw new Error(`source ${ref.source} was not read`);
-    const points = pointsOf(metric, samplesOf(declarations, source, ref), bucketing);
+    const points = found.pointsOf(metric, ref, declarations);
     if (labelled.length + points.length > rowsMax) {
-      const coarser = coarserThan(bucketing.rollup);
-      return { ok: false, status: 422, title: `More than ${rowsMax} rows; ${coarser}` };
+      return { ok: false, status: 422, title: `More than ${rowsMax} rows; ${coarserThan(rollup)}` };
     }
     for (const point of points) labelled.push({ point, ref });
   }
@@ -192,25 +196,38 @@ export async function readSeries(
   return { ok: true, body };
 }
 
+// One source's readings, each asked metric's value beside its reading's manifest.
+interface SourceRows {
+  keys: string[];
+  rows: { ts: number; manifestHash: string; values: (number | null)[] }[];
+}
+
+function samplesOf(declarations: Declaration[], source: SourceRows, ref: MetricRef): Sample[] {
+  const index = source.keys.indexOf(ref.key);
+  const exponentOf = exponentLookup(declarations, ref.source, ref.key);
+  return source.rows.flatMap((row) => {
+    const value = row.values[index];
+    if (value === undefined) throw new Error("a key past the values array");
+    if (value === null) return [];
+    return [{ ts: row.ts, exponent: exponentOf(row.manifestHash), value }];
+  });
+}
+
 // One statement a source, all in one round trip; each reads one past its bound, so a range over it
 // is refused rather than truncated.
-async function readSources(
+async function readReadings(
   db: Db,
   deviceId: string,
   refs: MetricRef[],
-  span: Window,
-): Promise<Map<string, SourceRows>> {
-  const keysBySource = new Map<string, string[]>();
-  for (const ref of refs)
-    keysBySource.set(ref.source, [...(keysBySource.get(ref.source) ?? []), ref.key]);
-
-  const sources = [...keysBySource];
+  window: Window,
+): Promise<Found | Refusal> {
+  const sources = keysBySourceOf(refs);
   const [first, ...rest] = sources.map(([source, keys]) =>
-    selectSamples(db, { deviceId, source, keys, ...span }, readingsMax + 1),
+    selectSamples(db, { deviceId, source, keys, ...window }, readingsMax + 1),
   );
   if (first === undefined) throw new Error("a series with no metrics");
   const results = await db.batch([first, ...rest]);
-  return new Map(
+  const bySource = new Map(
     sources.map(([source, keys], index) => {
       const rows = results[index];
       if (rows === undefined) throw new Error("a batch answered short");
@@ -221,4 +238,62 @@ async function readSources(
       return [source, { keys, rows: parsed }];
     }),
   );
+
+  const read = [...bySource.values()];
+  if (read.reduce((count, source) => count + source.rows.length, 0) > readingsMax) {
+    return { ok: false, status: 422, title: `More than ${readingsMax} readings; ask rollup=hour` };
+  }
+  return {
+    hashes: new Set(read.flatMap((source) => source.rows.map((row) => row.manifestHash))),
+    pointsOf: (_metric, ref, declarations) =>
+      readingPoints(samplesOf(declarations, rowsOf(bySource, ref), ref)),
+  };
+}
+
+// One source's buckets as D1 aggregated them, keyed by the asked keys' order.
+interface SourceBuckets {
+  keys: string[];
+  rows: BucketRow[];
+}
+
+// One statement a source, all in one round trip. Every bucket the window touches is whole, so no
+// bucket answers for part of itself.
+async function readBuckets(
+  db: Db,
+  deviceId: string,
+  refs: MetricRef[],
+  window: Window,
+  cut: { rollup: "hour" | "day"; tz: string },
+): Promise<Found | Refusal> {
+  const buckets = bucketsOf(cut.tz, cut.rollup);
+  const spans = spansOf(buckets, window.fromMs, window.toMs, bucketsMax);
+  if (spans.length > bucketsMax) {
+    const coarser = coarserThan(cut.rollup);
+    return { ok: false, status: 422, title: `More than ${bucketsMax} buckets; ${coarser}` };
+  }
+
+  const sources = keysBySourceOf(refs);
+  const results = await db.$client.batch(
+    sources.map(([source, keys]) => selectBuckets(db, { deviceId, source, keys, spans })),
+  );
+  const bySource = new Map<string, SourceBuckets>(
+    sources.map(([source, keys], index) => {
+      const result = results[index];
+      if (result === undefined) throw new Error("a batch answered short");
+      return [source, { keys, rows: result.results.map(bucketRowOf) }];
+    }),
+  );
+
+  return {
+    hashes: new Set([...bySource.values()].flatMap((s) => s.rows.map((row) => row.manifestHash))),
+    pointsOf: (metric, ref, declarations) => {
+      const source = rowsOf(bySource, ref);
+      const keyIndex = source.keys.indexOf(ref.key);
+      const exponentOf = exponentLookup(declarations, ref.source, ref.key);
+      const groups = source.rows
+        .filter((row) => row.keyIndex === keyIndex)
+        .map((row) => ({ ...row, exponent: exponentOf(row.manifestHash) }));
+      return bucketPoints(metric, groups);
+    },
+  };
 }

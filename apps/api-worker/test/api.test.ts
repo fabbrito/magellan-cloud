@@ -36,6 +36,8 @@ const seriesPath = (deviceId: string, metric: string, window = `from=${firstTs}&
 
 const at = (ts: number) => new Date(ts).toISOString();
 
+const valuesOf = (rows: ValueRow[]) => rows.map((row) => [row.time, row.value]);
+
 // Two days of the simulator's daily counter, sent as one batch through ingest.
 async function sendDays(deviceId: string, fromTs = firstTs): Promise<void> {
   const token = await registerDevice(server, deviceId);
@@ -452,6 +454,138 @@ describe("series", () => {
 
     expect(response.status).toBe(400);
     expect(await response.json()).toMatchObject({ detail: "query: to is after from" });
+  });
+});
+
+// Aggregated in D1: each answer here is the one the JS rollup gave before it moved there.
+describe("rollups", () => {
+  const hourMs = 60 * 60 * 1000;
+  const dayMs = 24 * hourMs;
+  const quarterMs = hourMs / 4;
+
+  interface Poll {
+    ts: number;
+    values: Record<string, number>;
+  }
+
+  // One boot a manifest, each committing its polls, so a later boot re-declares mid-range.
+  async function sendBoots(
+    deviceId: string,
+    boots: { manifest: Manifest; polls: Poll[] }[],
+  ): Promise<void> {
+    const token = await registerDevice(server, deviceId);
+    for (const [index, boot] of boots.entries()) {
+      const bootId = `${String(index).padStart(15, "0")}f`;
+      const device = bootDevice(server, { deviceId, token, manifest: boot.manifest, bootId });
+      await device.declare();
+      for (const poll of boot.polls) device.poll("source_1", poll.ts, poll.values);
+      if ((await device.flush()) !== "committed") throw new Error("a boot did not commit");
+    }
+  }
+
+  const quarters = (values: Record<string, number>[], fromTs = firstTs): Poll[] =>
+    values.map((polled, index) => ({ ts: fromTs + index * quarterMs, values: polled }));
+
+  const bucketed = (deviceId: string, metric: string, rollup: string, toTs = firstTs + dayMs) =>
+    getJson<ValueRow[]>(
+      server,
+      clientToken,
+      seriesPath(deviceId, metric, `from=${firstTs}&to=${toTs}&rollup=${rollup}`),
+    );
+
+  it("averages a gauge over each hour", async () => {
+    const polls = quarters([10, 20, 30, 40, 50].map((power) => ({ power })));
+    await sendBoots("rollup-01", [{ manifest: withPower(-1), polls }]);
+
+    expect(valuesOf(await bucketed("rollup-01", "source_1:power", "hour"))).toEqual([
+      [at(firstTs), 2.5],
+      [at(firstTs + hourMs), 5],
+    ]);
+  });
+
+  it("keeps a counter's last value each hour, across a reset, not a total", async () => {
+    const energy = { key: "energy", kind: "counter" as const, exponent: 0 };
+    const polls = quarters([5, 6, 7, 1, 2, 3].map((value) => ({ power: 0, energy: value })));
+    await sendBoots("rollup-02", [{ manifest: withPower(0, [energy]), polls }]);
+
+    expect(valuesOf(await bucketed("rollup-02", "source_1:energy", "hour"))).toEqual([
+      [at(firstTs), 1],
+      [at(firstTs + hourMs), 3],
+    ]);
+  });
+
+  it("keeps a state's last code in its hour", async () => {
+    const mode = { key: "mode", kind: "state" as const };
+    const polls = quarters([1, 2, 1, 3].map((code) => ({ power: 0, mode: code })));
+    await sendBoots("rollup-03", [{ manifest: withPower(0, [mode]), polls }]);
+
+    expect(valuesOf(await bucketed("rollup-03", "source_1:mode", "hour"))).toEqual([
+      [at(firstTs), 3],
+    ]);
+  });
+
+  it("keeps the last reading that carries the metric, not the last reading", async () => {
+    const mode = { key: "mode", kind: "state" as const };
+    const polls = quarters([{ power: 0, mode: 2 }, { power: 0 }]);
+    await sendBoots("rollup-04", [{ manifest: withPower(0, [mode]), polls }]);
+
+    expect(valuesOf(await bucketed("rollup-04", "source_1:mode", "hour"))).toEqual([
+      [at(firstTs), 2],
+    ]);
+  });
+
+  it("merges a bucket re-declared mid-hour, each reading by its own exponent", async () => {
+    await sendBoots("rollup-05", [
+      { manifest: withPower(-1), polls: quarters([{ power: 20 }, { power: 20 }, { power: 20 }]) },
+      {
+        manifest: withPower(-2),
+        polls: quarters([{ power: 600 }], firstTs + 3 * quarterMs),
+      },
+    ]);
+
+    expect(valuesOf(await bucketed("rollup-05", "source_1:power", "hour"))).toEqual([
+      [at(firstTs), 3],
+    ]);
+  });
+
+  it("gives a day that changed its clock its own length", async () => {
+    // 2026-10-25 in Berlin: 25 hours, from 22:00Z the day before to 23:00Z.
+    const dayStart = Date.parse("2026-10-24T22:00:00Z");
+    const polls = [
+      { ts: dayStart, values: { power: 10 } },
+      { ts: dayStart + 24 * hourMs + quarterMs, values: { power: 30 } },
+      { ts: dayStart + 25 * hourMs, values: { power: 90 } },
+    ];
+    await sendBoots("rollup-06", [{ manifest: withPower(0, [], "Europe/Berlin"), polls }]);
+
+    const rows = await getJson<ValueRow[]>(
+      server,
+      clientToken,
+      seriesPath(
+        "rollup-06",
+        "source_1:power",
+        `from=${dayStart}&to=${dayStart + 2 * dayMs}&rollup=day`,
+      ),
+    );
+
+    expect(valuesOf(rows)).toEqual([
+      [at(dayStart), 20],
+      [at(dayStart + 25 * hourMs), 90],
+    ]);
+  });
+
+  it("refuses more buckets than one read cuts", async () => {
+    await registerDevice(server, "rollup-07");
+    const response = await read(
+      server,
+      clientToken,
+      seriesPath("rollup-07", "source_1:power", `from=0&to=${2401 * hourMs}&rollup=hour`),
+    );
+
+    expect(response.status).toBe(422);
+    expect(await response.json()).toMatchObject({
+      title: "More than 2400 buckets; ask rollup=day",
+    });
   });
 });
 

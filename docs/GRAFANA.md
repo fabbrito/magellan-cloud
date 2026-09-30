@@ -140,9 +140,9 @@ and does not read the body. The reason is the problem's `title`, read with curl:
 curl -sS -H "authorization: Bearer $TOKEN" "$API/v1/devices/<id>/series?metric=<source:metric>"
 ```
 
-| Status | Why                                              | Do                                    |
-| ------ | ------------------------------------------------ | ------------------------------------- |
-| 400    | malformed parameter                              | check `metric`, `from`, `to`          |
-| 401    | no token, or one revoked                         | the datasource's token                |
-| 404    | no such device, or no metric declared            | the variables                         |
-| 422    | past 10k readings or rows, or too many manifests | narrow the range, or coarser `rollup` |
+| Status | Why                                                            | Do                                    |
+| ------ | -------------------------------------------------------------- | ------------------------------------- |
+| 400    | malformed parameter                                            | check `metric`, `from`, `to`          |
+| 401    | no token, or one revoked                                       | the datasource's token                |
+| 404    | no such device, or no metric declared                          | the variables                         |
+| 422    | past 10k readings or rows, 2400 buckets, or too many manifests | narrow the range, or coarser `rollup` |

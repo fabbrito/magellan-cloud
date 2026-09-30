@@ -64,7 +64,7 @@ flowchart TB
         direction TB
         L1["Layer 1 — Read API<br/>for clients: Grafana, scripts"]
         L2["Layer 2 — Workers<br/>ingest · api · jobs"]
-        L3["Layer 3 — Storage<br/>D1 recent + rollups · R2 every raw batch"]
+        L3["Layer 3 — Storage<br/>D1 readings, rollups as read · R2 every raw batch"]
         L4["Layer 4 — Contract<br/>ingest protocol v1 · the seam"]
         L1 --> L2 --> L3 --> L4
     end
@@ -94,8 +94,8 @@ flowchart TB
   delivery plus idempotent commitment is what is built.
 - **One deployable per worker**, separate for cost and blast radius, not for autonomy. One D1
   database, one R2 bucket, shared.
-- **Not a time-series database.** D1 holds recent readings and rollups; R2 holds the archive. It is
-  not queried for long-range analytics.
+- **Not a time-series database.** D1 holds readings and rolls them up as read; R2 holds the archive.
+  It is not queried for long-range analytics.
 - **No device commands.** The contract runs one way — device to cloud. Control, configuration and
   OTA are out of scope until a manifest round-trip needs them.
 - **No vendor knowledge in the cloud.** If a table, column or chart mentions a device model, the
@@ -217,13 +217,13 @@ never raised.
 - **api-worker** — client-facing. The read API: device list, health, time-series queries over D1.
   Writes nothing.
 - **jobs-worker** — cron. Hourly and daily rollups, D1 retention, silent-device detection.
-- **D1** — the registry (devices, manifests, metrics), recent readings, heartbeats, rollups.
+- **D1** — the registry (devices, manifests, metrics), readings, batch receipts, heartbeats.
 - **R2** — every raw batch and every manifest, unchanged. The archive D1 can be rebuilt from.
 
 Readings are one row per poll, with the minimum indexes the queries need — indexes cost writes on
-the same budget. Rollups collapse many readings into one row per bucket per metric, so the long tail
-is cheap to chart. When D1 cannot commit, ingest archives to R2 and returns "retry later"; the
-device keeps its buffer and the archive rebuilds D1 afterwards.
+the same budget. A rollup is aggregated in D1 as it is read, one value a bucket per metric, so the
+long tail is cheap to chart. When D1 cannot commit, ingest archives to R2 and returns "retry later";
+the device keeps its buffer and the archive rebuilds D1 afterwards.
 
 A device token is minted by the cloud, returned once, and stored only as its SHA-256 hash; a device
 sends it as `Authorization: Bearer`. The token alone identifies the device, and the path id must

@@ -70,7 +70,7 @@ time or request latency. Those are logs and live elsewhere.
 | **API worker**    | Client-facing read API. Devices, health, series                              |
 | **Jobs worker**   | Cron. Rollups, D1 retention, silent-device detection                         |
 | **Registry**      | D1's declaration of what exists: devices, manifests, metrics                 |
-| **Rollup**        | Many readings collapsed into one row per bucket per metric                   |
+| **Rollup**        | Readings aggregated in D1 as read: one value per bucket per metric           |
 | **Bucket**        | The window a rollup covers — an hour or a day                                |
 | **Archive**       | R2: every raw batch and every manifest, unchanged. D1 can be rebuilt from it |
 | **Site**          | A cloud-side registry grouping above plant, holding a place                  |
