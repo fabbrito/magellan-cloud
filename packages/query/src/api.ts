@@ -60,7 +60,8 @@ export const valueRowSchema = z
   })
   .meta({ description: "One value, labelled by source and metric." });
 
-// Null until the device is first heard: the heartbeat fields until a heartbeat, `seq` until a batch.
+// Null until the device is first heard: the heartbeat fields until a heartbeat, `seq` until a
+// batch.
 export const healthRowSchema = z.object({
   last_heard: instantSchema
     .nullable()

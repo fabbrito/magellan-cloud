@@ -72,8 +72,8 @@ export function bucketsOf(tz: string, rollup: "hour" | "day"): Buckets {
 }
 
 // Every bucket from the one holding `fromMs` to the one holding `toMs - 1`, as `[start, end)`, and
-// one past `countMax` at most, so a caller refuses a range rather than truncating it. An hour ends by
-// arithmetic; only a day asks Intl, twice a bucket.
+// one past `countMax` at most, so a caller refuses a range rather than truncating it. An hour ends
+// by arithmetic; only a day asks Intl, twice a bucket.
 export function spansOf(
   buckets: Buckets,
   fromMs: number,

@@ -22,8 +22,9 @@ export type CloudFetch = (
 ) => Promise<CloudResponse>;
 
 // A device as the cloud may assume one behaves: it declares its manifest, buffers readings, sends
-// them as one batch, and says it is alive on its own cadence. It keeps no clock — uptime is stated at the call site — and it holds no
-// network client, taking the `fetch` that reaches the cloud under test.
+// them as one batch, and says it is alive on its own cadence. It keeps no clock — uptime is stated
+// at the call site — and it holds no network client, taking the `fetch` that reaches the cloud
+// under test.
 export interface DeviceOptions {
   deviceId: string;
   token: string;

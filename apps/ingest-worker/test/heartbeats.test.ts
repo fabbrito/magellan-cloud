@@ -32,7 +32,8 @@ it("stores a heartbeat from a device yet to declare", async () => {
   expect(
     await query(
       server,
-      "SELECT boot_id, buffer_depth, battery_percent, signal_percent, sources_last_heard FROM heartbeats WHERE device_id = ?",
+      "SELECT boot_id, buffer_depth, battery_percent, signal_percent, sources_last_heard" +
+        " FROM heartbeats WHERE device_id = ?",
       "device-01",
     ),
   ).toEqual([

@@ -1,5 +1,5 @@
 import type { Batch, Heartbeat } from "@magellan/contract";
-import { batches, heartbeats, readings, type Db } from "@magellan/db";
+import { heartbeats, readings, receipts, type Db } from "@magellan/db";
 
 // D1 allows 100 bound parameters a statement, and a reading binds one per column. Rows beyond that
 // answer `too many SQL variables`, which a full batch reaches and nothing smaller does — see
@@ -26,7 +26,7 @@ export async function commitBatch(
   receivedAt: Date,
 ): Promise<void> {
   const receipt = db
-    .insert(batches)
+    .insert(receipts)
     .values({
       deviceId,
       bootId: batch.boot_id,

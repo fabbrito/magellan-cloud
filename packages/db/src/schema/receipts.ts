@@ -4,8 +4,8 @@ import { index, primaryKey, sqliteTable, text, integer } from "drizzle-orm/sqlit
 // `seq` is text: u64::MAX is past an exact JS number. It sorts lexicographically, not numerically.
 // The index serves health's window of receipts and latest receipt, which would otherwise scan a
 // device's history.
-export const batches = sqliteTable(
-  "batches",
+export const receipts = sqliteTable(
+  "receipts",
   {
     deviceId: text("device_id").notNull(),
     bootId: text("boot_id").notNull(),
@@ -15,6 +15,6 @@ export const batches = sqliteTable(
   },
   (table) => [
     primaryKey({ columns: [table.deviceId, table.bootId, table.seq] }),
-    index("batches_device_id_received_at").on(table.deviceId, table.receivedAt),
+    index("receipts_device_id_received_at").on(table.deviceId, table.receivedAt),
   ],
 );

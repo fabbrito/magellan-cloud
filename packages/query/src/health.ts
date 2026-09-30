@@ -26,12 +26,12 @@ export function seqGaps(receipts: Receipt[]): number {
 
 // A device is heard by either route: a heartbeat on its cadence, a batch whenever it has readings.
 // Each names its boot, so the later one's is current.
-export interface Heard {
+export interface Arrival {
   bootId: string;
   receivedAt: number;
 }
 
-export function latestHeard(heartbeat?: Heard, receipt?: Heard): Heard | undefined {
+export function latestArrival(heartbeat?: Arrival, receipt?: Arrival): Arrival | undefined {
   if (heartbeat === undefined) return receipt;
   if (receipt === undefined) return heartbeat;
   return receipt.receivedAt > heartbeat.receivedAt ? receipt : heartbeat;

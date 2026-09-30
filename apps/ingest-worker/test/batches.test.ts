@@ -89,7 +89,7 @@ it("commits a row per reading and the batch receipt", async () => {
   expect(
     await query(
       server,
-      "SELECT boot_id, seq, manifest_hash FROM batches WHERE device_id = ?",
+      "SELECT boot_id, seq, manifest_hash FROM receipts WHERE device_id = ?",
       "device-04",
     ),
   ).toEqual([{ boot_id: "0123456789abcdef", seq: "9", manifest_hash: manifestHash }]);

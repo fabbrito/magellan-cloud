@@ -57,8 +57,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "batches": {
-      "name": "batches",
+    "receipts": {
+      "name": "receipts",
       "columns": {
         "device_id": {
           "name": "device_id",
@@ -97,8 +97,8 @@
         }
       },
       "indexes": {
-        "batches_device_id_received_at": {
-          "name": "batches_device_id_received_at",
+        "receipts_device_id_received_at": {
+          "name": "receipts_device_id_received_at",
           "columns": [
             "device_id",
             "received_at"

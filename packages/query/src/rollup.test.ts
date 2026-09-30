@@ -5,8 +5,8 @@ import { hourMs } from "./bucket.ts";
 import { bucketPoints, readingPoints, type BucketGroup } from "./rollup.ts";
 import type { Sample } from "./series.ts";
 
-// What D1 aggregates is tested against D1, in apps/api-worker/test/api.test.ts. This is the merge
-// the Worker does after it: a bucket's groups, one a manifest, into one point.
+// The merge the Worker does after D1 aggregates: a bucket's groups, one a manifest, into one point.
+// What D1 aggregates is tested where D1 boots.
 
 const firstTs = Date.UTC(2026, 0, 1);
 const quarterMs = hourMs / 4;

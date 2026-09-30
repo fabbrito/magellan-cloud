@@ -1,4 +1,4 @@
-CREATE TABLE `batches` (
+CREATE TABLE `receipts` (
 	`device_id` text NOT NULL,
 	`boot_id` text NOT NULL,
 	`seq` text NOT NULL,
@@ -7,11 +7,11 @@ CREATE TABLE `batches` (
 	PRIMARY KEY(`device_id`, `boot_id`, `seq`)
 );
 --> statement-breakpoint
-CREATE INDEX `batches_device_id_received_at` ON `batches` (`device_id`,`received_at`);--> statement-breakpoint
+CREATE INDEX `receipts_device_id_received_at` ON `receipts` (`device_id`,`received_at`);--> statement-breakpoint
 -- Hand-written from here: each old row was a batch's receipt and the heartbeat it carried, so it
 -- splits in two. The receipt keeps its key. The heartbeat is keyed by arrival, so two batches of
 -- one device committed in the same millisecond keep one; no source was heard yet.
-INSERT INTO `batches` (`device_id`, `boot_id`, `seq`, `manifest_hash`, `received_at`)
+INSERT INTO `receipts` (`device_id`, `boot_id`, `seq`, `manifest_hash`, `received_at`)
 SELECT `device_id`, `boot_id`, `seq`, `manifest_hash`, `received_at` FROM `heartbeats`;
 --> statement-breakpoint
 CREATE TABLE `__new_heartbeats` (

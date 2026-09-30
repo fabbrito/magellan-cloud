@@ -1,5 +1,5 @@
 import { manifestSchema } from "@magellan/contract";
-import { batches, devices, heartbeats, manifests, readings, type Db } from "@magellan/db";
+import { devices, heartbeats, manifests, readings, receipts, type Db } from "@magellan/db";
 import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 
 import type { Declaration } from "./metric.ts";
@@ -74,18 +74,18 @@ export function selectLatestHeartbeat(db: Db, deviceId: string) {
 
 export function selectLatestReceipt(db: Db, deviceId: string) {
   return db
-    .select({ bootId: batches.bootId, seq: batches.seq, receivedAt: batches.receivedAt })
-    .from(batches)
-    .where(eq(batches.deviceId, deviceId))
-    .orderBy(desc(batches.receivedAt))
+    .select({ bootId: receipts.bootId, seq: receipts.seq, receivedAt: receipts.receivedAt })
+    .from(receipts)
+    .where(eq(receipts.deviceId, deviceId))
+    .orderBy(desc(receipts.receivedAt))
     .limit(1);
 }
 
 export function selectReceipts(db: Db, deviceId: string, sinceMs: number) {
   return db
-    .select({ bootId: batches.bootId, seq: batches.seq })
-    .from(batches)
-    .where(and(eq(batches.deviceId, deviceId), gte(batches.receivedAt, sinceMs)))
+    .select({ bootId: receipts.bootId, seq: receipts.seq })
+    .from(receipts)
+    .where(and(eq(receipts.deviceId, deviceId), gte(receipts.receivedAt, sinceMs)))
     .limit(receiptsMax);
 }
 
@@ -149,33 +149,36 @@ export interface BucketQuery {
   spans: [number, number][];
 }
 
-// One row a bucket, manifest and asked key with a value in it: a gauge's sum and count, and the last
-// value by `ts`. Grouped by manifest because the exponent is its; a bucket straddling a re-declare
-// answers a row for each, merged by the caller. `TOTAL`, not `SUM`: its float never overflows. The
-// last value is a key lookup on the row the group's `MAX(ts)` names. Each bucket is a range walk of
-// the readings key, so the rows read are the readings in range plus one a row answered.
+// One row a bucket, manifest and asked key with a value in it: a gauge's sum and count, and the
+// last value by `ts`. Grouped by manifest because the exponent is its; a bucket straddling a
+// re-declare answers a row for each, merged by the caller. `TOTAL`, not `SUM`: its float never
+// overflows. The last value is a key lookup on the row the group's `MAX(ts)` names. Each bucket is
+// a range walk of the readings key, so the rows read are the readings in range plus one a row
+// answered.
 //
 // The buckets and the keys ride as one JSON parameter each: D1 binds at most 100 a statement. A key
 // admits no `"`, so a path quoting it cannot be broken out of. Raw D1, not drizzle: drizzle's batch
 // takes no raw statement, and a CTE over `json_each` has no builder.
 const bucketsSql = `
-  WITH b AS (SELECT value ->> 0 AS start, value ->> 1 AS stop FROM json_each(?1)),
-  k AS (SELECT key AS key_index, '$."' || value || '"' AS path FROM json_each(?2)),
-  g AS (
-    SELECT b.start, r.manifest_hash, k.key_index, k.path,
-      TOTAL(json_extract(r."values", k.path)) AS total,
-      COUNT(json_extract(r."values", k.path)) AS count,
-      MAX(CASE WHEN json_extract(r."values", k.path) IS NOT NULL THEN r.ts END) AS last_ts
-    FROM b CROSS JOIN readings r CROSS JOIN k
-    WHERE r.device_id = ?3 AND r.source = ?4 AND r.ts >= b.start AND r.ts < b.stop
-    GROUP BY b.start, r.manifest_hash, k.key_index
+  WITH bucket AS (SELECT value ->> 0 AS start, value ->> 1 AS stop FROM json_each(?1)),
+  asked AS (SELECT key AS key_index, '$."' || value || '"' AS path FROM json_each(?2)),
+  aggregate AS (
+    SELECT bucket.start, reading.manifest_hash, asked.key_index, asked.path,
+      TOTAL(json_extract(reading."values", asked.path)) AS total,
+      COUNT(json_extract(reading."values", asked.path)) AS count,
+      MAX(CASE WHEN json_extract(reading."values", asked.path) IS NOT NULL THEN reading.ts END)
+        AS last_ts
+    FROM bucket CROSS JOIN readings reading CROSS JOIN asked
+    WHERE reading.device_id = ?3 AND reading.source = ?4
+      AND reading.ts >= bucket.start AND reading.ts < bucket.stop
+    GROUP BY bucket.start, reading.manifest_hash, asked.key_index
     HAVING count > 0
   )
-  SELECT g.start, g.manifest_hash, g.key_index, g.total, g.count, g.last_ts,
-    json_extract(l."values", g.path) AS last
-  FROM g CROSS JOIN readings l
-  WHERE l.device_id = ?3 AND l.source = ?4 AND l.ts = g.last_ts
-  ORDER BY g.start
+  SELECT aggregate.start, aggregate.manifest_hash, aggregate.key_index, aggregate.total,
+    aggregate.count, aggregate.last_ts, json_extract(latest."values", aggregate.path) AS last
+  FROM aggregate CROSS JOIN readings latest
+  WHERE latest.device_id = ?3 AND latest.source = ?4 AND latest.ts = aggregate.last_ts
+  ORDER BY aggregate.start
 `;
 
 export function selectBuckets(db: Db, query: BucketQuery) {
@@ -200,15 +203,19 @@ function numberOf(row: Record<string, unknown>, column: string): number {
   return value;
 }
 
+function stringOf(row: Record<string, unknown>, column: string): string {
+  const value = row[column];
+  if (typeof value !== "string") throw new Error(`a bucket row's ${column} is not a string`);
+  return value;
+}
+
 // Throws on what `selectBuckets` did not build: a bug here, never the caller's.
 export function bucketRowOf(row: unknown): BucketRow {
   if (typeof row !== "object" || row === null) throw new Error("a bucket row is not an object");
   const columns = Object.fromEntries(Object.entries(row));
-  const manifestHash = columns["manifest_hash"];
-  if (typeof manifestHash !== "string") throw new Error("a bucket row's manifest_hash");
   return {
     start: numberOf(columns, "start"),
-    manifestHash,
+    manifestHash: stringOf(columns, "manifest_hash"),
     keyIndex: numberOf(columns, "key_index"),
     total: numberOf(columns, "total"),
     count: numberOf(columns, "count"),

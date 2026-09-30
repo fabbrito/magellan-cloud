@@ -4,8 +4,9 @@ import { ceilingReadings, gaugeManifest, largestManifest } from "./ceiling.ts";
 import { SimulatedDevice, type CloudFetch } from "./index.ts";
 
 // Drives the simulated device over a real socket, which is the one thing the suite cannot do: its
-// tests reach workerd in process. It walks a boot — heartbeat, declare, poll, flush — against the same routes
-// a device does. `ceiling` sends the largest manifest and the largest batch the contract allows.
+// tests reach workerd in process. It walks a boot — heartbeat, declare, poll, flush — against the
+// same routes a device does. `ceiling` sends the largest manifest and the largest batch the
+// contract allows.
 //
 // It is a probe, not a test. Nothing asserts here; the statuses it prints are the answer.
 const sweepsDefault = 3;

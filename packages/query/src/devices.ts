@@ -10,7 +10,7 @@ import {
   type SourceHealthRow,
 } from "./api.ts";
 import { dayMs } from "./bucket.ts";
-import { latestHeard, seqGaps } from "./health.ts";
+import { latestArrival, seqGaps } from "./health.ts";
 import type { Declaration } from "./metric.ts";
 import {
   declarationOf,
@@ -74,11 +74,11 @@ export async function readHealth(
   ]);
   if (device === undefined) return noDevice;
 
-  const heard = latestHeard(heartbeat, receipt);
+  const latest = latestArrival(heartbeat, receipt);
   const row: HealthRow = {
-    last_heard: heard === undefined ? null : instantOf(heard.receivedAt),
+    last_heard: latest === undefined ? null : instantOf(latest.receivedAt),
     seq_gaps: seqGaps(receipts),
-    boot_id: heard?.bootId ?? null,
+    boot_id: latest?.bootId ?? null,
     seq: receipt?.seq ?? null,
     uptime_seconds: heartbeat?.uptimeSeconds ?? null,
     buffer_depth: heartbeat?.bufferDepth ?? null,
@@ -87,6 +87,13 @@ export async function readHealth(
     firmware_version: heartbeat?.firmwareVersion ?? null,
   };
   return { ok: true, body: [row] };
+}
+
+// Code-unit order: source ids are ASCII, so no locale enters it.
+function compareText(left: string, right: string): number {
+  if (left < right) return -1;
+  if (left > right) return 1;
+  return 0;
 }
 
 // The latest heartbeat's account, one row a source, in id order. A device yet to send one, or one
@@ -103,7 +110,7 @@ export async function readSourceHealth(
   if (heartbeat === undefined) return { ok: true, body: [] };
 
   const body = Object.entries(heartbeat.sourcesLastHeard)
-    .toSorted(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .toSorted(([left], [right]) => compareText(left, right))
     .map(([source, ms]) => ({ source, last_heard: instantOf(ms) }));
   return { ok: true, body };
 }
