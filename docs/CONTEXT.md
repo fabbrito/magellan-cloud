@@ -45,8 +45,7 @@ anything.
 
 **Reset** — a counter's value decreasing. Any decrease is one, declared or not: a counter restarting
 at midnight, on reboot or on wrap reads the same. **`resets`** is a counter's declared cadence
-(`daily`), never its boundary. An interval across a reset or a silence has no known delta, so there
-is none; the segment total still counts what accrued.
+(`daily`), never its boundary.
 
 **Zone** — the device's IANA time zone, the manifest's `tz`. A calendar day is cut in it; timestamps
 stay UTC.

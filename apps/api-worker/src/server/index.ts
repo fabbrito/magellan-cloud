@@ -126,7 +126,10 @@ const seriesRoute = createRoute({
   path: "/v1/devices/{id}/series",
   request: { params: deviceParams, query: seriesQuerySchema },
   responses: {
-    200: rows(valueRowSchema, "Each asked metric's values, a reading or a bucket each."),
+    200: rows(
+      valueRowSchema,
+      "Each asked metric's values, a reading or a bucket each, ascending by time.",
+    ),
     ...refusals,
     404: {
       description: "No such device, or no manifest declares a metric.",

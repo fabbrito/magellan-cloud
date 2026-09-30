@@ -7,6 +7,7 @@ device half is `magellan-device`; the two meet only at the contract.
 - Vocabulary: `docs/CONTEXT.md`
 - Conventions: `AGENTS.md`
 - Style: `docs/STYLE.md`
+- Grafana: `docs/GRAFANA.md`
 
 ## Status
 

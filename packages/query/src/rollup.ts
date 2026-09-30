@@ -1,83 +1,42 @@
 import type { Metric } from "@magellan/contract";
 
 import type { Bucketing, Buckets } from "./bucket.ts";
-import { counterIntervals, counterSegments, roundTo, scale, type Sample } from "./series.ts";
+import { scale, type Sample } from "./series.ts";
 
-// What one metric's readings answer as, a point a reading or a bucket. The kind decides the
-// aggregate: a gauge averages, a state keeps its last code, a counter sums its deltas — none across a
-// reset or a silence, so a bucket holding only those answers null. A daily counter's day is its
-// segment total instead, which counts what accrued across a silence too.
+// What one metric's readings answer as, a point a reading or a bucket. Readings pass through scaled,
+// a counter's raw value included: the cloud derives nothing from adjacent readings
+// (docs/adr/0006-the-client-owns-presentation.md). A bucket averages a gauge and keeps the last value of
+// a counter or a state.
 
-// `exponent` is the finest decimal the value is exact to, so a sum can shed its float error.
 export interface Point {
   ts: number;
-  value: number | null;
-  exponent: number;
+  value: number;
 }
 
-type Reduce = (points: Point[]) => number | null;
+type Reduce = (values: number[]) => number;
 
 // A state's samples carry exponent 0, so its code passes through unscaled.
 function scaledPoints(samples: Sample[]): Point[] {
-  return samples.map((sample) => ({
-    ts: sample.ts,
-    value: scale(sample.value, sample.exponent),
-    exponent: sample.exponent,
-  }));
+  return samples.map((sample) => ({ ts: sample.ts, value: scale(sample.value, sample.exponent) }));
 }
 
-// Each delta at the reading that ends it.
-function deltaPoints(samples: Sample[]): Point[] {
-  return counterIntervals(samples).map((interval) => ({
-    ts: interval.end,
-    value: interval.delta,
-    exponent: interval.exponent,
-  }));
-}
+const mean: Reduce = (values) => values.reduce((total, value) => total + value, 0) / values.length;
 
-function segmentPoints(samples: Sample[]): Point[] {
-  return counterSegments(samples).map((segment) => ({
-    ts: segment.end,
-    value: segment.total,
-    exponent: segment.exponent,
-  }));
-}
-
-function finestExponent(points: Point[]): number {
-  return points.reduce((finest, point) => Math.min(finest, point.exponent), 0);
-}
-
-// The known values, or undefined where every one is null.
-function known(points: Point[]): number[] | undefined {
-  const values = points.flatMap((point) => (point.value === null ? [] : [point.value]));
-  return values.length === 0 ? undefined : values;
-}
-
-const sum: Reduce = (points) => {
-  const values = known(points);
-  if (values === undefined) return null;
-  const total = values.reduce((accrued, value) => accrued + value, 0);
-  return roundTo(total, finestExponent(points));
+const last: Reduce = (values) => {
+  const value = values.at(-1);
+  if (value === undefined) throw new Error("an empty bucket");
+  return value;
 };
-
-// Not rounded: an average of whole numbers is rightly finer than they are.
-const mean: Reduce = (points) => {
-  const values = known(points);
-  if (values === undefined) return null;
-  return values.reduce((accrued, value) => accrued + value, 0) / values.length;
-};
-
-const last: Reduce = (points) => points.at(-1)?.value ?? null;
 
 // Points in ascending `ts`, so a bucket closes when a point passes its end and never reopens.
 function bucketed(points: Point[], buckets: Buckets, reduce: Reduce): Point[] {
   const result: Point[] = [];
   let start = Number.NEGATIVE_INFINITY;
   let end = Number.NEGATIVE_INFINITY;
-  let open: Point[] = [];
+  let open: number[] = [];
   const close = () => {
     if (open.length === 0) return;
-    result.push({ ts: start, value: reduce(open), exponent: finestExponent(open) });
+    result.push({ ts: start, value: reduce(open) });
   };
   for (const point of points) {
     if (point.ts >= end) {
@@ -86,29 +45,22 @@ function bucketed(points: Point[], buckets: Buckets, reduce: Reduce): Point[] {
       end = buckets.endOf(start);
       open = [];
     }
-    open.push(point);
+    open.push(point.value);
   }
   close();
   return result;
 }
 
 export function pointsOf(metric: Metric, samples: Sample[], bucketing: Bucketing): Point[] {
-  if (bucketing.rollup === "reading") {
-    if (metric.kind === "counter") return deltaPoints(samples);
-    return scaledPoints(samples);
-  }
+  const points = scaledPoints(samples);
+  if (bucketing.rollup === "reading") return points;
 
   const { buckets } = bucketing;
   switch (metric.kind) {
     case "gauge":
-      return bucketed(scaledPoints(samples), buckets, mean);
+      return bucketed(points, buckets, mean);
+    case "counter":
     case "state":
-      return bucketed(scaledPoints(samples), buckets, last);
-    case "counter": {
-      if (bucketing.rollup === "day" && metric.resets === "daily") {
-        return bucketed(segmentPoints(samples), buckets, sum);
-      }
-      return bucketed(deltaPoints(samples), buckets, sum);
-    }
+      return bucketed(points, buckets, last);
   }
 }

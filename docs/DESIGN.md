@@ -85,8 +85,8 @@ flowchart TB
 - **A generic collector.** The cloud is device- and source-agnostic by construction: manifests
   declare the shape, and the read API serves metric descriptors rather than hardcoded fields.
 - **The device owns meaning, the client owns presentation.** A manifest says what a metric is —
-  kind, exponent, unit, whether a counter resets — never how it is shown. The cloud reconstructs and
-  serves; which metrics a client shows, and how, is the client's
+  kind, exponent, unit, whether a counter resets — never how it is shown. The cloud scales and
+  serves readings; which metrics a client shows, and how, is the client's
   (`docs/adr/0005-the-device-owns-meaning.md`, `docs/adr/0006-the-client-owns-presentation.md`).
 - **No UI.** Each client brings its own dashboard; the cloud neither hosts nor configures one.
 - **Effectively-once, never exactly-once.** Exactly-once does not exist end to end. At-least-once
@@ -162,12 +162,11 @@ bytes are already spent.
 (`gauge`, `counter`, `state`), an `exponent` for anything measured and an optional `unit`. A state
 has neither, its value being a code. The exponent is the metric's, so re-scaling one is a new
 manifest (`docs/adr/0002-integer-values.md`). A counter is monotonic between resets and any decrease
-is a reset; one that resets on a cadence declares `resets: "daily"`. The cadence is all it says —
-the cloud finds each reset by the decrease, so no boundary crosses the wire. `tz` cuts calendar days
-for reads, never finds a reset, and never moves a timestamp off UTC
-(`docs/adr/0006-the-client-owns-presentation.md`). The hash is SHA-256 over the manifest's bytes as
-sent; the cloud recomputes it from the body it receives and answers the PUT with the accepted hash
-in `ETag`, so the device asserts its own matches rather than trusting it.
+is a reset; one that resets on a cadence declares `resets: "daily"`. The cadence is all it says — no
+boundary crosses the wire. `tz` cuts calendar days for reads, never finds a reset, and never moves a
+timestamp off UTC (`docs/adr/0006-the-client-owns-presentation.md`). The hash is SHA-256 over the
+manifest's bytes as sent; the cloud recomputes it from the body it receives and answers the PUT with
+the accepted hash in `ETag`, so the device asserts its own matches rather than trusting it.
 
 **Batch** — `manifest_hash`, a `boot_id`, a `seq`, an ordered `readings[]`, and a `heartbeat`
 carrying uptime, buffer depth, battery percentage, signal percentage and firmware version. `boot_id`
