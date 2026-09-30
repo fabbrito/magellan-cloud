@@ -26,10 +26,9 @@ neither; epoch ms or RFC 3339; neither is the last day) and `rollup` (`reading`,
 Without `rollup` the range picks one: up to 2 days by reading, up to 90 by hour, past that by day.
 Hours and days are cut in the device's zone; a bucket's `time` is its start.
 
-A value is the physical quantity: a gauge's is averaged over a bucket, a state's is its last code,
-and a counter's is its delta — since the previous reading, or summed over a bucket. A counter that
-resets daily answers its day's total by `day`. `null` is a reading with no known value: a counter
-across a reset or a silence.
+A value is the physical quantity, as read: a gauge's is averaged over a bucket, a counter's and a
+state's is the bucket's last. Nothing is derived from adjacent readings, so a lost reading is a
+missing point.
 
 ## Token
 
@@ -127,8 +126,8 @@ The API answers values, never how they look.
 - **Units** are on `/metrics`, not on a value row; set them per panel.
 - **A state** is an integer code. Its labels are the metric's `state_labels` on `/metrics`; map them
   with a value mapping (Value type, one per code).
-- **A counter** answers deltas, suited to bars. For its running total: transformation Add field from
-  calculation › Cumulative functions › Total. Its raw reading is `/latest`'s.
+- **A counter** answers its raw running value. Show it as a number, a stat panel over `/latest`;
+  chart the gauge that measures the same thing, power rather than energy.
 
 ## Refusals
 
