@@ -16,15 +16,6 @@ export interface Buckets {
   endOf(start: number): number;
 }
 
-// A rollup and, for a bucketed one, its buckets: built together, so neither answers without the
-// other.
-export type Bucketing = { rollup: "reading" } | { rollup: "hour" | "day"; buckets: Buckets };
-
-export function bucketingOf(tz: string, rollup: Rollup): Bucketing {
-  if (rollup === "reading") return { rollup };
-  return { rollup, buckets: bucketsOf(tz, rollup) };
-}
-
 // The wall clock at `ms`, read as if it were UTC, less `ms`. Whole seconds: no zone offsets by less.
 function offsetMs(format: Intl.DateTimeFormat, ms: number): number {
   const fields = new Map(format.formatToParts(ms).map((part) => [part.type, Number(part.value)]));
@@ -78,4 +69,23 @@ export function bucketsOf(tz: string, rollup: "hour" | "day"): Buckets {
     return midnightWall - offsetMs(format, midnightWall - offset);
   };
   return { startOf, endOf: (start) => startOf(start + dayMsMax) };
+}
+
+// Every bucket from the one holding `fromMs` to the one holding `toMs - 1`, as `[start, end)`, and
+// one past `countMax` at most, so a caller refuses a range rather than truncating it. An hour ends
+// by arithmetic; only a day asks Intl, twice a bucket.
+export function spansOf(
+  buckets: Buckets,
+  fromMs: number,
+  toMs: number,
+  countMax: number,
+): [number, number][] {
+  const spans: [number, number][] = [];
+  let start = buckets.startOf(fromMs);
+  while (start < toMs && spans.length <= countMax) {
+    const end = buckets.endOf(start);
+    spans.push([start, end]);
+    start = end;
+  }
+  return spans;
 }

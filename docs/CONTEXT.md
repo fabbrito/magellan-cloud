@@ -31,13 +31,14 @@ device-side arrangement (`magellan-device` ADR 10).
 | **Metric**           | A named, typed quantity of a source: a `key`, a `kind`, and for measured kinds an `exponent` and optional `unit` |
 | **Reading**          | One source poll: a timestamp plus that source's metric values                                                    |
 | **Manifest**         | A device's description of its sources and metrics, versioned by hash                                             |
-| **Batch**            | One upload: a `boot_id`, a `seq`, a manifest hash, ordered readings, a heartbeat                                 |
+| **Batch**            | One upload: a `boot_id`, a `seq`, a manifest hash, ordered readings                                              |
 | **Sequence** (`seq`) | A counter, monotonic within one boot; diagnostic, not what the cloud deduplicates on                             |
 | **Boot id**          | Drawn once per boot, needing no flash; with `seq` it names a batch                                               |
-| **Heartbeat**        | The device's account of itself — uptime, buffer depth, battery, signal, firmware                                 |
+| **Heartbeat**        | The device's account of itself, sent apart from batches; fields are the contract's                               |
+| **Receipt**          | What the cloud keeps of a committed batch: its `boot_id`, `seq`, manifest hash, when received                    |
 | **Exponent**         | A metric's decimal scale: its values mean `value × 10^exponent`                                                  |
 | **Measured**         | When the device read the values — the reading's timestamp                                                        |
-| **Received**         | When the cloud committed the batch. Routinely later than **measured**                                            |
+| **Received**         | When the cloud committed the batch or stored the heartbeat. Routinely later than **measured**                    |
 
 **Metric `kind`** is one of `gauge`, `counter`, `state`. A gauge is a value in time, a counter is
 monotonic between resets, a state is a discrete condition. The kind decides which rollups mean
@@ -67,15 +68,15 @@ time or request latency. Those are logs and live elsewhere.
 | ----------------- | ---------------------------------------------------------------------------- |
 | **Ingest worker** | Device-facing. Verifies the token, validates, stores, commits, archives      |
 | **API worker**    | Client-facing read API. Devices, health, series                              |
-| **Jobs worker**   | Cron. Rollups, D1 retention, silent-device detection                         |
 | **Registry**      | D1's declaration of what exists: devices, manifests, metrics                 |
-| **Rollup**        | Many readings collapsed into one row per bucket per metric                   |
+| **Rollup**        | Readings aggregated in D1 as read: one value per bucket per metric           |
 | **Bucket**        | The window a rollup covers — an hour or a day                                |
 | **Archive**       | R2: every raw batch and every manifest, unchanged. D1 can be rebuilt from it |
 | **Site**          | A cloud-side registry grouping above plant, holding a place                  |
 | **Plant**         | A cloud-side registry grouping between site and device, holding a facility   |
 | **Device token**  | One revocable credential per device; the cloud stores only its hash          |
-| **Silent device** | A device whose last heartbeat is older than its expected cadence             |
+| **Last heard**    | When a hop last heard from the next: cloud from device, device from source   |
+| **Silent device** | A device last heard longer ago than its heartbeat cadence; a client decides  |
 | **Client**        | What reads the read API — a Grafana, a script. Owns presentation             |
 | **Client token**  | One revocable read credential per client; never a device token               |
 | **Token**         | A device token or a client token; its **kind** says which                    |
@@ -92,11 +93,11 @@ so a reading's shape is always traceable to a pinned declaration.
 
 ## Contract
 
-| Term                 | Meaning                                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------------------- |
-| **Contract**         | The ingest protocol (Layer 4) — the only interface between the repositories                             |
-| **Contract version** | A tag in this repo (`contract-vX.Y.Z`) naming the published wire document `magellan-device` transcribes |
-| **Manifest hash**    | SHA-256 over a manifest's bytes as sent — the manifest's identity and its tag                           |
+| Term                 | Meaning                                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------------------- |
+| **Contract**         | The ingest protocol (Layer 4) — the only interface between the repositories                                    |
+| **Contract version** | The emitted document's `info.version`, semver; its major is the path's `/vN`. `magellan-device` transcribes it |
+| **Manifest hash**    | SHA-256 over a manifest's bytes as sent — the manifest's identity and its tag                                  |
 
 ## Vocabulary limits
 

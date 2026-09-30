@@ -43,15 +43,27 @@ describe("the byte bounds hold the largest body the other bounds allow", () => {
         ts: LIMITS.timestampMsMax - index,
         values,
       })),
-      heartbeat: {
-        uptime_seconds: LIMITS.uptimeSecondsMax,
-        buffer_depth: LIMITS.bufferDepthMax,
-        battery_percent: LIMITS.batteryPercentMax,
-        signal_percent: LIMITS.signalPercentMax,
-        firmware_version: "v".repeat(LIMITS.firmwareVersionLengthMax),
-      },
     };
 
     expect(bytes(batch)).toBeLessThanOrEqual(LIMITS.batchBytesMax);
+  });
+
+  it("fits a heartbeat of every field at its bound", () => {
+    const heartbeat = {
+      boot_id: "f".repeat(LIMITS.bootIdLengthMax),
+      uptime_seconds: LIMITS.uptimeSecondsMax,
+      buffer_depth: LIMITS.bufferDepthMax,
+      battery_percent: LIMITS.batteryPercentMax,
+      signal_percent: LIMITS.signalPercentMax,
+      firmware_version: "v".repeat(LIMITS.firmwareVersionLengthMax),
+      sources_last_heard: Object.fromEntries(
+        Array.from({ length: LIMITS.sourcesMax }, (_unused, index) => [
+          pad("s", index, LIMITS.keyLengthMax),
+          LIMITS.timestampMsMax,
+        ]),
+      ),
+    };
+
+    expect(bytes(heartbeat)).toBeLessThanOrEqual(LIMITS.heartbeatBytesMax);
   });
 });

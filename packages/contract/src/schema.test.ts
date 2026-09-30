@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { batchSchema, manifestSchema } from "./schema.ts";
+import { LIMITS } from "./limits.ts";
+import { batchSchema, heartbeatSchema, manifestSchema } from "./schema.ts";
 
 const gauge = { key: "power_w", kind: "gauge", unit: "W", exponent: -2 };
 const counter = { key: "energy_kwh", kind: "counter", unit: "kWh", exponent: 0 };
@@ -24,7 +25,13 @@ const batch = {
   boot_id: "0123456789abcdef",
   seq: "1",
   readings: [{ source: "source_1", ts: 1_758_326_400_000, values: { power_w: 123_450 } }],
-  heartbeat: { uptime_seconds: 42, buffer_depth: 0 },
+};
+
+const heartbeat = {
+  boot_id: "0123456789abcdef",
+  uptime_seconds: 42,
+  buffer_depth: 0,
+  sources_last_heard: {},
 };
 
 describe("manifestSchema", () => {
@@ -230,24 +237,8 @@ describe("batchSchema", () => {
       boot_id: "0123456789abcdef",
       seq: "1",
       readings: [{ source: "source_1", ts: 1_758_326_400_000, values: { power_w: 27_034 } }],
-      heartbeat: { uptime_seconds: 42, buffer_depth: 1 },
     };
     expect(batchSchema.safeParse(wire).success).toBe(true);
-  });
-
-  it("accepts a heartbeat", () => {
-    const withHeartbeat = {
-      ...batch,
-      seq: "2",
-      heartbeat: {
-        uptime_seconds: 3600,
-        buffer_depth: 0,
-        battery_percent: 88,
-        signal_percent: 70,
-        firmware_version: "1.0.0",
-      },
-    };
-    expect(batchSchema.safeParse(withHeartbeat).success).toBe(true);
   });
 
   it("rejects a batch with no boot id", () => {
@@ -255,17 +246,8 @@ describe("batchSchema", () => {
     expect(batchSchema.safeParse(withoutBootId).success).toBe(false);
   });
 
-  it("rejects a boot id inside a heartbeat", () => {
-    const stale = {
-      ...batch,
-      heartbeat: { ...batch.heartbeat, boot_id: "0123456789abcdef" },
-    };
-    expect(batchSchema.safeParse(stale).success).toBe(false);
-  });
-
-  it("rejects a batch with no heartbeat", () => {
-    const { heartbeat: _heartbeat, ...withoutHeartbeat } = batch;
-    expect(batchSchema.safeParse(withoutHeartbeat).success).toBe(false);
+  it("rejects a heartbeat inside a batch", () => {
+    expect(batchSchema.safeParse({ ...batch, heartbeat }).success).toBe(false);
   });
 
   it("accepts the largest seq", () => {
@@ -351,5 +333,50 @@ describe("batchSchema", () => {
 
   it("rejects an uppercase boot id", () => {
     expect(batchSchema.safeParse({ ...batch, boot_id: "A1B2C3D4" }).success).toBe(false);
+  });
+});
+
+describe("heartbeatSchema", () => {
+  it("accepts a minimal heartbeat, no source heard yet", () => {
+    expect(heartbeatSchema.safeParse(heartbeat).success).toBe(true);
+  });
+
+  it("accepts every field", () => {
+    const full = {
+      ...heartbeat,
+      battery_percent: 88,
+      signal_percent: 70,
+      firmware_version: "1.0.0",
+      sources_last_heard: { source_1: 1_758_326_400_000, "source.2": 0 },
+    };
+    expect(heartbeatSchema.safeParse(full).success).toBe(true);
+  });
+
+  it("rejects a heartbeat with no boot id", () => {
+    const { boot_id: _bootId, ...withoutBootId } = heartbeat;
+    expect(heartbeatSchema.safeParse(withoutBootId).success).toBe(false);
+  });
+
+  it("rejects a heartbeat with no sources_last_heard", () => {
+    const { sources_last_heard: _heard, ...withoutHeard } = heartbeat;
+    expect(heartbeatSchema.safeParse(withoutHeard).success).toBe(false);
+  });
+
+  it("rejects a source id off the key pattern", () => {
+    const bad = { ...heartbeat, sources_last_heard: { ".hidden": 1 } };
+    expect(heartbeatSchema.safeParse(bad).success).toBe(false);
+  });
+
+  it("rejects a last-heard past the timestamp bound", () => {
+    const late = { ...heartbeat, sources_last_heard: { source_1: LIMITS.timestampMsMax + 1 } };
+    expect(heartbeatSchema.safeParse(late).success).toBe(false);
+  });
+
+  it("rejects more sources than a manifest may declare", () => {
+    const heard = Object.fromEntries(
+      Array.from({ length: LIMITS.sourcesMax + 1 }, (_unused, index) => [`source_${index}`, 1]),
+    );
+    const crowded = { ...heartbeat, sources_last_heard: heard };
+    expect(heartbeatSchema.safeParse(crowded).success).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
-import type { Batch } from "@magellan/contract";
-import { heartbeats, readings, type Db } from "@magellan/db";
+import type { Batch, Heartbeat } from "@magellan/contract";
+import { heartbeats, readings, receipts, type Db } from "@magellan/db";
 
 // D1 allows 100 bound parameters a statement, and a reading binds one per column. Rows beyond that
 // answer `too many SQL variables`, which a full batch reaches and nothing smaller does — see
@@ -26,17 +26,12 @@ export async function commitBatch(
   receivedAt: Date,
 ): Promise<void> {
   const receipt = db
-    .insert(heartbeats)
+    .insert(receipts)
     .values({
       deviceId,
       bootId: batch.boot_id,
       seq: batch.seq,
       manifestHash: batch.manifest_hash,
-      uptimeSeconds: batch.heartbeat.uptime_seconds,
-      bufferDepth: batch.heartbeat.buffer_depth,
-      batteryPercent: batch.heartbeat.battery_percent ?? null,
-      signalPercent: batch.heartbeat.signal_percent ?? null,
-      firmwareVersion: batch.heartbeat.firmware_version ?? null,
       receivedAt: receivedAt.getTime(),
     })
     .onConflictDoNothing();
@@ -55,4 +50,28 @@ export async function commitBatch(
       db.insert(readings).values(batched).onConflictDoNothing(),
     ),
   ]);
+}
+
+// One row, one write. A second heartbeat in the same millisecond is absorbed: the device sends one
+// an hour, and either says the same.
+export async function commitHeartbeat(
+  db: Db,
+  deviceId: string,
+  heartbeat: Heartbeat,
+  receivedAt: Date,
+): Promise<void> {
+  await db
+    .insert(heartbeats)
+    .values({
+      deviceId,
+      receivedAt: receivedAt.getTime(),
+      bootId: heartbeat.boot_id,
+      uptimeSeconds: heartbeat.uptime_seconds,
+      bufferDepth: heartbeat.buffer_depth,
+      batteryPercent: heartbeat.battery_percent ?? null,
+      signalPercent: heartbeat.signal_percent ?? null,
+      firmwareVersion: heartbeat.firmware_version ?? null,
+      sourcesLastHeard: heartbeat.sources_last_heard,
+    })
+    .onConflictDoNothing();
 }

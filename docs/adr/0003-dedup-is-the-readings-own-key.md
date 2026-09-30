@@ -1,14 +1,14 @@
 # 3. Deduplication is the readings' own key
 
-- Status: accepted
+- Status: accepted, amended in place — the receipt apart from the heartbeat
 
 ## Chosen
 
 D1's readings table is keyed on `(device_id, source, ts)`. Ingest writes with `INSERT OR IGNORE`, so
-a replayed batch collides row for row and vanishes. There is no receipts table.
+a replayed batch collides row for row and vanishes. No receipt gates a commit.
 
-The batch's `boot_id` and `seq` are kept, but diagnostic: they make a gap visible and the heartbeat
-carries the pair as the batch's receipt. They never gate a commit.
+The batch's `boot_id` and `seq` are kept, but diagnostic: the pair is the batch's receipt, written
+beside its readings, and makes a gap visible. It never gates a commit.
 
 ## Why
 

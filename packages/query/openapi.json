@@ -462,7 +462,7 @@
         ],
         "responses": {
           "200": {
-            "description": "One row: the latest heartbeat and gaps.",
+            "description": "One row: when last heard, the latest heartbeat, and gaps.",
             "content": {
               "application/json": {
                 "schema": {
@@ -470,10 +470,10 @@
                   "items": {
                     "type": "object",
                     "properties": {
-                      "last_seen": {
+                      "last_heard": {
                         "type": ["string", "null"],
                         "format": "date-time",
-                        "description": "RFC 3339, UTC, to the millisecond."
+                        "description": "When the cloud last received a heartbeat or a batch."
                       },
                       "seq_gaps": {
                         "type": "integer",
@@ -503,7 +503,7 @@
                       }
                     },
                     "required": [
-                      "last_seen",
+                      "last_heard",
                       "seq_gaps",
                       "boot_id",
                       "seq",
@@ -513,6 +513,133 @@
                       "signal_percent",
                       "firmware_version"
                     ]
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No client token, or one revoked.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such device.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/devices/{id}/health/sources": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "When the device last heard each source, per its heartbeat.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "source": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                      },
+                      "last_heard": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "When the device last heard the source."
+                      }
+                    },
+                    "required": ["source", "last_heard"]
                   }
                 }
               }

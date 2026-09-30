@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Magellan ingest",
-    "version": "0"
+    "version": "1.0.0"
   },
   "components": {
     "securitySchemes": {
@@ -286,42 +286,9 @@
                     },
                     "minItems": 1,
                     "maxItems": 512
-                  },
-                  "heartbeat": {
-                    "type": "object",
-                    "properties": {
-                      "uptime_seconds": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 315576000
-                      },
-                      "buffer_depth": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 1000000
-                      },
-                      "battery_percent": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 100
-                      },
-                      "signal_percent": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 100
-                      },
-                      "firmware_version": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 32
-                      }
-                    },
-                    "required": ["uptime_seconds", "buffer_depth"],
-                    "additionalProperties": false,
-                    "description": "The device's account of itself, sent with a batch."
                   }
                 },
-                "required": ["manifest_hash", "boot_id", "seq", "readings", "heartbeat"],
+                "required": ["manifest_hash", "boot_id", "seq", "readings"],
                 "additionalProperties": false,
                 "description": "One upload: ordered readings under a manifest hash, identified by boot_id and seq. A duplicate is absorbed per reading, not per batch."
               }
@@ -355,6 +322,111 @@
           },
           "503": {
             "description": "The named manifest has not arrived. The device keeps the buffer."
+          }
+        }
+      }
+    },
+    "/v1/devices/{id}/heartbeats": {
+      "post": {
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "description": "Fire and forget: a device treats any 2xx as stored and ignores every other answer, never retrying or buffering one. The next heartbeat supersedes it.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "x-max-bytes": 4096,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "boot_id": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{8,32}$"
+                  },
+                  "uptime_seconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 315576000
+                  },
+                  "buffer_depth": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1000000,
+                    "description": "Batches pending on the device when sent."
+                  },
+                  "battery_percent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "signal_percent": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  "firmware_version": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 32
+                  },
+                  "sources_last_heard": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 32503680000000
+                    },
+                    "maxProperties": 8,
+                    "propertyNames": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+                    },
+                    "description": "When the device last heard each source, UTC ms, keyed by source id. At most 8; a source not heard since boot is absent."
+                  }
+                },
+                "required": ["boot_id", "uptime_seconds", "buffer_depth", "sources_last_heard"],
+                "additionalProperties": false,
+                "description": "The device's account of itself, sent on its own cadence."
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Stored."
+          },
+          "400": {
+            "description": "The body is not a heartbeat."
+          },
+          "401": {
+            "description": "The credential is absent or resolves to no device."
+          },
+          "403": {
+            "description": "The credential names another device."
+          },
+          "411": {
+            "description": "No parseable `content-length`. A device must declare what it sends."
+          },
+          "413": {
+            "description": "The body is past 4096 bytes."
+          },
+          "429": {
+            "description": "Too many requests."
           }
         }
       }

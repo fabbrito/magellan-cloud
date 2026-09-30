@@ -13,7 +13,7 @@ device half is `magellan-device`; the two meet only at the contract.
 
 The ingest worker is live and takes a device's manifests and batches. The API worker answers
 devices, health and series over the same D1 for clients such as Grafana; the cloud has no UI of its
-own. The jobs worker is still scaffold.
+own.
 
 ## Setup
 
@@ -82,7 +82,6 @@ packages/query/      reads, rollups, row schemas, and the read openapi.json
 packages/token/      tokens: minted, hashed, resolved to a device or client, revoked
 apps/ingest-worker/  device-facing
 apps/api-worker/     client-facing read API
-apps/jobs-worker/    cron — rollups, retention, silent-device detection
 tools/simulator/     a fake device that speaks the contract
 tools/emit-openapi/  writes both openapi.json files from the workers' routes
 tools/token/         mints or revokes a device or client token, as the statement to run

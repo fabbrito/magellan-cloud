@@ -4,7 +4,8 @@ import app from "./index.ts";
 // the document cannot drift from the worker (docs/adr/0001-contract-authoring.md). `tools/emit-openapi`
 // writes it down and a test compares the two.
 //
-// `version` stays "0" until the read contract is tagged; until then it is provisional.
+// `version` stays "0" while the read contract is provisional; a semver here publishes it, as the
+// ingest contract's does (docs/DESIGN.md §6).
 export function openApiDocument() {
   return app.getOpenAPI31Document({
     openapi: "3.1.0",

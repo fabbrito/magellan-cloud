@@ -51,7 +51,8 @@ with backoff. A batch the cloud refuses to commit is a batch the device still ho
 
 **Only the archive and the contract are durable.** R2 holds every raw batch and every manifest
 unchanged, and the contract is what the other repository reads. D1 is a derived index over the
-archive and can be rebuilt from it, so its columns are engineering, not this document.
+archive and can be rebuilt from it, so its columns are engineering, not this document. Heartbeats
+are the exception: live state, kept in D1 alone.
 
 ## 3. Layers
 
@@ -62,8 +63,8 @@ flowchart TB
     subgraph cloud["magellan-cloud"]
         direction TB
         L1["Layer 1 — Read API<br/>for clients: Grafana, scripts"]
-        L2["Layer 2 — Workers<br/>ingest · api · jobs"]
-        L3["Layer 3 — Storage<br/>D1 recent + rollups · R2 every raw batch"]
+        L2["Layer 2 — Workers<br/>ingest · api"]
+        L3["Layer 3 — Storage<br/>D1 readings, rollups as read · R2 every raw batch"]
         L4["Layer 4 — Contract<br/>ingest protocol v1 · the seam"]
         L1 --> L2 --> L3 --> L4
     end
@@ -93,8 +94,8 @@ flowchart TB
   delivery plus idempotent commitment is what is built.
 - **One deployable per worker**, separate for cost and blast radius, not for autonomy. One D1
   database, one R2 bucket, shared.
-- **Not a time-series database.** D1 holds recent readings and rollups; R2 holds the archive. It is
-  not queried for long-range analytics.
+- **Not a time-series database.** D1 holds readings and rolls them up as read; R2 holds the archive.
+  It is not queried for long-range analytics.
 - **No device commands.** The contract runs one way — device to cloud. Control, configuration and
   OTA are out of scope until a manifest round-trip needs them.
 - **No vendor knowledge in the cloud.** If a table, column or chart mentions a device model, the
@@ -120,8 +121,8 @@ flowchart TB
    diagnostic, leaving a gap visible; they never gate a commit, so a device below its highest `seq`
    still lands. Two readings that genuinely share a timestamp collide and the second is dropped, not
    mistaken for a retry (`docs/adr/0003-dedup-is-the-readings-own-key.md`).
-5. **Commit is atomic per batch.** Either every reading in a batch and its heartbeat land, or
-   nothing does and the device retries the whole batch.
+5. **Commit is atomic per batch.** Either every reading in a batch lands, or none does and the
+   device retries the whole batch.
 6. **Values are integers, scaled on the device; timestamps are UTC.** A metric declares a decimal
    exponent and a reading carries whole numbers: the physical value is `value × 10^exponent`. The
    cloud stores integers and instants — never a float, never engineering units in flux, never local
@@ -129,6 +130,8 @@ flowchart TB
 7. **Every raw batch and every manifest is archived unchanged.** R2 holds both exactly as sent,
    under one prefix a device and then one a kind. D1 is a derived index over that archive and can be
    rebuilt from it — which the manifests must be in it for, since a batch resolves against one.
+   Heartbeats are not archived: live state, not record, so not rebuildable, by design
+   (`docs/adr/0007-the-heartbeat-is-apart-from-data.md`).
 8. **One revocable token per device.** The token is the authority: it identifies exactly one device,
    the path `{id}` is a claim checked against it, and a mismatch is refused `403`. It can be rotated
    or revoked without touching another (`docs/adr/0004-the-token-is-the-authority.md`).
@@ -144,17 +147,18 @@ the endpoints exist — never authored twice. Rust types are written natively ra
 so the two implementations stay independent of each other's toolchain while agreeing on the emitted
 shape (`docs/adr/0001-contract-authoring.md`).
 
-Until the first `contract-v*` tag the contract is provisional: no version is published, so the seam
-is cheap to move. What the tag freezes — the wire bytes — and what D1 or R2 persist are settled
-before it; the wire _around_ the bytes settles when the endpoints are built, against a running
-worker rather than on paper. After the tag, a breaking change is a new version, not an edit.
+The contract is settled at v1. Its version is the emitted document's `info.version`, semver: the
+major is the path's `/vN`, a minor adds what a device may ignore, a patch changes descriptions only.
+A breaking change is a new `/vN` beside the old, never an edit under it. The device transcribes the
+version it was written against.
 
 ```
 PUT  /v1/devices/{id}/manifest
 POST /v1/devices/{id}/batches
+POST /v1/devices/{id}/heartbeats
 ```
 
-Both carry a `content-length`. A body whose size the device will not declare is refused with 411
+Each carries a `content-length`. A body whose size the device will not declare is refused with 411
 before it is read: without a declared length there is nothing to bound the read against until the
 bytes are already spent.
 
@@ -168,17 +172,24 @@ timestamp off UTC (`docs/adr/0006-the-client-owns-presentation.md`). The hash is
 manifest's bytes as sent; the cloud recomputes it from the body it receives and answers the PUT with
 the accepted hash in `ETag`, so the device asserts its own matches rather than trusting it.
 
-**Batch** — `manifest_hash`, a `boot_id`, a `seq`, an ordered `readings[]`, and a `heartbeat`
-carrying uptime, buffer depth, battery percentage, signal percentage and firmware version. `boot_id`
-is drawn once per boot; `seq` is a decimal string, canonical and at most u64::MAX, restarting at
-zero each boot. The pair is diagnostic — gap detection — not the dedup key, which is the readings'
-own (invariant 4). A reading's values are integers, each scaled by its metric's `exponent`.
+**Batch** — `manifest_hash`, a `boot_id`, a `seq` and an ordered `readings[]`. `boot_id` is drawn
+once per boot; `seq` is a decimal string, canonical and at most u64::MAX, restarting at zero each
+boot. The pair is diagnostic — gap detection — not the dedup key, which is the readings' own
+(invariant 4). A reading's values are integers, each scaled by its metric's `exponent`.
+
+**Heartbeat** — the device's account of itself, apart from any batch: its `boot_id`, uptime, buffer
+depth in pending batches, optional battery, signal and firmware, and `sources_last_heard`, when it
+last heard each source down its chain. Source ids are checked by pattern, never against a manifest —
+a heartbeat names none and may come before the first declare. The device sends one at start and
+hourly after, unbuffered, and ignores the answer: the next supersedes a lost one
+(`docs/adr/0007-the-heartbeat-is-apart-from-data.md`).
 
 A rule the document cannot state — unique source ids, unique metric keys — stays enforced cloud-side
 and travels in the emitted document as description text, so the device author reads the rule rather
 than inferring it. A rule it can state rides as a keyword the device asserts.
 
-Responses are policy, not documentation: a device reads the status class and acts.
+Responses are policy, not documentation: a device reads the status class of a manifest or batch
+answer and acts. A heartbeat's answer is read for nothing.
 
 | Class            | Meaning                          | Device does                      |
 | ---------------- | -------------------------------- | -------------------------------- |
@@ -196,23 +207,24 @@ An unknown `manifest_hash` is not the device's fault — the contract has it sen
 a batch that names it — so the cloud archives the batch, answers `5xx`, and the archive rebuilds D1
 once the manifest is present.
 
-A `429` can come from the edge before the worker runs, so both routes may answer one this repository
+A `429` can come from the edge before the worker runs, so any route may answer one this repository
 never raised.
 
 ## 7. Cloud (Layers 1–3)
 
 - **ingest-worker** — device-facing. Verifies the token, validates against the contract, stores the
-  manifest, commits readings, writes the raw batch to R2.
+  manifest, commits readings, writes the raw batch to R2, stores heartbeats.
 - **api-worker** — client-facing. The read API: device list, health, time-series queries over D1.
   Writes nothing.
-- **jobs-worker** — cron. Hourly and daily rollups, D1 retention, silent-device detection.
-- **D1** — the registry (devices, manifests, metrics), recent readings, heartbeats, rollups.
+- **D1** — the registry (devices, manifests, metrics), readings, batch receipts, heartbeats.
 - **R2** — every raw batch and every manifest, unchanged. The archive D1 can be rebuilt from.
 
 Readings are one row per poll, with the minimum indexes the queries need — indexes cost writes on
-the same budget. Rollups collapse many readings into one row per bucket per metric, so the long tail
-is cheap to chart. When D1 cannot commit, ingest archives to R2 and returns "retry later"; the
-device keeps its buffer and the archive rebuilds D1 afterwards.
+the same budget. A rollup is aggregated in D1 as it is read, one value a bucket per metric, so the
+long tail is cheap to chart. Nothing runs on a schedule: retention waits until the budget needs it,
+and deciding a device is silent is the client's (`docs/adr/0006-the-client-owns-presentation.md`).
+When D1 cannot commit, ingest archives to R2 and returns "retry later"; the device keeps its buffer
+and the archive rebuilds D1 afterwards.
 
 A device token is minted by the cloud, returned once, and stored only as its SHA-256 hash; a device
 sends it as `Authorization: Bearer`. The token alone identifies the device, and the path id must
@@ -229,9 +241,9 @@ What the cloud assumes of the other repository, and no more — how the device i
 
 - The device buffers readings across outages, bounded on purpose: when the buffer fills, the oldest
   batch is dropped and `seq` leaves a visible gap rather than the device dying. A gap is recoverable
-  from nothing, so `jobs-worker` reports it as a health signal, never hides it.
+  from nothing, so the health route exposes it, never hides it.
 - It computes the manifest hash itself, and sends its manifest on boot and whenever sources change.
-- It sends a heartbeat with the batch, and its own account of uptime, buffer depth and firmware.
+- It sends a heartbeat on its own cadence, apart from any batch, whether or not it has readings.
 - It issues no request the contract does not define.
 
 ## 9. The path of a reading
@@ -239,7 +251,7 @@ What the cloud assumes of the other repository, and no more — how the device i
 ```mermaid
 flowchart TD
     A([source poll]) --> B[reading: ts + metric values]
-    B --> C[buffer, bounded RAM with flash spill]
+    B --> C[buffer, bounded, on disk]
     C --> D[upload batch]
     D --> E{status class}
     E -->|2xx| F[drop batch]
@@ -247,11 +259,11 @@ flowchart TD
     E -->|5xx, 429, 503| C
     D --> H[ingest: verify token,<br/>validate, dedupe on reading key]
     H --> I[(R2: raw batch, unchanged)]
-    H --> J[(D1: readings, heartbeat)]
-    J --> K[jobs: rollups, retention]
-    K --> L[(D1: rollups)]
+    H --> J[(D1: readings, receipt)]
+    N([heartbeat, hourly]) --> O[ingest: verify token, validate]
+    O --> P[(D1: heartbeats)]
     J --> M[api: read API → client]
-    L --> M
+    P --> M
     M -.->|rebuild if needed| I
 ```
 

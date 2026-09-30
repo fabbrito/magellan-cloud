@@ -11,7 +11,9 @@ import {
   readLatest,
   readMetrics,
   readSeries,
+  readSourceHealth,
   seriesQuerySchema,
+  sourceHealthRowSchema,
   valueRowSchema,
   type Answer,
 } from "@magellan/query";
@@ -113,12 +115,31 @@ const healthRoute = createRoute({
   method: "get",
   path: "/v1/devices/{id}/health",
   request: { params: deviceParams },
-  responses: { 200: rows(healthRowSchema, "One row: the latest heartbeat and gaps."), ...refusals },
+  responses: {
+    200: rows(healthRowSchema, "One row: when last heard, the latest heartbeat, and gaps."),
+    ...refusals,
+  },
 });
 
 app.openapi(healthRoute, async (context) => {
   const { id } = context.req.valid("param");
   return respond(context, await readHealth(getDb(context.env.DB), id, Date.now()));
+});
+
+// Its own route, not a field of health: every body is flat rows, and this is one a source.
+const sourceHealthRoute = createRoute({
+  method: "get",
+  path: "/v1/devices/{id}/health/sources",
+  request: { params: deviceParams },
+  responses: {
+    200: rows(sourceHealthRowSchema, "When the device last heard each source, per its heartbeat."),
+    ...refusals,
+  },
+});
+
+app.openapi(sourceHealthRoute, async (context) => {
+  const { id } = context.req.valid("param");
+  return respond(context, await readSourceHealth(getDb(context.env.DB), id));
 });
 
 const seriesRoute = createRoute({

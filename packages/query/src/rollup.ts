@@ -1,6 +1,5 @@
 import type { Metric } from "@magellan/contract";
 
-import type { Bucketing, Buckets } from "./bucket.ts";
 import { scale, type Sample } from "./series.ts";
 
 // What one metric's readings answer as, a point a reading or a bucket. Readings pass through scaled,
@@ -13,54 +12,63 @@ export interface Point {
   value: number;
 }
 
-type Reduce = (values: number[]) => number;
-
 // A state's samples carry exponent 0, so its code passes through unscaled.
-function scaledPoints(samples: Sample[]): Point[] {
+export function readingPoints(samples: Sample[]): Point[] {
   return samples.map((sample) => ({ ts: sample.ts, value: scale(sample.value, sample.exponent) }));
 }
 
-const mean: Reduce = (values) => values.reduce((total, value) => total + value, 0) / values.length;
-
-const last: Reduce = (values) => {
-  const value = values.at(-1);
-  if (value === undefined) throw new Error("an empty bucket");
-  return value;
-};
-
-// Points in ascending `ts`, so a bucket closes when a point passes its end and never reopens.
-function bucketed(points: Point[], buckets: Buckets, reduce: Reduce): Point[] {
-  const result: Point[] = [];
-  let start = Number.NEGATIVE_INFINITY;
-  let end = Number.NEGATIVE_INFINITY;
-  let open: number[] = [];
-  const close = () => {
-    if (open.length === 0) return;
-    result.push({ ts: start, value: reduce(open) });
-  };
-  for (const point of points) {
-    if (point.ts >= end) {
-      close();
-      start = buckets.startOf(point.ts);
-      end = buckets.endOf(start);
-      open = [];
-    }
-    open.push(point.value);
-  }
-  close();
-  return result;
+// One metric's bucket as D1 aggregated it under one manifest, beside that manifest's exponent.
+export interface BucketGroup {
+  start: number;
+  exponent: number;
+  total: number;
+  count: number;
+  lastTs: number;
+  last: number;
 }
 
-export function pointsOf(metric: Metric, samples: Sample[], bucketing: Bucketing): Point[] {
-  const points = scaledPoints(samples);
-  if (bucketing.rollup === "reading") return points;
+type Reduce = (groups: BucketGroup[]) => number;
 
-  const { buckets } = bucketing;
+// Each manifest's sum scaled by its own exponent, so a bucket straddling a re-scale weighs every
+// reading once, by the exponent it was read under.
+const mean: Reduce = (groups) =>
+  groups.reduce((total, group) => total + scale(group.total, group.exponent), 0) /
+  groups.reduce((count, group) => count + group.count, 0);
+
+const last: Reduce = (groups) => {
+  const [first, ...rest] = groups;
+  if (first === undefined) throw new Error("an empty bucket");
+  const latest = rest.reduce((kept, group) => (group.lastTs > kept.lastTs ? group : kept), first);
+  return scale(latest.last, latest.exponent);
+};
+
+interface Run {
+  start: number;
+  groups: BucketGroup[];
+}
+
+// Groups in ascending `start`, so one bucket's are adjacent.
+function runsOf(groups: BucketGroup[]): Run[] {
+  const runs: Run[] = [];
+  for (const group of groups) {
+    const run = runs.at(-1);
+    if (run?.start === group.start) run.groups.push(group);
+    else runs.push({ start: group.start, groups: [group] });
+  }
+  return runs;
+}
+
+function reduceOf(metric: Metric): Reduce {
   switch (metric.kind) {
     case "gauge":
-      return bucketed(points, buckets, mean);
+      return mean;
     case "counter":
     case "state":
-      return bucketed(points, buckets, last);
+      return last;
   }
+}
+
+export function bucketPoints(metric: Metric, groups: BucketGroup[]): Point[] {
+  const reduce = reduceOf(metric);
+  return runsOf(groups).map((run) => ({ ts: run.start, value: reduce(run.groups) }));
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bucketsOf, hourMs } from "./bucket.ts";
+import { bucketsOf, hourMs, spansOf } from "./bucket.ts";
 
 const at = (iso: string) => Date.parse(iso);
 
@@ -55,5 +55,34 @@ describe("day", () => {
     const buckets = bucketsOf("UTC", "day");
 
     expect(buckets.startOf(at("2026-09-29T23:59:59.999Z"))).toBe(at("2026-09-29T00:00:00Z"));
+  });
+});
+
+describe("spans", () => {
+  it("covers the range in whole buckets, the partial ones at each end included", () => {
+    const buckets = bucketsOf("UTC", "hour");
+
+    expect(
+      spansOf(buckets, at("2026-09-29T10:30:00Z"), at("2026-09-29T12:00:00.001Z"), 10),
+    ).toEqual([
+      [at("2026-09-29T10:00:00Z"), at("2026-09-29T11:00:00Z")],
+      [at("2026-09-29T11:00:00Z"), at("2026-09-29T12:00:00Z")],
+      [at("2026-09-29T12:00:00Z"), at("2026-09-29T13:00:00Z")],
+    ]);
+  });
+
+  it("gives a day that changed its clock its own length", () => {
+    const buckets = bucketsOf("Europe/Berlin", "day");
+
+    expect(spansOf(buckets, at("2026-10-25T12:00:00Z"), at("2026-10-26T12:00:00Z"), 10)).toEqual([
+      [at("2026-10-24T22:00:00Z"), at("2026-10-25T23:00:00Z")],
+      [at("2026-10-25T23:00:00Z"), at("2026-10-26T23:00:00Z")],
+    ]);
+  });
+
+  it("stops one past the bound", () => {
+    const buckets = bucketsOf("UTC", "hour");
+
+    expect(spansOf(buckets, 0, 100 * hourMs, 3)).toHaveLength(4);
   });
 });

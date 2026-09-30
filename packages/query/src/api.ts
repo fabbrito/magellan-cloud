@@ -60,9 +60,12 @@ export const valueRowSchema = z
   })
   .meta({ description: "One value, labelled by source and metric." });
 
-// The heartbeat fields are null until a first batch commits.
+// Null until the device is first heard: the heartbeat fields until a heartbeat, `seq` until a
+// batch.
 export const healthRowSchema = z.object({
-  last_seen: instantSchema.nullable(),
+  last_heard: instantSchema
+    .nullable()
+    .meta({ description: "When the cloud last received a heartbeat or a batch." }),
   seq_gaps: z
     .int()
     .min(0)
@@ -76,7 +79,14 @@ export const healthRowSchema = z.object({
   firmware_version: z.string().nullable(),
 });
 
+// One row a source the latest heartbeat names: the device's hop, beside the cloud's `last_heard`.
+export const sourceHealthRowSchema = z.object({
+  source: keySchema,
+  last_heard: instantSchema.meta({ description: "When the device last heard the source." }),
+});
+
 export type DeviceRow = z.infer<typeof deviceRowSchema>;
 export type MetricRow = z.infer<typeof metricRowSchema>;
 export type ValueRow = z.infer<typeof valueRowSchema>;
 export type HealthRow = z.infer<typeof healthRowSchema>;
+export type SourceHealthRow = z.infer<typeof sourceHealthRowSchema>;

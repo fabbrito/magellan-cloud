@@ -1,6 +1,6 @@
 # 6. The client owns presentation
 
-- Status: accepted, amended in place — raw counters, no deltas
+- Status: accepted, amended in place — raw counters, no deltas; alerts are the client's
 - Amends: 0005, where it gives presentation to the cloud and time zone to the viewer
 
 ## Chosen
@@ -13,6 +13,11 @@ neither hosts nor configures. No layouts, no dashboard, no UI.
 
 0005's core stands: the manifest says what a metric is, never how it is shown.
 
+Alerting is presentation's sibling, and the client's too. The cloud serves health — when a device
+was last heard, the gaps in its sequence, its last heartbeat — and decides nothing from it: no
+silent-device detection, no notification. A client that alerts reads health and holds its own
+thresholds.
+
 The device declares its time zone in the manifest. A calendar bucket — a day — is cut in the
 device's zone, the one a `daily` reset already follows. Resets are still found by the decrease; the
 zone crosses the seam for calendar buckets only.
@@ -22,6 +27,10 @@ zone crosses the seam for calendar buckets only.
 Charting is solved elsewhere, and building it here spent effort off the mission: capture,
 resilience, diagnostics. What a chart tool cannot know is the manifest a reading was read under and
 the zone its day is cut in, so that is what the cloud applies.
+
+What counts as silent is a threshold per device and per source — a source dark every night is not a
+fault — and choosing one is judging what the data means to a viewer. A chart tool already alerts; a
+detector here would be a second, with its own schedule and its own notifications to run.
 
 Counter deltas are not served for now: a reading lost inside the silence threshold folds two
 intervals into one, drawn as a spike. A raw value loses a point and stays true. A counter is shown
@@ -46,4 +55,5 @@ Clients that need shared, cloud-held presentation — dashboards provisioned for
 as a client concern first: provisioning files beside the client, not tables here. A device that
 moves between zones would need the zone per reading rather than per manifest. A client that needs a
 counter's increase across resets and silences brings deltas back as a served rollup, beside the raw
-value rather than in place of it.
+value rather than in place of it. A deployment with no client running around the clock brings
+detection back as scheduled work here.

@@ -1,9 +1,10 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { batchSchema, LIMITS, manifestSchema } from "@magellan/contract";
+import { batchSchema, heartbeatSchema, LIMITS, manifestSchema } from "@magellan/contract";
 import { getDb } from "@magellan/db";
 import { resolveToken } from "@magellan/token";
 import type { Context, Next } from "hono";
 
+import { commitHeartbeat } from "./commit.ts";
 import { declareManifest, ingestBatch, type Store } from "./ingest.ts";
 
 type RefusalStatus = 400 | 401 | 403 | 411 | 413 | 422 | 503;
@@ -86,6 +87,9 @@ app.use("/v1/devices/:id/manifest", (context, next) =>
 app.use("/v1/devices/:id/batches", (context, next) =>
   refuseOversized(context, next, LIMITS.batchBytesMax),
 );
+app.use("/v1/devices/:id/heartbeats", (context, next) =>
+  refuseOversized(context, next, LIMITS.heartbeatBytesMax),
+);
 
 const manifestRoute = createRoute({
   method: "put",
@@ -166,6 +170,40 @@ app.openapi(batchesRoute, async (context) => {
       return refuse(context, 422, reason, { ...fields, source, metric });
     }
   }
+});
+
+// Live state, not record: straight to D1, never archived, so a lost one is superseded by the next
+// rather than retried (docs/adr/0007-the-heartbeat-is-apart-from-data.md).
+const heartbeatsRoute = createRoute({
+  method: "post",
+  path: "/v1/devices/{id}/heartbeats",
+  security: [{ deviceToken: [] }],
+  description:
+    "Fire and forget: a device treats any 2xx as stored and ignores every other answer, never retrying or buffering one. The next heartbeat supersedes it.",
+  request: {
+    params: z.object({ id: z.string() }),
+    body: {
+      content: { "application/json": { schema: heartbeatSchema } },
+      required: true,
+      "x-max-bytes": LIMITS.heartbeatBytesMax,
+    },
+  },
+  responses: {
+    204: { description: "Stored." },
+    400: { description: "The body is not a heartbeat." },
+    401: { description: "The credential is absent or resolves to no device." },
+    403: { description: "The credential names another device." },
+    411: { description: "No parseable `content-length`. A device must declare what it sends." },
+    413: { description: `The body is past ${LIMITS.heartbeatBytesMax} bytes.` },
+    429: { description: "Too many requests." },
+  },
+});
+
+app.openapi(heartbeatsRoute, async (context) => {
+  const { id } = context.req.valid("param");
+  const heartbeat = context.req.valid("json");
+  await commitHeartbeat(context.get("store").db, id, heartbeat, new Date());
+  return context.body(null, 204);
 });
 
 // Chosen, not inherited: a fault here is never the device's, so it answers the class that keeps the

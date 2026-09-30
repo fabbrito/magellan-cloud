@@ -34,7 +34,7 @@ it("carries a boot from declaring to committed", async () => {
 
   await device.declare();
   device.poll("inlet", 1_767_225_600_000, { temperature: 213 });
-  await device.flush(42);
+  await device.flush();
 
   expect(device.bufferDepth).toBe(0);
   expect(
@@ -47,7 +47,7 @@ it("keeps the buffer until the manifest it named exists", async () => {
   const device = boot("device-02", token);
   device.poll("inlet", 1_767_225_600_000, { temperature: 100 });
 
-  await device.flush(10);
+  await device.flush();
 
   // Nothing committed and nothing lost: the batch named a manifest the cloud cannot resolve, which
   // is not the device's fault and so must not cost it the readings (docs/DESIGN.md §6).
@@ -57,7 +57,7 @@ it("keeps the buffer until the manifest it named exists", async () => {
   );
 
   await device.declare();
-  await device.flush(20);
+  await device.flush();
 
   expect(device.bufferDepth).toBe(0);
   expect(await query(server, "SELECT ts FROM readings WHERE device_id = ?", "device-02")).toEqual([
@@ -71,7 +71,7 @@ it("drops a batch the cloud refuses for good", async () => {
   await device.declare();
   device.poll("outlet", 1_767_225_600_000, { temperature: 1 });
 
-  await device.flush(30);
+  await device.flush();
 
   // The manifest declares no `outlet`, and retrying will not make it declare one. An emptied buffer
   // is what separates this from the unresolved manifest above: refused for good, not deferred.

@@ -27,7 +27,6 @@ function batchOf(manifestHash: string, seq: string): Batch {
     boot_id: "0123456789abcdef",
     seq,
     readings: [{ source: "inlet", ts: 1_767_225_600_000, values: { temperature: 213 } }],
-    heartbeat: { uptime_seconds: 42, buffer_depth: 0 },
   };
 }
 
@@ -90,12 +89,10 @@ it("commits a row per reading and the batch receipt", async () => {
   expect(
     await query(
       server,
-      "SELECT boot_id, seq, manifest_hash, uptime_seconds FROM heartbeats WHERE device_id = ?",
+      "SELECT boot_id, seq, manifest_hash FROM receipts WHERE device_id = ?",
       "device-04",
     ),
-  ).toEqual([
-    { boot_id: "0123456789abcdef", seq: "9", manifest_hash: manifestHash, uptime_seconds: 42 },
-  ]);
+  ).toEqual([{ boot_id: "0123456789abcdef", seq: "9", manifest_hash: manifestHash }]);
 });
 
 it("archives a batch whose manifest never arrived", async () => {
