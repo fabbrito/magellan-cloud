@@ -147,10 +147,10 @@ the endpoints exist — never authored twice. Rust types are written natively ra
 so the two implementations stay independent of each other's toolchain while agreeing on the emitted
 shape (`docs/adr/0001-contract-authoring.md`).
 
-Until the first `contract-v*` tag the contract is provisional: no version is published, so the seam
-is cheap to move. What the tag freezes — the wire bytes — and what D1 or R2 persist are settled
-before it; the wire _around_ the bytes settles when the endpoints are built, against a running
-worker rather than on paper. After the tag, a breaking change is a new version, not an edit.
+The contract is settled at v1. Its version is the emitted document's `info.version`, semver: the
+major is the path's `/vN`, a minor adds what a device may ignore, a patch changes descriptions only.
+A breaking change is a new `/vN` beside the old, never an edit under it. The device transcribes the
+version it was written against.
 
 ```
 PUT  /v1/devices/{id}/manifest
