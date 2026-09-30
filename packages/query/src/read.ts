@@ -1,5 +1,5 @@
 import { manifestSchema } from "@magellan/contract";
-import { devices, heartbeats, manifests, readings, type Db } from "@magellan/db";
+import { batches, devices, heartbeats, manifests, readings, type Db } from "@magellan/db";
 import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 
 import type { Declaration } from "./metric.ts";
@@ -7,7 +7,7 @@ import type { Declaration } from "./metric.ts";
 // Row reads, left unawaited so a caller batches the independent ones into one round trip. Every read
 // here is bounded where it runs: the limit a caller trusts is the one in the query.
 export const devicesMax = 100;
-// A day of heartbeats is ~300 at a five-minute sweep; this leaves room for a device catching up.
+// A day of receipts is ~300 at a five-minute sweep; this leaves room for a device catching up.
 export const receiptsMax = 2000;
 
 // Throws on a row ingest wrote and this cannot read: a bug here, never the caller's.
@@ -62,6 +62,7 @@ export async function manifestsOf(
   return rows.map(declarationOf);
 }
 
+// The key's descending walk stops at the first row.
 export function selectLatestHeartbeat(db: Db, deviceId: string) {
   return db
     .select()
@@ -71,11 +72,20 @@ export function selectLatestHeartbeat(db: Db, deviceId: string) {
     .limit(1);
 }
 
+export function selectLatestReceipt(db: Db, deviceId: string) {
+  return db
+    .select({ bootId: batches.bootId, seq: batches.seq, receivedAt: batches.receivedAt })
+    .from(batches)
+    .where(eq(batches.deviceId, deviceId))
+    .orderBy(desc(batches.receivedAt))
+    .limit(1);
+}
+
 export function selectReceipts(db: Db, deviceId: string, sinceMs: number) {
   return db
-    .select({ bootId: heartbeats.bootId, seq: heartbeats.seq })
-    .from(heartbeats)
-    .where(and(eq(heartbeats.deviceId, deviceId), gte(heartbeats.receivedAt, sinceMs)))
+    .select({ bootId: batches.bootId, seq: batches.seq })
+    .from(batches)
+    .where(and(eq(batches.deviceId, deviceId), gte(batches.receivedAt, sinceMs)))
     .limit(receiptsMax);
 }
 

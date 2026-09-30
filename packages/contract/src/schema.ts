@@ -32,6 +32,7 @@ const bootIdPattern = new RegExp(`^[0-9a-f]{${LIMITS.bootIdLengthMin},${LIMITS.b
 
 export const keySchema = z.string().min(1).max(LIMITS.keyLengthMax).regex(keyPattern);
 const unitSchema = z.string().min(1).max(LIMITS.unitLengthMax);
+const bootIdSchema = z.string().regex(bootIdPattern);
 
 const stateLabelsSchema = z
   .record(z.string(), z.string().min(1).max(LIMITS.stateLabelLengthMax))
@@ -181,24 +182,15 @@ const metricValuesSchema = z
 
 // One reading is one source poll: a timestamp plus that source's values, keyed so it stays readable
 // as the manifest grows (docs/DESIGN.md invariant 3).
+const timestampSchema = z.int().min(0).max(LIMITS.timestampMsMax);
+
 export const readingSchema = z
   .strictObject({
     source: keySchema,
-    ts: z.int().min(0).max(LIMITS.timestampMsMax),
+    ts: timestampSchema,
     values: metricValuesSchema,
   })
   .meta({ description: "One source poll: a UTC timestamp in ms and that source's metric values." });
-
-export const heartbeatSchema = z
-  .strictObject({
-    // Resets on every reboot, power cut and OTA; the batch's boot_id explains the reset.
-    uptime_seconds: z.int().min(0).max(LIMITS.uptimeSecondsMax),
-    buffer_depth: z.int().min(0).max(LIMITS.bufferDepthMax),
-    battery_percent: z.int().min(0).max(LIMITS.batteryPercentMax).optional(),
-    signal_percent: z.int().min(0).max(LIMITS.signalPercentMax).optional(),
-    firmware_version: z.string().min(1).max(LIMITS.firmwareVersionLengthMax).optional(),
-  })
-  .meta({ description: "The device's account of itself, sent with a batch." });
 
 // A batch is the unit of delivery and retry; the reading is the unit of dedup
 // (docs/adr/0003-dedup-is-the-readings-own-key.md). seq is a decimal string because 2^53 is a cliff
@@ -216,18 +208,53 @@ const seqSchema = z
 export const batchSchema = z
   .strictObject({
     manifest_hash: z.string().regex(manifestHashPattern),
-    // Drawn once per boot, needing no flash to keep. An identifier cannot be optional, so it sits
-    // on the batch, and uptime is explained by it beside.
-    boot_id: z.string().regex(bootIdPattern),
+    // Drawn once per boot, needing no flash to keep.
+    boot_id: bootIdSchema,
     seq: seqSchema,
     readings: z.array(readingSchema).min(1).max(LIMITS.readingsPerBatchMax),
-    // Required: it is the only D1 trace a batch leaves and the carrier of gap detection.
-    heartbeat: heartbeatSchema,
   })
   .meta({
     description:
       "One upload: ordered readings under a manifest hash, identified by boot_id and seq. A duplicate is absorbed per reading, not per batch.",
   });
+
+// Checked by pattern only, never against a manifest: a heartbeat names none, and may come before
+// the first declare. Measured on the device's clock, like a reading's `ts`.
+const sourcesLastHeardSchema = z
+  .record(keySchema, timestampSchema)
+  .refine((heard) => Object.keys(heard).length <= LIMITS.sourcesMax, {
+    message: `more than ${LIMITS.sourcesMax} sources`,
+  })
+  .meta({
+    maxProperties: LIMITS.sourcesMax,
+    propertyNames: {
+      type: "string",
+      minLength: 1,
+      maxLength: LIMITS.keyLengthMax,
+      pattern: keyPattern.source,
+    },
+    description: `When the device last heard each source, UTC ms, keyed by source id. At most ${LIMITS.sourcesMax}; a source not heard since boot is absent.`,
+  });
+
+// Apart from any batch, so a device with nothing to read still says it is alive
+// (docs/adr/0007-the-heartbeat-is-apart-from-data.md). Live state, not record: never archived.
+export const heartbeatSchema = z
+  .strictObject({
+    // The same as this boot's batches; it explains an uptime reset.
+    boot_id: bootIdSchema,
+    // Resets on every reboot, power cut and OTA.
+    uptime_seconds: z.int().min(0).max(LIMITS.uptimeSecondsMax),
+    buffer_depth: z
+      .int()
+      .min(0)
+      .max(LIMITS.bufferDepthMax)
+      .meta({ description: "Batches pending on the device when sent." }),
+    battery_percent: z.int().min(0).max(LIMITS.batteryPercentMax).optional(),
+    signal_percent: z.int().min(0).max(LIMITS.signalPercentMax).optional(),
+    firmware_version: z.string().min(1).max(LIMITS.firmwareVersionLengthMax).optional(),
+    sources_last_heard: sourcesLastHeardSchema,
+  })
+  .meta({ description: "The device's account of itself, sent on its own cadence." });
 
 export type Manifest = z.infer<typeof manifestSchema>;
 export type Metric = z.infer<typeof metricSchema>;

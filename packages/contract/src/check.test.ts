@@ -28,7 +28,6 @@ const batch = (readings: ReturnType<typeof reading>[]) => ({
   boot_id: "0123456789abcdef",
   seq: "1",
   readings,
-  heartbeat: { uptime_seconds: 42, buffer_depth: 1 },
 });
 
 describe("checkBatchAgainstManifest", () => {

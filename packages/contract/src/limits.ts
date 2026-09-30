@@ -28,4 +28,5 @@ export const LIMITS = {
   // One D1 row, capped at 2 MB; 1 KB is left for its other columns.
   manifestBytesMax: 2_000_000 - 1_000,
   batchBytesMax: 6 * 1024 * 1024,
+  heartbeatBytesMax: 4 * 1024,
 } as const;

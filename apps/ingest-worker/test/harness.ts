@@ -1,4 +1,4 @@
-import type { Batch } from "@magellan/contract";
+import type { Batch, Heartbeat } from "@magellan/contract";
 import { mintStatement, revokeStatement } from "@magellan/token";
 import { createTestHarness, type TestHarness } from "wrangler";
 
@@ -59,6 +59,20 @@ export function putManifest(
 export function postBatch(server: TestHarness, deviceId: string, token: string, batch: Batch) {
   const body = new TextEncoder().encode(JSON.stringify(batch));
   return server.fetch(`/v1/devices/${deviceId}/batches`, {
+    method: "POST",
+    headers: headersFor(token, body.byteLength),
+    body,
+  });
+}
+
+export function postHeartbeat(
+  server: TestHarness,
+  deviceId: string,
+  token: string,
+  heartbeat: Heartbeat,
+) {
+  const body = new TextEncoder().encode(JSON.stringify(heartbeat));
+  return server.fetch(`/v1/devices/${deviceId}/heartbeats`, {
     method: "POST",
     headers: headersFor(token, body.byteLength),
     body,

@@ -1,5 +1,5 @@
 import type { Manifest } from "@magellan/contract";
-import type { DeviceRow, HealthRow, MetricRow, ValueRow } from "@magellan/query";
+import type { DeviceRow, HealthRow, MetricRow, SourceHealthRow, ValueRow } from "@magellan/query";
 import { daysManifest, daysReadings, energyStep } from "@magellan/simulator";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { TestHarness } from "wrangler";
@@ -48,7 +48,7 @@ async function sendDays(deviceId: string, fromTs = firstTs): Promise<void> {
   await device.declare();
   const readings = daysReadings({ firstTs: fromTs, periodMs, readingsPerDay: 4, days: 2 });
   for (const reading of readings) device.poll(reading.source, reading.ts, reading.values);
-  if ((await device.flush(60)) !== "committed") throw new Error("the days did not commit");
+  if ((await device.flush()) !== "committed") throw new Error("the days did not commit");
 }
 
 const withPower = (
@@ -139,34 +139,88 @@ describe("devices", () => {
     expect(latest).toContainEqual({ time: null, source: "source_1", metric: "power", value: null });
   });
 
-  it("answers health from the latest heartbeat", async () => {
-    await sendDays("device-10");
+  it("answers health from the latest heartbeat and receipt", async () => {
+    const token = await registerDevice(server, "device-10");
+    const device = bootDevice(server, {
+      deviceId: "device-10",
+      token,
+      manifest: daysManifest,
+      bootId: "0123456789abcdef",
+    });
+    await device.declare();
+    device.poll("source_1", firstTs, { power: 1 });
+    await device.flush();
+    expect(await device.heartbeat(60)).toBe(204);
 
     const health = await getJson<HealthRow[]>(server, clientToken, "/v1/devices/device-10/health");
 
     expect(health).toEqual([
       expect.objectContaining({
-        last_seen: instant,
+        last_heard: instant,
         seq_gaps: 0,
         boot_id: "0123456789abcdef",
+        seq: "0",
         uptime_seconds: 60,
-        buffer_depth: 8,
+        buffer_depth: 0,
       }),
     ]);
   });
 
-  it("answers health with nulls before a first batch", async () => {
+  it("hears a device by its heartbeat alone", async () => {
+    const token = await registerDevice(server, "device-quiet");
+    const device = bootDevice(server, {
+      deviceId: "device-quiet",
+      token,
+      manifest: daysManifest,
+      bootId: "fedcba9876543210",
+    });
+    await device.heartbeat(5);
+
+    const health = await getJson<HealthRow[]>(
+      server,
+      clientToken,
+      "/v1/devices/device-quiet/health",
+    );
+
+    expect(health).toEqual([
+      expect.objectContaining({ last_heard: instant, boot_id: "fedcba9876543210", seq: null }),
+    ]);
+  });
+
+  it("answers health with nulls before a device is heard", async () => {
     await registerDevice(server, "device-new");
 
     const health = await getJson<HealthRow[]>(server, clientToken, "/v1/devices/device-new/health");
 
-    expect(health).toEqual([expect.objectContaining({ last_seen: null, seq: null, seq_gaps: 0 })]);
+    expect(health).toEqual([expect.objectContaining({ last_heard: null, seq: null, seq_gaps: 0 })]);
+  });
+
+  it("answers when the device last heard each source, per its latest heartbeat", async () => {
+    const token = await registerDevice(server, "device-heard");
+    const device = bootDevice(server, {
+      deviceId: "device-heard",
+      token,
+      manifest: daysManifest,
+      bootId: "0123456789abcdef",
+    });
+    await device.heartbeat(1);
+    device.poll("source_1", firstTs, { power: 1 });
+    await device.heartbeat(2);
+
+    const sources = await getJson<SourceHealthRow[]>(
+      server,
+      clientToken,
+      "/v1/devices/device-heard/health/sources",
+    );
+
+    expect(sources).toEqual([{ source: "source_1", last_heard: at(firstTs) }]);
   });
 
   it.each([
     "/v1/devices/nobody/metrics",
     "/v1/devices/nobody/latest",
     "/v1/devices/nobody/health",
+    "/v1/devices/nobody/health/sources",
     "/v1/devices/nobody/series?metric=source_1:power&from=0&to=1",
   ])("answers 404 for a device never registered: %s", async (path) => {
     const response = await read(server, clientToken, path);
@@ -238,7 +292,7 @@ describe("series", () => {
       const device = bootDevice(server, { deviceId: "device-05", token, ...boot });
       await device.declare();
       device.poll("source_1", firstTs + index * periodMs, { power: boot.value });
-      await device.flush(1);
+      await device.flush();
     }
 
     const rows = await getJson<ValueRow[]>(
@@ -260,7 +314,7 @@ describe("series", () => {
     });
     await first.declare();
     first.poll("source_1", firstTs, { power: 1, voltage: 230 });
-    await first.flush(1);
+    await first.flush();
     await bootDevice(server, {
       deviceId: "device-06",
       token,
@@ -327,7 +381,7 @@ describe("series", () => {
     });
     await device.declare();
     device.poll("source_1", firstTs, { power: 10 });
-    await device.flush(1);
+    await device.flush();
 
     const rows = await getJson<ValueRow[]>(
       server,

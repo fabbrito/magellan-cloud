@@ -29,7 +29,6 @@ it("fills the largest batch the contract accepts", () => {
     boot_id: "0123456789abcdef",
     seq: "0",
     readings: ceilingReadings(firstTs),
-    heartbeat: { uptime_seconds: 0, buffer_depth: LIMITS.readingsPerBatchMax },
   };
   const valueCounts = batch.readings.map((reading) => Object.keys(reading.values).length);
 

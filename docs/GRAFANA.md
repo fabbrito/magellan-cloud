@@ -13,13 +13,14 @@ line; running on Grafana 13.2.3.
 GET only, `Authorization: Bearer <client token>`, every body a flat array of rows. The OpenAPI
 document is `packages/query/openapi.json`.
 
-| Route                      | Rows                                                             |
-| -------------------------- | ---------------------------------------------------------------- |
-| `/v1/devices`              | `id`, `description`, `revoked_at`                                |
-| `/v1/devices/{id}/metrics` | `source`, `metric`, `kind`, and the kind's `unit`, `exponent`, … |
-| `/v1/devices/{id}/latest`  | each metric's newest value within a day, or null                 |
-| `/v1/devices/{id}/health`  | one row: `last_seen`, `seq_gaps`, the heartbeat fields           |
-| `/v1/devices/{id}/series`  | `time`, `source`, `metric`, `value`, ascending by time           |
+| Route                             | Rows                                                             |
+| --------------------------------- | ---------------------------------------------------------------- |
+| `/v1/devices`                     | `id`, `description`, `revoked_at`                                |
+| `/v1/devices/{id}/metrics`        | `source`, `metric`, `kind`, and the kind's `unit`, `exponent`, … |
+| `/v1/devices/{id}/latest`         | each metric's newest value within a day, or null                 |
+| `/v1/devices/{id}/health`         | one row: `last_heard`, `seq_gaps`, the heartbeat fields          |
+| `/v1/devices/{id}/health/sources` | `source`, `last_heard`: when the device last read each           |
+| `/v1/devices/{id}/series`         | `time`, `source`, `metric`, `value`, ascending by time           |
 
 `series` takes `metric` (comma-separated `source:metric`, up to 20), `from` and `to` (both or
 neither; epoch ms or RFC 3339; neither is the last day) and `rollup` (`reading`, `hour`, `day`).
@@ -116,8 +117,9 @@ A time series panel:
 ### Latest and health
 
 A table or stat panel over `/v1/devices/${device}/latest` (the series columns, Format Table), and
-one over `/v1/devices/${device}/health` (`last_seen` Timestamp, `seq_gaps` Number, and whichever
-heartbeat fields it shows).
+one over `/v1/devices/${device}/health` (`last_heard` Timestamp, `seq_gaps` Number, and whichever
+heartbeat fields it shows). `/health/sources` is the device's side of the same question, one row a
+source; alerting on either is the client's (`docs/adr/0006-the-client-owns-presentation.md`).
 
 ## Presentation
 

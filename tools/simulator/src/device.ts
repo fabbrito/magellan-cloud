@@ -1,4 +1,10 @@
-import { manifestHash, type Batch, type Manifest, type Reading } from "@magellan/contract";
+import {
+  manifestHash,
+  type Batch,
+  type Heartbeat,
+  type Manifest,
+  type Reading,
+} from "@magellan/contract";
 
 import { etagHash } from "./etag.ts";
 import { classify, type Outcome } from "./outcome.ts";
@@ -15,8 +21,8 @@ export type CloudFetch = (
   init: { method: string; headers: Record<string, string>; body: Uint8Array },
 ) => Promise<CloudResponse>;
 
-// A device as the cloud may assume one behaves: it declares its manifest, buffers readings, and
-// sends them as one batch. It keeps no clock — uptime is stated at the call site — and it holds no
+// A device as the cloud may assume one behaves: it declares its manifest, buffers readings, sends
+// them as one batch, and says it is alive on its own cadence. It keeps no clock — uptime is stated at the call site — and it holds no
 // network client, taking the `fetch` that reaches the cloud under test.
 export interface DeviceOptions {
   deviceId: string;
@@ -31,6 +37,7 @@ export class SimulatedDevice {
   private readonly options: DeviceOptions;
   private readonly bytes: Uint8Array;
   private readonly buffer: Reading[] = [];
+  private readonly lastHeard = new Map<string, number>();
   private seq = 0n;
 
   constructor(options: DeviceOptions) {
@@ -59,17 +66,17 @@ export class SimulatedDevice {
 
   poll(source: string, ts: number, values: Record<string, number>): void {
     this.buffer.push({ source, ts, values });
+    this.lastHeard.set(source, Math.max(ts, this.lastHeard.get(source) ?? ts));
   }
 
   // One batch, one delivery. The buffer survives anything the cloud may yet accept, and is dropped
   // only on an answer that will not change: committed, or refused for good.
-  async flush(uptimeSeconds: number): Promise<Outcome> {
+  async flush(): Promise<Outcome> {
     const batch: Batch = {
       manifest_hash: await manifestHash(this.bytes),
       boot_id: this.options.bootId,
       seq: String(this.seq),
       readings: [...this.buffer],
-      heartbeat: { uptime_seconds: uptimeSeconds, buffer_depth: this.buffer.length },
     };
 
     const body = new TextEncoder().encode(JSON.stringify(batch));
@@ -83,11 +90,25 @@ export class SimulatedDevice {
     return outcome;
   }
 
+  // Fire and forget: the answer is returned for a test to read, and never changes the device.
+  // Everything buffered goes as one batch, so what is pending is one batch or none.
+  async heartbeat(uptimeSeconds: number): Promise<number> {
+    const heartbeat: Heartbeat = {
+      boot_id: this.options.bootId,
+      uptime_seconds: uptimeSeconds,
+      buffer_depth: this.buffer.length === 0 ? 0 : 1,
+      sources_last_heard: Object.fromEntries(this.lastHeard),
+    };
+    const body = new TextEncoder().encode(JSON.stringify(heartbeat));
+    const response = await this.send("POST", "heartbeats", body);
+    return response.status;
+  }
+
   // The verb rides with the resource rather than being inferred from its name, and the length is
   // declared: the cloud answers 411 to a body whose size a device will not state.
   private send(
     method: "PUT" | "POST",
-    resource: "manifest" | "batches",
+    resource: "manifest" | "batches" | "heartbeats",
     body: Uint8Array,
   ): Promise<CloudResponse> {
     return this.options.fetch(`/v1/devices/${this.options.deviceId}/${resource}`, {

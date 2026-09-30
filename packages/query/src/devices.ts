@@ -1,9 +1,16 @@
 import type { Manifest } from "@magellan/contract";
 import type { Db } from "@magellan/db";
 
-import { noDevice, type Answer, type DeviceRow, type HealthRow, type MetricRow } from "./api.ts";
+import {
+  noDevice,
+  type Answer,
+  type DeviceRow,
+  type HealthRow,
+  type MetricRow,
+  type SourceHealthRow,
+} from "./api.ts";
 import { dayMs } from "./bucket.ts";
-import { seqGaps } from "./health.ts";
+import { latestHeard, seqGaps } from "./health.ts";
 import type { Declaration } from "./metric.ts";
 import {
   declarationOf,
@@ -11,6 +18,7 @@ import {
   selectDevice,
   selectDevices,
   selectLatestHeartbeat,
+  selectLatestReceipt,
   selectReceipts,
 } from "./read.ts";
 import { instantOf } from "./time.ts";
@@ -58,18 +66,20 @@ export async function readHealth(
   deviceId: string,
   nowMs: number,
 ): Promise<Answer<HealthRow[]>> {
-  const [[device], [heartbeat], receipts] = await db.batch([
+  const [[device], [heartbeat], [receipt], receipts] = await db.batch([
     selectDevice(db, deviceId),
     selectLatestHeartbeat(db, deviceId),
+    selectLatestReceipt(db, deviceId),
     selectReceipts(db, deviceId, nowMs - dayMs),
   ]);
   if (device === undefined) return noDevice;
 
+  const heard = latestHeard(heartbeat, receipt);
   const row: HealthRow = {
-    last_seen: heartbeat === undefined ? null : instantOf(heartbeat.receivedAt),
+    last_heard: heard === undefined ? null : instantOf(heard.receivedAt),
     seq_gaps: seqGaps(receipts),
-    boot_id: heartbeat?.bootId ?? null,
-    seq: heartbeat?.seq ?? null,
+    boot_id: heard?.bootId ?? null,
+    seq: receipt?.seq ?? null,
     uptime_seconds: heartbeat?.uptimeSeconds ?? null,
     buffer_depth: heartbeat?.bufferDepth ?? null,
     battery_percent: heartbeat?.batteryPercent ?? null,
@@ -77,4 +87,23 @@ export async function readHealth(
     firmware_version: heartbeat?.firmwareVersion ?? null,
   };
   return { ok: true, body: [row] };
+}
+
+// The latest heartbeat's account, one row a source, in id order. A device yet to send one, or one
+// that has heard no source since boot, answers no rows.
+export async function readSourceHealth(
+  db: Db,
+  deviceId: string,
+): Promise<Answer<SourceHealthRow[]>> {
+  const [[device], [heartbeat]] = await db.batch([
+    selectDevice(db, deviceId),
+    selectLatestHeartbeat(db, deviceId),
+  ]);
+  if (device === undefined) return noDevice;
+  if (heartbeat === undefined) return { ok: true, body: [] };
+
+  const body = Object.entries(heartbeat.sourcesLastHeard)
+    .toSorted(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+    .map(([source, ms]) => ({ source, last_heard: instantOf(ms) }));
+  return { ok: true, body };
 }

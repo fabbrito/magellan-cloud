@@ -5,8 +5,9 @@ export {
   healthRowSchema,
   metricRowSchema,
   problemSchema,
+  sourceHealthRowSchema,
   valueRowSchema,
 } from "./api.ts";
-export { listDevices, readHealth, readMetrics } from "./devices.ts";
+export { listDevices, readHealth, readMetrics, readSourceHealth } from "./devices.ts";
 export { readLatest } from "./latest.ts";
 export { readSeries, seriesQuerySchema } from "./query.ts";

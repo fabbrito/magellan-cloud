@@ -4,7 +4,7 @@ import { ceilingReadings, gaugeManifest, largestManifest } from "./ceiling.ts";
 import { SimulatedDevice, type CloudFetch } from "./index.ts";
 
 // Drives the simulated device over a real socket, which is the one thing the suite cannot do: its
-// tests reach workerd in process. It walks a boot — declare, poll, flush — against the same routes
+// tests reach workerd in process. It walks a boot — heartbeat, declare, poll, flush — against the same routes
 // a device does. `ceiling` sends the largest manifest and the largest batch the contract allows.
 //
 // It is a probe, not a test. Nothing asserts here; the statuses it prints are the answer.
@@ -58,7 +58,7 @@ if (run.kind === "ceiling") {
   for (const reading of ceilingReadings(Date.now())) {
     device.poll(reading.source, reading.ts, reading.values);
   }
-  console.log(`ceiling: ${await device.flush(0)}`);
+  console.log(`ceiling: ${await device.flush()}`);
 } else {
   // One source, one gauge: the probe exercises the wire, not the data.
   const device = simulatedDevice(
@@ -70,11 +70,13 @@ if (run.kind === "ceiling") {
     },
     "0123456789abcdef",
   );
+  await device.heartbeat(0);
   console.log(`declared ${await device.declare()}`);
 
   for (let sweep = 0; sweep < run.sweeps; sweep += 1) {
     device.poll("inlet", Date.now(), { temperature: 200 + sweep });
-    const outcome = await device.flush(sweep);
+    const outcome = await device.flush();
     console.log(`sweep ${sweep}: ${outcome}, buffer ${device.bufferDepth}`);
+    await device.heartbeat(sweep + 1);
   }
 }

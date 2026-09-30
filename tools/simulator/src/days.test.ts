@@ -34,7 +34,6 @@ it("reads under its manifest", () => {
     boot_id: "0123456789abcdef",
     seq: "0",
     readings,
-    heartbeat: { uptime_seconds: 0, buffer_depth: 0 },
   };
 
   expect(checkBatchAgainstManifest(daysManifest, batch)).toEqual({ ok: true });

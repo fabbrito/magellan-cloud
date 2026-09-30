@@ -35,7 +35,6 @@ it("commits a batch at every bound the contract allows", async () => {
     boot_id: "0123456789abcdef",
     seq: "0",
     readings: fullBatchReadings(1_767_225_600_000),
-    heartbeat: { uptime_seconds: 42, buffer_depth: 0 },
   });
 
   expect(response.status).toBe(204);

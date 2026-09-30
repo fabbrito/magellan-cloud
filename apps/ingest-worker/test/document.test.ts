@@ -19,4 +19,7 @@ it("states each body's byte bound", () => {
   expect(committed.paths["/v1/devices/{id}/batches"].post.requestBody).toMatchObject({
     "x-max-bytes": LIMITS.batchBytesMax,
   });
+  expect(committed.paths["/v1/devices/{id}/heartbeats"].post.requestBody).toMatchObject({
+    "x-max-bytes": LIMITS.heartbeatBytesMax,
+  });
 });
