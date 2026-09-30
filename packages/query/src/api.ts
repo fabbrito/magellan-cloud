@@ -55,7 +55,7 @@ export const valueRowSchema = z
     ...rowLabels,
     value: z.number().nullable().meta({
       description:
-        "The physical quantity: scaled, a counter's delta, a state's code. Null where none is known.",
+        "The physical quantity: scaled, a counter's raw value, a state's code. Null where none is known.",
     }),
   })
   .meta({ description: "One value, labelled by source and metric." });

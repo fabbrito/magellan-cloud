@@ -186,7 +186,7 @@ const readingTs = (index: number) => at(firstTs + index * periodMs);
 describe("series", () => {
   const step = energyStep / 100;
 
-  it("answers a daily counter's deltas a reading, null across the reset", async () => {
+  it("answers a daily counter's raw value a reading, across the reset", async () => {
     await sendDays("device-03");
 
     const rows = await getJson<ValueRow[]>(
@@ -196,11 +196,11 @@ describe("series", () => {
     );
 
     expect(rows).toEqual(
-      [1, 2, 3, 4, 5, 6, 7].map((index) => ({
+      [0, 1, 2, 3, 4, 5, 6, 7].map((index) => ({
         time: readingTs(index),
         source: "source_1",
         metric: "energy_today",
-        value: index === 4 ? null : step,
+        value: (((index % 4) + 1) * energyStep) / 100,
       })),
     );
   });
@@ -279,7 +279,7 @@ describe("series", () => {
     ]);
   });
 
-  it("rolls readings into the hour: a gauge averaged, a counter's deltas summed", async () => {
+  it("rolls readings into the hour: a gauge averaged, a counter's last value kept", async () => {
     await sendDays("device-11");
 
     const rows = await getJson<ValueRow[]>(
@@ -298,12 +298,12 @@ describe("series", () => {
         time: at(firstTs),
         source: "source_1",
         metric: "energy_today",
-        value: 0.3,
+        value: 4 * step,
       },
     ]);
   });
 
-  it("totals a daily counter's day by its segments", async () => {
+  it("keeps a daily counter's last reading in its day", async () => {
     await sendDays("device-13");
 
     const rows = await getJson<ValueRow[]>(
@@ -313,7 +313,7 @@ describe("series", () => {
     );
 
     expect(rows).toEqual([
-      { time: at(firstTs), source: "source_1", metric: "energy_today", value: 8 * step },
+      { time: at(firstTs), source: "source_1", metric: "energy_today", value: 4 * step },
     ]);
   });
 

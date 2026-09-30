@@ -1,6 +1,6 @@
 import type { Manifest, Reading } from "@magellan/contract";
 
-// One source with each kind, and a counter that resets daily, so a query has a reset to find.
+// One source with each kind, and a counter that resets daily, so a query has a reset to cross.
 export const daysManifest: Manifest = {
   tz: "UTC",
   sources: [
@@ -22,9 +22,8 @@ export interface DaysOptions {
   days: number;
 }
 
-// The counter climbs one `energyStep` a reading and restarts every `readingsPerDay` readings, so
-// every delta is one step — the one across a reset included, the value after it being the step.
-// The reset sits at a reading index, not a clock boundary: the cloud never reads the boundary.
+// The counter climbs one `energyStep` a reading and restarts every `readingsPerDay` readings. The
+// reset sits at a reading index, not a clock boundary: the cloud never reads the boundary.
 export const energyStep = 5;
 
 export function daysReadings(options: DaysOptions): Reading[] {
