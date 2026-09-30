@@ -13,7 +13,6 @@
     { "path": "./apps/ingest-worker/tsconfig.test.json" },
     { "path": "./apps/api-worker" },
     { "path": "./apps/api-worker/tsconfig.test.json" },
-    { "path": "./apps/jobs-worker" },
     { "path": "./tools/emit-openapi" },
     { "path": "./tools/token" },
     { "path": "./tools/simulator" },

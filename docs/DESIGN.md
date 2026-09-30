@@ -63,7 +63,7 @@ flowchart TB
     subgraph cloud["magellan-cloud"]
         direction TB
         L1["Layer 1 — Read API<br/>for clients: Grafana, scripts"]
-        L2["Layer 2 — Workers<br/>ingest · api · jobs"]
+        L2["Layer 2 — Workers<br/>ingest · api"]
         L3["Layer 3 — Storage<br/>D1 readings, rollups as read · R2 every raw batch"]
         L4["Layer 4 — Contract<br/>ingest protocol v1 · the seam"]
         L1 --> L2 --> L3 --> L4
@@ -213,17 +213,18 @@ never raised.
 ## 7. Cloud (Layers 1–3)
 
 - **ingest-worker** — device-facing. Verifies the token, validates against the contract, stores the
-  manifest, commits readings, writes the raw batch to R2.
+  manifest, commits readings, writes the raw batch to R2, stores heartbeats.
 - **api-worker** — client-facing. The read API: device list, health, time-series queries over D1.
   Writes nothing.
-- **jobs-worker** — cron. Hourly and daily rollups, D1 retention, silent-device detection.
 - **D1** — the registry (devices, manifests, metrics), readings, batch receipts, heartbeats.
 - **R2** — every raw batch and every manifest, unchanged. The archive D1 can be rebuilt from.
 
 Readings are one row per poll, with the minimum indexes the queries need — indexes cost writes on
 the same budget. A rollup is aggregated in D1 as it is read, one value a bucket per metric, so the
-long tail is cheap to chart. When D1 cannot commit, ingest archives to R2 and returns "retry later";
-the device keeps its buffer and the archive rebuilds D1 afterwards.
+long tail is cheap to chart. Nothing runs on a schedule: retention waits until the budget needs it,
+and deciding a device is silent is the client's (`docs/adr/0006-the-client-owns-presentation.md`).
+When D1 cannot commit, ingest archives to R2 and returns "retry later"; the device keeps its buffer
+and the archive rebuilds D1 afterwards.
 
 A device token is minted by the cloud, returned once, and stored only as its SHA-256 hash; a device
 sends it as `Authorization: Bearer`. The token alone identifies the device, and the path id must
@@ -240,7 +241,7 @@ What the cloud assumes of the other repository, and no more — how the device i
 
 - The device buffers readings across outages, bounded on purpose: when the buffer fills, the oldest
   batch is dropped and `seq` leaves a visible gap rather than the device dying. A gap is recoverable
-  from nothing, so `jobs-worker` reports it as a health signal, never hides it.
+  from nothing, so the health route exposes it, never hides it.
 - It computes the manifest hash itself, and sends its manifest on boot and whenever sources change.
 - It sends a heartbeat on its own cadence, apart from any batch, whether or not it has readings.
 - It issues no request the contract does not define.
@@ -250,7 +251,7 @@ What the cloud assumes of the other repository, and no more — how the device i
 ```mermaid
 flowchart TD
     A([source poll]) --> B[reading: ts + metric values]
-    B --> C[buffer, bounded RAM with flash spill]
+    B --> C[buffer, bounded, on disk]
     C --> D[upload batch]
     D --> E{status class}
     E -->|2xx| F[drop batch]
@@ -261,11 +262,8 @@ flowchart TD
     H --> J[(D1: readings, receipt)]
     N([heartbeat, hourly]) --> O[ingest: verify token, validate]
     O --> P[(D1: heartbeats)]
-    J --> K[jobs: rollups, retention]
-    K --> L[(D1: rollups)]
     J --> M[api: read API → client]
     P --> M
-    L --> M
     M -.->|rebuild if needed| I
 ```
 
