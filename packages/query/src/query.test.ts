@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { dayMs } from "./bucket.ts";
-import { rollupOf, seriesQuerySchema, windowOf } from "./query.ts";
+import { refName, rollupOf, seriesQuerySchema, windowOf } from "./query.ts";
 
 const nowMs = 1_790_270_481_000;
 const metric = "source_1:power";
@@ -45,6 +45,12 @@ describe("metric", () => {
       { source: "source_1", key: "power" },
       { source: "source_2", key: "energy.today" },
     ]);
+  });
+
+  it("names a metric in the form it parses from", () => {
+    const query = seriesQuerySchema.parse({ metric: "source_2:energy.today" });
+
+    expect(query.metric.map(refName)).toEqual(["source_2:energy.today"]);
   });
 
   it.each(["", "power", "source_1:power:extra", "source_1:power,source_1:power", "a b:power"])(

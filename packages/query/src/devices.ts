@@ -96,6 +96,12 @@ function compareText(left: string, right: string): number {
   return 0;
 }
 
+export function sourceHealthRowsOf(sourcesLastHeard: Record<string, number>): SourceHealthRow[] {
+  return Object.entries(sourcesLastHeard)
+    .toSorted(([left], [right]) => compareText(left, right))
+    .map(([source, ms]) => ({ source, last_heard: instantOf(ms) }));
+}
+
 // The latest heartbeat's account, one row a source, in id order. A device yet to send one, or one
 // that has heard no source since boot, answers no rows.
 export async function readSourceHealth(
@@ -108,9 +114,5 @@ export async function readSourceHealth(
   ]);
   if (device === undefined) return noDevice;
   if (heartbeat === undefined) return { ok: true, body: [] };
-
-  const body = Object.entries(heartbeat.sourcesLastHeard)
-    .toSorted(([left], [right]) => compareText(left, right))
-    .map(([source, ms]) => ({ source, last_heard: instantOf(ms) }));
-  return { ok: true, body };
+  return { ok: true, body: sourceHealthRowsOf(heartbeat.sourcesLastHeard) };
 }
