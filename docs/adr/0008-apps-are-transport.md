@@ -25,6 +25,10 @@ keeps an app small enough to read as its routes.
 A package with one consumer — each worker's logic has exactly one. A move across workspaces where a
 file would otherwise stay put, and a manifest, a tsconfig and an entry point for each.
 
+A package boots nothing to test. Its unit tests sit beside its source and cover what is pure; what
+it writes and reads is proven through its app's booted tests, so logic left inside an I/O function
+goes unproven by the package — pull it out to test it.
+
 ## Reverses
 
 Packages that only ever have one consumer, and moves that cost more than the reading they save, fold
