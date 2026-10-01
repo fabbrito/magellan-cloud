@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { ZodError } from "zod";
 
 import { bucketRowOf, declarationOf, sampleValuesOf } from "./read.ts";
 
@@ -18,7 +19,7 @@ describe("declarationOf", () => {
   });
 
   it("throws on a stored body the contract does not accept", () => {
-    expect(() => declarationOf({ hash: "abc", declaredAt: 1, body: "{}" })).toThrow();
+    expect(() => declarationOf({ hash: "abc", declaredAt: 1, body: "{}" })).toThrow(ZodError);
   });
 });
 
@@ -28,11 +29,11 @@ describe("sampleValuesOf", () => {
   });
 
   it.each([
-    ["not an array", "{}", 1],
-    ["one value short", "[1]", 2],
-    ["a value not a number", '["1"]', 1],
-  ])("throws on %s", (_name, json, count) => {
-    expect(() => sampleValuesOf(json, count)).toThrow();
+    ["not an array", "{}", 1, "a malformed values array"],
+    ["one value short", "[1]", 2, "a malformed values array"],
+    ["a value not a number", '["1"]', 1, "a value neither a number nor null"],
+  ])("throws on %s", (_name, json, count, message) => {
+    expect(() => sampleValuesOf(json, count)).toThrow(message);
   });
 });
 
@@ -65,6 +66,6 @@ describe("bucketRowOf", () => {
   });
 
   it("throws on a row that is not an object", () => {
-    expect(() => bucketRowOf(null)).toThrow();
+    expect(() => bucketRowOf(null)).toThrow("not an object");
   });
 });
