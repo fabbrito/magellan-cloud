@@ -14,7 +14,7 @@
     { "path": "./apps/api-worker" },
     { "path": "./apps/api-worker/tsconfig.test.json" },
     { "path": "./tools/emit-openapi" },
-    { "path": "./tools/token" },
+    { "path": "./tools/token-cli" },
     { "path": "./tools/simulator" },
     { "path": "./tools/simulator/tsconfig.test.json" },
     { "path": "./tools/simulator/tsconfig.cli.json" }

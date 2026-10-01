@@ -3,8 +3,8 @@ import { isTokenKind, mintStatement, revokeStatement } from "@magellan/token";
 // Prints the SQL that changes the token registry — minting prints the token once beside it. It
 // never talks to Cloudflare: scripts/ run what it prints against the live store.
 const usage = `usage:
-  bun tools/token/src/index.ts mint [--plain] <device|client> <id> <description>
-  bun tools/token/src/index.ts revoke <device|client> <id>`;
+  bun tools/token-cli/src/index.ts mint [--plain] <device|client> <id> <description>
+  bun tools/token-cli/src/index.ts revoke <device|client> <id>`;
 
 function refuse(problem: string): never {
   console.error(`${problem}\n\n${usage}`);

@@ -15,7 +15,7 @@ description=$3
 {
 	IFS= read -r token
 	IFS= read -r statement
-} < <(bun tools/token/src/index.ts mint --plain "$kind" "$id" "$description")
+} < <(bun tools/token-cli/src/index.ts mint --plain "$kind" "$id" "$description")
 [[ -n $statement ]] || exit 1
 
 cd apps/ingest-worker || exit

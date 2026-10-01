@@ -84,7 +84,7 @@ apps/ingest-worker/  device-facing
 apps/api-worker/     client-facing read API
 tools/simulator/     a fake device that speaks the contract
 tools/emit-openapi/  writes both openapi.json files from the workers' routes
-tools/token/         mints or revokes a device or client token, as the statement to run
+tools/token-cli/     mints or revokes a device or client token, as the statement to run
 scripts/             the Makefile's shell, reaching the account
 ```
 

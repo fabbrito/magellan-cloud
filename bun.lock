@@ -122,7 +122,7 @@
         "vitest": "^5.0.2",
       },
     },
-    "tools/token": {
+    "tools/token-cli": {
       "name": "@magellan/token-cli",
       "version": "0.0.0",
       "dependencies": {
@@ -294,7 +294,7 @@
 
     "@magellan/token": ["@magellan/token@workspace:packages/token"],
 
-    "@magellan/token-cli": ["@magellan/token-cli@workspace:tools/token"],
+    "@magellan/token-cli": ["@magellan/token-cli@workspace:tools/token-cli"],
 
     "@oxc-project/types": ["@oxc-project/types@0.150.0", "", {}, "sha512-rDS5/31E9HfPl/CIzGrn0DOlvBbXFseQ5URJ9sYMfstbKLD/c6Gm9vmRzRGDdAXyOIL4zmO37lc9RIwYqVruZw=="],
 
