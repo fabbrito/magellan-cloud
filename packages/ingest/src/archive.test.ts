@@ -2,11 +2,20 @@ import { expect, it } from "vitest";
 
 import { archiveKey, manifestKey } from "./archive.ts";
 
-it("keys a batch by the UTC day it was received", () => {
-  const receivedAt = new Date("2026-01-01T23:59:59.999Z");
+// Tests run off UTC (vitest.config.ts): just past UTC midnight is the previous local day.
+it("keys a batch by the UTC day it was received, not the local one", () => {
+  const receivedAt = new Date("2026-01-02T00:00:00.000Z");
 
   expect(archiveKey("device-01", "0123456789abcdef", "7", receivedAt)).toBe(
-    "device-01/batches/2026/01/01/0123456789abcdef-7",
+    "device-01/batches/2026/01/02/0123456789abcdef-7",
+  );
+});
+
+it("keeps the last instant of a UTC day in that day", () => {
+  const receivedAt = new Date("2026-01-01T23:59:59.999Z");
+
+  expect(archiveKey("device-01", "boot", "0", receivedAt)).toBe(
+    "device-01/batches/2026/01/01/boot-0",
   );
 });
 
@@ -18,7 +27,6 @@ it("pads month and day, so keys list in time order", () => {
   );
 });
 
-it("keeps batches and manifests under one prefix a device, apart by kind", () => {
+it("keys a manifest by its hash, under its device", () => {
   expect(manifestKey("device-01", "abc")).toBe("device-01/manifests/abc");
-  expect(archiveKey("device-01", "boot", "0", new Date(0))).toMatch(/^device-01\/batches\//);
 });

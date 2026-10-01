@@ -1,14 +1,17 @@
 import type { Batch, Heartbeat } from "@magellan/contract";
 import { heartbeats, readings, receipts, type Db } from "@magellan/db";
+import { getTableColumns } from "drizzle-orm";
 
-// D1 allows 100 bound parameters a statement, and a reading binds one per column. Rows beyond that
-// answer `too many SQL variables`, which a full batch reaches and nothing smaller does — see
-// apps/ingest-worker/test/ceiling.test.ts, which is what pins this.
+// D1 allows 100 bound parameters a statement, and an insert binds one per column, so a full batch
+// answers `too many SQL variables` in one statement. Counted off the table, not the row: a column
+// the row leaves to its default only makes the bound safer.
 const boundParametersMax = 100;
-const readingColumns = 5;
-export const readingsPerInsertMax = Math.floor(boundParametersMax / readingColumns);
+const readingsPerInsertMax = Math.floor(
+  boundParametersMax / Object.keys(getTableColumns(readings)).length,
+);
 
 export function chunk<Row>(rows: Row[], size: number): Row[][] {
+  if (!Number.isInteger(size) || size < 1) throw new Error(`a chunk of ${size} rows never ends`);
   const chunks: Row[][] = [];
   for (let start = 0; start < rows.length; start += size) {
     chunks.push(rows.slice(start, start + size));
@@ -16,7 +19,11 @@ export function chunk<Row>(rows: Row[], size: number): Row[][] {
   return chunks;
 }
 
-export function receiptRowOf(deviceId: string, batch: Batch, receivedAt: Date) {
+export function receiptRowOf(
+  deviceId: string,
+  batch: Batch,
+  receivedAt: Date,
+): typeof receipts.$inferInsert {
   return {
     deviceId,
     bootId: batch.boot_id,
@@ -27,7 +34,7 @@ export function receiptRowOf(deviceId: string, batch: Batch, receivedAt: Date) {
 }
 
 // One row a reading, each under the manifest its batch names.
-export function readingRowsOf(deviceId: string, batch: Batch) {
+export function readingRowsOf(deviceId: string, batch: Batch): (typeof readings.$inferInsert)[] {
   return batch.readings.map((reading) => ({
     deviceId,
     source: reading.source,
@@ -60,7 +67,11 @@ export async function commitBatch(
 }
 
 // An optional field the device left out is stored null, never absent.
-export function heartbeatRowOf(deviceId: string, heartbeat: Heartbeat, receivedAt: Date) {
+export function heartbeatRowOf(
+  deviceId: string,
+  heartbeat: Heartbeat,
+  receivedAt: Date,
+): typeof heartbeats.$inferInsert {
   return {
     deviceId,
     receivedAt: receivedAt.getTime(),
