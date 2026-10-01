@@ -89,5 +89,6 @@ tools/token-cli/     mints or revokes a device or client token, as the statement
 scripts/             the Makefile's shell, reaching the account
 ```
 
-The workspaces exist; what goes in them lands incrementally. `docs/DESIGN.md` is the stack and the
-boundaries.
+Apps and tools are transport; what they do lives in packages
+(`docs/adr/0008-apps-are-transport.md`). The workspaces exist; what goes in them lands
+incrementally. `docs/DESIGN.md` is the stack and the boundaries.
