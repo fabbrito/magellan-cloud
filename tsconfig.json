@@ -6,6 +6,7 @@
     { "path": "./packages/contract/tsconfig.test.json" },
     { "path": "./packages/db" },
     { "path": "./packages/ingest" },
+    { "path": "./packages/ingest/tsconfig.test.json" },
     { "path": "./packages/query" },
     { "path": "./packages/query/tsconfig.test.json" },
     { "path": "./packages/token" },
