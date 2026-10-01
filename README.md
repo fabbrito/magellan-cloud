@@ -78,6 +78,7 @@ make sql SQL='<statement>'                         # the live D1; `$` in a JSON 
 ```
 packages/contract/   the contract: Zod schemas, and openapi.json emitted from the routes
 packages/db/         D1 schema and migrations
+packages/ingest/     a device's writes: manifests, batches, heartbeats, archived then committed
 packages/query/      reads, rollups, row schemas, and the read openapi.json
 packages/token/      tokens: minted, hashed, resolved to a device or client, revoked
 apps/ingest-worker/  device-facing

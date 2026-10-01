@@ -3,7 +3,7 @@ import { heartbeats, readings, receipts, type Db } from "@magellan/db";
 
 // D1 allows 100 bound parameters a statement, and a reading binds one per column. Rows beyond that
 // answer `too many SQL variables`, which a full batch reaches and nothing smaller does — see
-// test/ceiling.test.ts, which is what pins this.
+// apps/ingest-worker/test/ceiling.test.ts, which is what pins this.
 const boundParametersMax = 100;
 const readingColumns = 5;
 const readingsPerInsertMax = Math.floor(boundParametersMax / readingColumns);
