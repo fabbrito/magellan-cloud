@@ -1,11 +1,9 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { batchSchema, heartbeatSchema, LIMITS, manifestSchema } from "@magellan/contract";
 import { getDb } from "@magellan/db";
+import { commitHeartbeat, declareManifest, ingestBatch, type Store } from "@magellan/ingest";
 import { resolveToken } from "@magellan/token";
 import type { Context, Next } from "hono";
-
-import { commitHeartbeat } from "./commit.ts";
-import { declareManifest, ingestBatch, type Store } from "./ingest.ts";
 
 type RefusalStatus = 400 | 401 | 403 | 411 | 413 | 422 | 503;
 

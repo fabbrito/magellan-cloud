@@ -15,7 +15,7 @@ import { commitBatch } from "./commit.ts";
 // is written first and a 2xx means both (docs/DESIGN.md invariant 7).
 export interface Store {
   db: Db;
-  archive: Env["ARCHIVE"];
+  archive: R2Bucket;
 }
 
 // The hash is over the bytes as received: a re-serialized copy hashes differently (DESIGN §6).

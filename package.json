@@ -24,17 +24,17 @@
     "dev:reset": "rm -rf .wrangler/state",
     "dev:api": "bun run dev:migrate && bun --cwd=apps/api-worker run dev",
     "db:generate": "bun --cwd=packages/db run db:generate",
-    "mint": "bun tools/token/src/index.ts mint",
+    "mint": "bun tools/token-cli/src/index.ts mint",
     "sim": "bun --cwd=tools/simulator run sim",
     "emit": "bun --cwd=tools/emit-openapi run emit && bun format"
   },
   "devDependencies": {
     "@types/bun": "^1.4.2",
-    "oxfmt": "^0.70.0",
-    "oxlint": "^1.85.0",
+    "oxfmt": "^0.71.0",
+    "oxlint": "^1.86.0",
     "typescript": "^7.0.2",
     "vitest": "^5.0.2",
-    "wrangler": "^4.141.0"
+    "wrangler": "^4.142.0"
   },
   "engines": {
     "node": ">=24"

@@ -9,7 +9,7 @@ usage() {
 
 (($# == 2)) || usage
 
-statement=$(bun tools/token/src/index.ts revoke "$1" "$2") || exit
+statement=$(bun tools/token-cli/src/index.ts revoke "$1" "$2") || exit
 
 cd apps/ingest-worker || exit
 bunx wrangler d1 execute DB --remote -c wrangler.prod.jsonc --command "$statement"

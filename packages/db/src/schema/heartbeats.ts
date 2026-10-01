@@ -22,3 +22,5 @@ export const heartbeats = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.deviceId, table.receivedAt] })],
 );
+
+export type NewHeartbeat = typeof heartbeats.$inferInsert;

@@ -1,11 +1,10 @@
 {
-  "name": "@magellan/query",
+  "name": "@magellan/ingest",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
-    "./openapi.json": "./openapi.json"
+    ".": "./src/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
@@ -13,12 +12,10 @@
   "dependencies": {
     "@magellan/contract": "workspace:*",
     "@magellan/db": "workspace:*",
-    "drizzle-orm": "^0.45.3",
-    "zod": "^4.6.5"
+    "drizzle-orm": "^0.45.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260928.1",
-    "@magellan/simulator": "workspace:*",
     "@types/node": "^26.6.3",
     "vitest": "^5.0.2"
   }

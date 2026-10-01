@@ -15,7 +15,7 @@ export async function startIngest(): Promise<TestHarness> {
   return server;
 }
 
-// Registers a device through the statement tools/token prints; the token exists only here.
+// Registers a device through the statement tools/token-cli prints; the token exists only here.
 export async function registerDevice(server: TestHarness, id: string): Promise<string> {
   const minted = await mintStatement("device", id, `device ${id}`, Date.now());
   if (!minted.ok) throw new Error(minted.problem);

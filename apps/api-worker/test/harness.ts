@@ -18,7 +18,7 @@ export async function startCloud(): Promise<TestHarness> {
   return server;
 }
 
-// Registers a token through the statement tools/token prints; the token exists only here.
+// Registers a token through the statement tools/token-cli prints; the token exists only here.
 async function register(server: TestHarness, kind: TokenKind, id: string): Promise<string> {
   const minted = await mintStatement(kind, id, `${kind} ${id}`, Date.now());
   if (!minted.ok) throw new Error(minted.problem);
