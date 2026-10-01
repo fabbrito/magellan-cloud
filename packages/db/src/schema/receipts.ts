@@ -18,3 +18,5 @@ export const receipts = sqliteTable(
     index("receipts_device_id_received_at").on(table.deviceId, table.receivedAt),
   ],
 );
+
+export type NewReceipt = typeof receipts.$inferInsert;

@@ -1,5 +1,13 @@
 import type { Batch, Heartbeat } from "@magellan/contract";
-import { heartbeats, readings, receipts, type Db } from "@magellan/db";
+import {
+  heartbeats,
+  readings,
+  receipts,
+  type Db,
+  type NewHeartbeat,
+  type NewReading,
+  type NewReceipt,
+} from "@magellan/db";
 import { getTableColumns } from "drizzle-orm";
 
 // D1 allows 100 bound parameters a statement, and an insert binds one per column, so a full batch
@@ -19,11 +27,7 @@ export function chunk<Row>(rows: Row[], size: number): Row[][] {
   return chunks;
 }
 
-export function receiptRowOf(
-  deviceId: string,
-  batch: Batch,
-  receivedAt: Date,
-): typeof receipts.$inferInsert {
+export function receiptRowOf(deviceId: string, batch: Batch, receivedAt: Date): NewReceipt {
   return {
     deviceId,
     bootId: batch.boot_id,
@@ -34,7 +38,7 @@ export function receiptRowOf(
 }
 
 // One row a reading, each under the manifest its batch names.
-export function readingRowsOf(deviceId: string, batch: Batch): (typeof readings.$inferInsert)[] {
+export function readingRowsOf(deviceId: string, batch: Batch): NewReading[] {
   return batch.readings.map((reading) => ({
     deviceId,
     source: reading.source,
@@ -71,7 +75,7 @@ export function heartbeatRowOf(
   deviceId: string,
   heartbeat: Heartbeat,
   receivedAt: Date,
-): typeof heartbeats.$inferInsert {
+): NewHeartbeat {
   return {
     deviceId,
     receivedAt: receivedAt.getTime(),

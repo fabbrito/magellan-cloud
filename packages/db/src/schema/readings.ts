@@ -15,3 +15,5 @@ export const readings = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.deviceId, table.source, table.ts] })],
 );
+
+export type NewReading = typeof readings.$inferInsert;
