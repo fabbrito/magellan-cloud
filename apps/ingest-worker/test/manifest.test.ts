@@ -90,11 +90,13 @@ it("refuses a manifest the contract does not accept, with an empty body", async 
 it("refuses a manifest that declares no length", async () => {
   const token = await registerDevice(server, "device-06");
 
-  // Not through `putManifest`: the omission is the subject.
+  // Not through `putManifest`: the omission is the subject. A stream, not bytes: fetch derives a
+  // length from bytes on its own, so only a chunked body arrives with none.
   const response = await server.fetch("/v1/devices/device-06/manifest", {
     method: "PUT",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
-    body: manifestBytes,
+    body: new Blob([manifestBytes]).stream(),
+    duplex: "half",
   });
 
   expect(response.status).toBe(411);
