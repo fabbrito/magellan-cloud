@@ -1,5 +1,8 @@
-# Magellan cloud — every target but help acts on the live deploy. The
-# maintainer runs them.
+# Magellan cloud — the maintainer's: per-clone setup, and every target under
+# Deploy, Tokens and Observe acts on the live deploy. An agent never runs make.
+
+include .config/make/base.mk
+.DEFAULT_GOAL := help # base.mk defines `deps` first
 
 -include cloudflare.prod.env
 
@@ -41,7 +44,11 @@ export HELP_AWK
 
 ##@ Setup
 help: ## show this help
-	@awk "$$HELP_AWK" $(firstword $(MAKEFILE_LIST))
+	@awk "$$HELP_AWK" $(MAKEFILE_LIST)
+
+# mise exec: PATH was read before mise install.
+deps::
+	mise exec -- bun install
 
 bootstrap: ## create D1 and R2 - the D1 id goes in cloudflare.prod.env
 	$(wrangler) d1 create magellan

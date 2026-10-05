@@ -43,9 +43,9 @@ stay agent work; deploy, `--remote`, and secret or bucket commands never leave t
 hands.
 
 The split is in the tool, so it is read rather than remembered: **an agent never runs `make`.**
-`package.json` scripts reach the local store at most and are agent work; the `Makefile` and its
-`scripts/` reach the account. A new command that authenticates goes in the `Makefile` before it gets
-a body.
+`package.json` scripts reach the local store at most and are agent work; the `Makefile` is the
+maintainer's — per-clone setup, and with its `scripts/`, the account. A new command that
+authenticates goes in the `Makefile` before it gets a body.
 
 ## The contract is the seam
 
