@@ -17,11 +17,11 @@
     "@magellan/db": "workspace:*",
     "@magellan/query": "workspace:*",
     "@magellan/token": "workspace:*",
-    "hono": "^4.13.9",
+    "hono": "^4.13.12",
     "zod": "^4.6.5"
   },
   "devDependencies": {
     "@magellan/simulator": "workspace:*",
-    "@types/node": "^26.6.3"
+    "@types/node": "^26.6.4"
   }
 }
