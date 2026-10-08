@@ -73,7 +73,7 @@ flowchart TB
         direction TB
         L5["Layer 5 — Device runtime<br/>config, clock, scheduling, buffer, upload, health"]
         L6["Layer 6 — Source drivers<br/>one per kind of source read"]
-        L7["Layer 7 — Platform<br/>esp-idf-svc (ESP32) | Linux (Pi)"]
+        L7["Layer 7 — Platform<br/>Linux on 32-bit ARM"]
         L8["Layer 8 — Hardware<br/>board, power, buses"]
         L5 --> L6 --> L7 --> L8
     end

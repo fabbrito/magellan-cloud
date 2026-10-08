@@ -14,7 +14,7 @@ its sources is `magellan-device`'s vocabulary, not this one.
 
 | Term          | Meaning                                                                              |
 | ------------- | ------------------------------------------------------------------------------------ |
-| **Device**    | A physical agent that uploads readings: an ESP32, a Raspberry Pi, the simulator      |
+| **Device**    | A physical agent that uploads readings: a Raspberry Pi, the simulator                |
 | **Simulator** | A fake device that speaks the contract — the cloud is tested against it, not a board |
 
 **Caution — "device" is never a browser or HTML concept here.** It is a physical producer.
