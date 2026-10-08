@@ -1,5 +1,5 @@
 <!-- Title is the merge commit subject: type(scope): subject, lowercase, <= 72 chars, per
-.config/commit-msg.conf. Terse. Cut every word. Delete any section with nothing to add. -->
+.config/commitlint.config.mjs. Terse. Cut every word. Delete any section with nothing to add. -->
 
 ## What
 

@@ -1,5 +1,5 @@
 # The commit gate: repokit's templates, copied into .config/lefthook/ and owned
-# here. Message policy is .config/commit-msg.conf. No job reaches Cloudflare:
+# here. Message policy is .config/commitlint.config.mjs. No job reaches Cloudflare:
 # anything that authenticates there is the maintainer's, never a hook's.
 #
 # This repo's own jobs go below - never a name a template uses: the extended
