@@ -14,13 +14,13 @@ its sources is `magellan-device`'s vocabulary, not this one.
 
 | Term          | Meaning                                                                              |
 | ------------- | ------------------------------------------------------------------------------------ |
-| **Device**    | A physical agent that uploads readings: a Raspberry Pi, the simulator                |
+| **Device**    | What holds one token and uploads readings: a Raspberry Pi, a worker, the simulator   |
 | **Simulator** | A fake device that speaks the contract — the cloud is tested against it, not a board |
 
-**Caution — "device" is never a browser or HTML concept here.** It is a physical producer.
+**Caution — "device" is never a browser or HTML concept here.** It is a producer, physical or not.
 
-**Caution — only the uploading agent is a Device.** Whatever it reads — an inverter behind a relay,
-a board on the local network — is a **source** to the manifest, never a Device. The chain is
+**Caution — only what uploads is a Device.** Whatever it reads, down its chain — an inverter, a
+board on the local network — is a **source** to the manifest, never a Device. The chain is
 device-side arrangement (`magellan-device` ADR 10).
 
 ## Data
