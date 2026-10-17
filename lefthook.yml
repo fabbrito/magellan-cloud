@@ -26,13 +26,3 @@ pre-commit:
         ]
       file_types: &file [not symlink]
       run: bun run test
-
-check:
-  jobs:
-    - name: test
-      glob: *test
-      file_types: *file
-      files:
-        "sh -c 'git diff --name-only --diff-filter=ACMR HEAD 2>/dev/null || git diff --cached
-        --name-only --diff-filter=ACMR; git ls-files --others --exclude-standard'"
-      run: bun run test

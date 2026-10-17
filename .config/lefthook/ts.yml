@@ -8,7 +8,8 @@
 # import cycle or break a type against an unformatted one - so they run on
 # the tree. No lint fix on commit: oxlint --fix rewrites code, not whitespace.
 # Tests are not a lane here; add one if they are fast enough to sit between
-# you and a commit.
+# you and a commit. pre-commit only: the whole-tree check is the repo's
+# script, not a lefthook lane.
 pre-commit:
   jobs:
     - name: oxfmt
@@ -34,39 +35,3 @@ pre-commit:
       glob: *ts
       file_types: *file
       run: bun --filter '*' typecheck
-
-check:
-  jobs:
-    - name: oxfmt
-      glob: *fmt
-      file_types: *file
-      files:
-        &changed "sh -c 'git diff --name-only --diff-filter=ACMR HEAD 2>/dev/null || git diff
-        --cached --name-only --diff-filter=ACMR; git ls-files --others --exclude-standard'"
-      run: bun oxfmt --check --no-error-on-unmatched-pattern {files}
-    - name: oxfmt-config
-      glob: *fmtconfig
-      files: *changed
-      run: bun oxfmt --check
-    - name: oxlint
-      glob: *ts
-      file_types: *file
-      files: *changed
-      run: bun oxlint --deny-warnings
-    - name: typecheck
-      glob: *ts
-      file_types: *file
-      files: *changed
-      run: bun --filter '*' typecheck
-
-fix:
-  jobs:
-    - name: oxfmt
-      glob: *fmt
-      file_types: *file
-      files: *changed
-      run: bun oxfmt --no-error-on-unmatched-pattern {files}
-    - name: oxfmt-config
-      glob: *fmtconfig
-      files: *changed
-      run: bun oxfmt
