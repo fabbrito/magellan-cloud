@@ -11,8 +11,8 @@
     "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
-    "@cloudflare/workers-types": "^5.20261002.1",
-    "drizzle-orm": "^0.45.3"
+    "@cloudflare/workers-types": "^5.20261014.1",
+    "drizzle-orm": "^0.45.4"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.11"
