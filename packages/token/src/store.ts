@@ -1,17 +1,15 @@
-import { apiClients, devices, type Db } from "@magellan/db";
+import type { Db } from "@magellan/db";
 import { and, eq, getTableName, isNull } from "drizzle-orm";
 
-import { bearerToken, hashToken, idPattern, mintToken } from "./token.ts";
-
-// A token's kind names the table that holds it, so a device token never reads and a client token
-// never ingests: each resolves only in its own table. The one place a kind becomes a table.
-const tables = { device: devices, client: apiClients } as const;
-
-export type TokenKind = keyof typeof tables;
-
-export function isTokenKind(word: string | undefined): word is TokenKind {
-  return word !== undefined && Object.hasOwn(tables, word);
-}
+import { tables, type TokenKind } from "./kind.ts";
+import {
+  bearerToken,
+  descriptionPattern,
+  hashToken,
+  idPattern,
+  mintToken,
+  TOKEN,
+} from "./token.ts";
 
 // The id a header's token names, or undefined for no token, an unknown one, a revoked one, or one of
 // another kind. Which of those it was is not the caller's to learn.
@@ -39,11 +37,8 @@ export type Refusal = { ok: false; problem: string };
 export type Statement = { ok: true; statement: string } | Refusal;
 export type Minted = { ok: true; statement: string; token: string } | Refusal;
 
-const descriptionLengthMax = 64;
-const descriptionPattern = new RegExp(`^[A-Za-z0-9 ._:()/-]{1,${descriptionLengthMax}}$`);
-
 const idProblem = "An id is lowercase letters, digits and dashes, starting with a letter or digit.";
-const descriptionProblem = `A description is 1 to ${descriptionLengthMax} characters, no quotes or backslashes.`;
+const descriptionProblem = `A description is 1 to ${TOKEN.descriptionLengthMax} characters, no quotes or backslashes.`;
 
 // The token is returned once and never stored: the statement carries only its hash.
 export async function mintStatement(
