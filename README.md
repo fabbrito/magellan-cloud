@@ -9,6 +9,7 @@ device half is `magellan-device`; the two meet only at the contract.
 - Conventions: `AGENTS.md`
 - Style: `docs/STYLE.md`
 - Grafana: `docs/GRAFANA.md`
+- Deploying, and the repository settings: `docs/DEPLOYING.md`
 
 ## Status
 
@@ -63,35 +64,6 @@ endpoint = "http://127.0.0.1:8787/v1"
 `MAGELLAN_DEVICE_ID` and `MAGELLAN_TOKEN` come from `bun run mint device`, whose printed statement
 registers the hash here. The device refuses plain http unless it is loopback, so one running on
 another host wants a tunnel to this one rather than a LAN address.
-
-## Deploying
-
-A merge to `main` deploys: `.github/workflows/deploy.yml` runs the check, applies D1 migrations,
-then deploys ingest, the API and admin, in that order. A change to docs alone deploys nothing.
-Rollback is a revert merged like any change, or an older run re-run: migrations stay
-forward-compatible (`docs/STYLE.md`), so older code still reads the schema.
-
-D1 and R2 are the maintainer's infrastructure repository's, not this one's. The workflow reads four
-secrets from the `production` environment:
-
-| Secret                  | Holds                                                       |
-| ----------------------- | ----------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`  | the "Edit Cloudflare Workers" template, plus D1 Edit        |
-| `CLOUDFLARE_ACCOUNT_ID` | the account                                                 |
-| `D1_DATABASE_ID`        | the live D1; `scripts/prod-config.sh` renders it into place |
-| `ADMIN_TOKEN_HASH`      | the admin token's hash, from `bun run mint:admin`           |
-
-Repository settings, set by hand — the workflows assume them:
-
-- Actions: approval required for every external contributor's PR; `GITHUB_TOKEN` read-only by
-  default; full-length SHA pins required; only GitHub's actions and those named in the workflows.
-- A ruleset on `main`: a PR, `check` passing, no force-push, no deletion, no bypass.
-- Environment `production`: deploys from `main` only; the secrets above, none at repository level.
-
-Tokens are minted and revoked through the admin worker, with the admin token; its contract is
-`packages/token/openapi.json`. Rotating the admin token is a new secret and a re-run deploy. Should
-it be lost, `bun run mint` and `bun run revoke` still print the statements for the live D1's
-console.
 
 ## Layout
 

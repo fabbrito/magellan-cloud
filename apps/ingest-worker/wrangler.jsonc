@@ -3,6 +3,8 @@
   "name": "magellan-ingest",
   "main": "src/index.ts",
   "compatibility_date": "2026-09-19",
+  "workers_dev": true,
+  "preview_urls": false,
   // Pinned so the device repo's `[cloud] endpoint` names a fixed address across restarts. The
   // device refuses plain http unless it is loopback, which this is.
   "dev": {

@@ -27,3 +27,14 @@ manifest is already neutral: a zone, sources, typed metrics.
 **Not the trigger:** host monitoring on a LAN. Always connected, polled every few seconds and
 queried by rate and aggregate, it wants a Prometheus stack. This collector is for producers that go
 offline, buffer, and fit a write budget.
+
+## Settings checked, not set once
+
+**Trigger:** a repository setting found drifted from what `docs/DEPLOYING.md` lists, or a third
+repository holding the same settings.
+
+The ruleset is a file already; the rest — Actions permissions, the security toggles, the environment
+— are commands run once and trusted after. A check that reads the live settings and diffs them
+against committed files turns that trust into a signal. Reading them takes admin access, so it is
+the maintainer's to run, or a workflow's with a token that reads settings and nothing else. Shared
+by more than two repositories, it lives in `fabbrito/repokit`, not here.
