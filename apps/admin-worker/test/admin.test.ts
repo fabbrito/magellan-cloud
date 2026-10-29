@@ -1,4 +1,4 @@
-import type { TokenRow } from "@magellan/token";
+import { mintedSchema, tokenRowSchema, type TokenRow } from "@magellan/token";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { TestHarness } from "wrangler";
 
@@ -26,13 +26,12 @@ const revoke = (collection: string, id: string) =>
 async function tokenOf(collection: string, id: string): Promise<string> {
   const response = await register(collection, id);
   if (response.status !== 201) throw new Error(`${id} answered ${response.status}`);
-  const { token } = (await response.json()) as { token: string };
-  return token;
+  return mintedSchema.parse(await response.json()).token;
 }
 
 async function rowOf(collection: string, id: string): Promise<TokenRow | undefined> {
   const response = await call(server, admin, `/v1/${collection}`);
-  const rows = (await response.json()) as TokenRow[];
+  const rows = tokenRowSchema.array().parse(await response.json());
   return rows.find((row) => row.id === id);
 }
 
