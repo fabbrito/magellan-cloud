@@ -82,8 +82,9 @@ Repository settings, set by hand — the workflows assume them:
 - Environment `production`: deploys from `main` only; the secrets above, none at repository level.
 
 Tokens are the maintainer's, through `make`. Copy `cloudflare.prod.env.example` to
-`cloudflare.prod.env` — git ignores it — and fill it. Each target fetches a scoped API token from
-`CLOUDFLARE_TOKEN_CMD`, so no `wrangler login` is left for anything else to use:
+`cloudflare.prod.env` — git ignores it — and fill it. Each target fetches an API token from
+`CLOUDFLARE_TOKEN_CMD` — account-scoped, D1 Edit alone, not the deploy's — so no `wrangler login` is
+left for anything else to use:
 
 ```bash
 make register ID=<id> DESCRIPTION='<text>'         # a device token, printed once
