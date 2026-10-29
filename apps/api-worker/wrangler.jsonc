@@ -4,7 +4,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-09-19",
   "workers_dev": true,
-  "preview_urls": true,
+  "preview_urls": false,
   // Beside ingest in `bun run dev`: its own port, and its own inspector, which both would otherwise
   // race for.
   "dev": {
