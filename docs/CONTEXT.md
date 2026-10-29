@@ -68,7 +68,7 @@ time or request latency. Those are logs and live elsewhere.
 | ----------------- | ----------------------------------------------------------------------------- |
 | **Ingest worker** | Device-facing. Verifies the token, validates, stores, commits, archives       |
 | **API worker**    | Client-facing read API. Devices, health, series                               |
-| **Admin worker**  | Maintainer-facing. Mints and revokes device and client tokens                 |
+| **Admin worker**  | Maintainer-facing. Mints, revokes and lists device and client tokens          |
 | **Registry**      | D1's declaration of what exists: devices, manifests, metrics                  |
 | **Rollup**        | Readings aggregated in D1 as read: one value per bucket per metric            |
 | **Bucket**        | The window a rollup covers — an hour or a day                                 |
