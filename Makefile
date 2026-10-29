@@ -39,13 +39,13 @@ check::
 fmt::
 	bun run fix
 
-# Every workspace: plain `bun update` moves the root's package.json alone.
-# Inside the declared ranges, cooled by bunfig.toml; `bun run update` (--latest)
-# widens a range, a decision by hand.
+# package.json's `update`: every workspace (-r), past the declared ranges
+# (--latest) - `^0.x` holds a minor - picked by hand (-i), so a major stays a
+# decision. Cooled too: `bun outdated` marks Latest held by bunfig.toml.
 bump: bump-bun
 
 bump-bun:
-	bun update -r
+	bun run update
 
 .PHONY: bump-bun help bootstrap migrate deploy takedown tail sql register register-client revoke-device revoke-client probe probe-ceiling
 
