@@ -43,10 +43,10 @@ stay agent work; deploy, `--remote`, and secret or bucket commands never leave t
 hands.
 
 The split is in the tool, so it is read rather than remembered. `package.json` scripts reach the
-local store at most and are agent work. **In the `Makefile`, an agent runs only what reads:**
-`help`, `check`, and `-n` on any target. The rest is the maintainer's — per-clone setup, `upgrade`
-(interactive), and with its `scripts/`, the account. A new command that authenticates goes in the
-`Makefile` before it gets a body.
+local store at most and are agent work. **In the `Makefile`, an agent runs only the local tree's:**
+`help`, `check`, `fmt`, and `-n` on any target. The rest is the maintainer's — per-clone setup,
+`upgrade` (interactive), and with its `scripts/`, the account. A new command that authenticates goes
+in the `Makefile` before it gets a body.
 
 ## The contract is the seam
 

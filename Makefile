@@ -1,6 +1,6 @@
 # Magellan cloud — the maintainer's: per-clone setup, upgrade, and every target
 # under Deploy, Tokens and Observe acts on the live deploy. An agent runs only
-# what reads: help, check, -n.
+# the local tree's: help, check, fmt, -n.
 
 include .config/make/base.mk
 include .config/make/shell.mk

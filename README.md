@@ -29,7 +29,7 @@ make upgrade # every pin and dependency, cooled three days, then fmt and check; 
 
 Anything that authenticates to Cloudflare is the maintainer's to run, never an agent's
 (`AGENTS.md`). The split is in the tool: `bun run` reaches the local store at most; `make` is the
-maintainer's — per-clone setup, upgrades, and the account — but for `help`, `check` and `-n`.
+maintainer's — per-clone setup, upgrades, and the account — but for `help`, `check`, `fmt` and `-n`.
 
 ## Running it
 
