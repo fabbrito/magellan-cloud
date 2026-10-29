@@ -26,6 +26,7 @@ async function mint(commandArguments: string[]): Promise<void> {
     console.log(`token, shown once — store it now:\n\n  ${minted.token}\n`);
     console.log(`register it in the local store:\n`);
     console.log(`  bun run dev:exec --command "${minted.statement}"\n`);
+    console.log(`or in the live D1, through its console:\n\n  ${minted.statement}\n`);
   }
 }
 
