@@ -1,3 +1,4 @@
 [install]
-# Only install package versions published at least 3 days ago
+# Only install package versions published at least 3 days ago: base.toml's
+# minimum_release_age, in bun's own key. make upgrade's bun update obeys it.
 minimumReleaseAge = 259200

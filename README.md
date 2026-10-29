@@ -22,13 +22,14 @@ Needs [mise](https://mise.jdx.dev); bun and the gate's tools are pinned in `.con
 ```bash
 make deps    # the pinned tools, then bun install
 make hooks   # once per clone: lefthook's git hooks
+make upgrade # every pin and dependency, cooled three days, then fmt and check; a clean tree first
 ```
 
 `bun run` lists the scripts, so they are not copied here to rot.
 
 Anything that authenticates to Cloudflare is the maintainer's to run, never an agent's
-(`AGENTS.md`). The split is in the tool: `bun run` reaches the local store at most, `make` is the
-maintainer's — per-clone setup, and the account.
+(`AGENTS.md`). The split is in the tool: `bun run` reaches the local store at most; `make` is the
+maintainer's — per-clone setup, upgrades, and the account — but for `help`, `check` and `-n`.
 
 ## Running it
 

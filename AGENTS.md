@@ -42,10 +42,11 @@ Agents write the code and hand over the commands to run. Formatting, typecheckin
 stay agent work; deploy, `--remote`, and secret or bucket commands never leave the maintainer's
 hands.
 
-The split is in the tool, so it is read rather than remembered: **an agent never runs `make`.**
-`package.json` scripts reach the local store at most and are agent work; the `Makefile` is the
-maintainer's — per-clone setup, and with its `scripts/`, the account. A new command that
-authenticates goes in the `Makefile` before it gets a body.
+The split is in the tool, so it is read rather than remembered. `package.json` scripts reach the
+local store at most and are agent work. **In the `Makefile`, an agent runs only what reads:**
+`help`, `check`, and `-n` on any target. The rest is the maintainer's — per-clone setup, `upgrade`
+(interactive), and with its `scripts/`, the account. A new command that authenticates goes in the
+`Makefile` before it gets a body.
 
 ## The contract is the seam
 
@@ -121,8 +122,9 @@ separate tsconfig projects, so what a test may import is not what the code may.
 - The gate is lefthook's: `lefthook.yml` extends copies of `fabbrito/repokit`'s templates in
   `.config/lefthook/`, owned here; this repo's own jobs sit beside them, never under a template's
   job name. Message policy is `.config/commitlint.config.mjs`. Hooks check what is staged;
-  `bun run check` / `bun run fix` run the same tools over the whole tree, untracked included, as
-  plain scripts — lefthook is the git hooks only. A new kind of file means a lane in both.
+  `make check` / `make fmt` run every lane over the whole tree — lefthook is the git hooks only.
+  `bun run check` / `bun run fix` are the TS lanes alone, which make delegates to; shell and the
+  gate's own config are make's includes. A new kind of file means a lane in both.
 - `type(scope): subject`, scope the semantic area rather than the directory. Subject-only by
   default; cut every word the diff already says.
 - AI co-authored: `Co-Authored-By:` naming the model. Never a session link — history is permanent.

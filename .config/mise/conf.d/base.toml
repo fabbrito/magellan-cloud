@@ -1,6 +1,12 @@
 # templates/base: copy to .config/mise/conf.d/base.toml. Hooks and make run
 # these, never whatever apt left on PATH. A bump is a version here and
 # `make deps`.
+[settings]
+# A release is taken three days after it ships: time for a bad one to be
+# pulled. make upgrade holds back what this refuses; bunfig.toml names the same
+# age in bun's own key.
+minimum_release_age = "3d"
+
 [tools]
 lefthook = "2.2.2"
 # commitlint and the config-conventional it bundles: no package.json needed.
