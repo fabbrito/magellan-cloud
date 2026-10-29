@@ -92,9 +92,6 @@ make register-client ID=<id> DESCRIPTION='<text>'  # a client token, for Grafana
 make revoke-device ID=<id>                         # or revoke-client: the token stops resolving
 ```
 
-A deploy is walked end to end by the simulator, a device token in hand:
-`bun run sim <endpoint> <device-id> <token>`, `ceiling` after it for the largest manifest and batch.
-
 ## Layout
 
 ```
