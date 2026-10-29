@@ -63,6 +63,13 @@ terminate is asserted.
 
 State a bound where it is enforced, once, so the bound a reader trusts is the bound in force.
 
+## Migrations
+
+A migration is forward-compatible for one deploy: the code before it still runs against the schema
+after it. A deploy migrates before it ships, and a rollback — an older run re-run, or a revert —
+leaves D1 as it is. So add, then use; stop reading, then drop: a column or table goes a deploy after
+its last reader.
+
 ## Shape
 
 - **No recursion.** Every execution that should be bounded is bounded.
