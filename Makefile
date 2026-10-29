@@ -1,6 +1,6 @@
-# Magellan cloud — the maintainer's: per-clone setup, upgrade, and every target
-# under Deploy, Tokens and Observe acts on the live deploy. An agent runs only
-# the local tree's: help, check, fmt, -n.
+# Magellan cloud — the maintainer's: per-clone setup, upgrade, and the Tokens
+# targets, which act on the live D1. Deploys are .github/workflows/deploy.yml's.
+# An agent runs only the local tree's: help, check, fmt, -n.
 
 include .config/make/base.mk
 include .config/make/shell.mk
@@ -9,27 +9,15 @@ include .config/make/shell.mk
 -include cloudflare.prod.env
 
 ingest := apps/ingest-worker
-api    := apps/api-worker
 ingest_config := $(ingest)/wrangler.prod.jsonc
-configs := $(ingest_config) $(api)/wrangler.prod.jsonc
 
 need = $(if $($(1)),,$(error $(1) is unset))
-# A choice of worker, named every time: no default to act on by accident.
-need_worker = $(call need,WORKER)$(if $(filter ingest api,$(WORKER)),,$(error WORKER is ingest or api))
 
 # The token lives in one child's env, never the shell's; a failed lookup stops
 # the recipe rather than falling back to a stored login.
 auth = $(call need,CLOUDFLARE_TOKEN_CMD)$(call need,CLOUDFLARE_ACCOUNT_ID)token=$$($(CLOUDFLARE_TOKEN_CMD)) && CLOUDFLARE_API_TOKEN=$$token
-wrangler_in = cd $(1) && $(auth) bun x wrangler
-wrangler = $(call wrangler_in,$(ingest))
-
 # Names the account, so the token needs no scope to look it up.
 export CLOUDFLARE_ACCOUNT_ID
-
-# Through the environment, so quotes in the SQL reach wrangler intact. Taken
-# unexpanded: make would otherwise read a JSON path's `$.key` as a variable.
-override SQL := $(value SQL)
-export SQL
 
 # The TS lanes are package.json's, where an agent runs them: make delegates, one
 # definition, two entries. Shell and lefthook's own are the includes'.
@@ -39,15 +27,24 @@ check::
 fmt::
 	bun run fix
 
+# The workflows' lanes: lefthook.yml's actionlint and pinact, over the tree.
+check::
+	actionlint
+	pinact run --fix=false --no-api
+
 # package.json's `update`: every workspace (-r), past the declared ranges
 # (--latest) - `^0.x` holds a minor - picked by hand (-i), so a major stays a
 # decision. Cooled too: `bun outdated` marks Latest held by bunfig.toml.
-bump: bump-bun
+bump: bump-bun bump-actions
 
 bump-bun:
 	bun run update
 
-.PHONY: bump-bun help bootstrap migrate deploy takedown tail sql register register-client revoke-device revoke-client probe probe-ceiling
+# Every action to its newest sha, cooled as mise and bun are.
+bump-actions:
+	pinact run -u -m 3
+
+.PHONY: bump-bun bump-actions help register register-client revoke-device revoke-client
 
 define HELP_AWK
 BEGIN {
@@ -68,27 +65,9 @@ help: ## show this help
 deps::
 	mise exec -- bun install
 
-bootstrap: ## create D1 and R2 - the D1 id goes in cloudflare.prod.env
-	$(wrangler) d1 create magellan
-	$(wrangler) r2 bucket create magellan-archive
-
 %/wrangler.prod.jsonc: %/wrangler.jsonc cloudflare.prod.env
 	$(call need,D1_DATABASE_ID)
 	scripts/prod-config.sh $(D1_DATABASE_ID) $< $@
-
-##@ Deploy
-migrate: $(ingest_config) ## apply D1 migrations
-	$(wrangler) d1 migrations apply DB --remote -c wrangler.prod.jsonc
-
-# Ingest first: after a migration, the running one may write a shape the
-# database no longer takes, and the device's buffer holds until it is replaced.
-deploy: $(configs) ## deploy the ingest and API workers
-	$(wrangler) deploy -c wrangler.prod.jsonc
-	$(call wrangler_in,$(api)) deploy -c wrangler.prod.jsonc
-
-takedown: $(configs) ## delete both workers - D1 and R2 stay
-	$(call wrangler_in,$(api)) delete -c wrangler.prod.jsonc
-	$(wrangler) delete -c wrangler.prod.jsonc
 
 ##@ Tokens
 register: $(ingest_config) ## mint and register a device token - ID=, DESCRIPTION=
@@ -108,23 +87,3 @@ revoke-device: $(ingest_config) ## revoke a device's token - ID=
 revoke-client: $(ingest_config) ## revoke a client's token - ID=
 	$(call need,ID)
 	$(auth) scripts/revoke.sh client $(ID)
-
-##@ Observe
-# JSON carries each invocation's CPU time. *.prod.* keeps the log out of git.
-tail: $(configs) ## stream invocations to logs/tail.prod.jsonl - WORKER=ingest|api
-	$(call need_worker)
-	@mkdir -p logs
-	$(call wrangler_in,$($(WORKER))) tail -c wrangler.prod.jsonc --format json | tee -a $(CURDIR)/logs/tail.prod.jsonl
-
-sql: $(ingest_config) ## query the live D1 - SQL="<statement>"
-	$(call need,SQL)
-	$(wrangler) d1 execute DB --remote -c wrangler.prod.jsonc --command "$$SQL"
-
-probe: ## walk a simulated boot against the endpoint
-	$(call need,ENDPOINT)
-	$(call need,PROBE_DEVICE_ID)
-	$(call need,PROBE_TOKEN)
-	@bun tools/simulator/src/cli.ts $(ENDPOINT) $(PROBE_DEVICE_ID) $(PROBE_TOKEN) $(run)
-
-probe-ceiling: run := ceiling
-probe-ceiling: probe ## send the largest manifest and batch

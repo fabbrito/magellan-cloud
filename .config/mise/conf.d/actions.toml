@@ -1,0 +1,4 @@
+# This repo's own, not a repokit template: the workflows' lanes.
+[tools]
+actionlint = "1.7.12"
+pinact = "5.0.2"

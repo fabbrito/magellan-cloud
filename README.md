@@ -60,19 +60,40 @@ another host wants a tunnel to this one rather than a LAN address.
 
 ## Deploying
 
-The maintainer's. Copy `cloudflare.prod.env.example` to `cloudflare.prod.env` — git ignores it — and
-fill it as the targets ask. Each target fetches a scoped API token from `CLOUDFLARE_TOKEN_CMD`, so
-no `wrangler login` is left for anything else to use. `make` lists them:
+A merge to `main` deploys: `.github/workflows/deploy.yml` runs the check, applies D1 migrations,
+then deploys ingest and the API, in that order. A change to docs alone deploys nothing. Rollback is
+a revert merged like any change, or an older run re-run: migrations stay forward-compatible
+(`docs/STYLE.md`), so older code still reads the schema.
+
+D1 and R2 are the maintainer's infrastructure repository's, not this one's. The workflow reads three
+secrets from the `production` environment:
+
+| Secret                  | Holds                                                       |
+| ----------------------- | ----------------------------------------------------------- |
+| `CLOUDFLARE_API_TOKEN`  | the "Edit Cloudflare Workers" template, plus D1 Edit        |
+| `CLOUDFLARE_ACCOUNT_ID` | the account                                                 |
+| `D1_DATABASE_ID`        | the live D1; `scripts/prod-config.sh` renders it into place |
+
+Repository settings, set by hand — the workflows assume them:
+
+- Actions: approval required for every external contributor's PR; `GITHUB_TOKEN` read-only by
+  default; full-length SHA pins required; only GitHub's actions and those named in the workflows.
+- A ruleset on `main`: a PR, `check` passing, no force-push, no deletion, no bypass.
+- Environment `production`: deploys from `main` only; the secrets above, none at repository level.
+
+Tokens are the maintainer's, through `make`. Copy `cloudflare.prod.env.example` to
+`cloudflare.prod.env` — git ignores it — and fill it. Each target fetches an API token from
+`CLOUDFLARE_TOKEN_CMD` — account-scoped, D1 Edit alone, not the deploy's — so no `wrangler login` is
+left for anything else to use:
 
 ```bash
-make bootstrap                                     # D1 and R2; the D1 id goes in cloudflare.prod.env
-make migrate deploy                                # migrate first: a new ingest writes the new shape
 make register ID=<id> DESCRIPTION='<text>'         # a device token, printed once
 make register-client ID=<id> DESCRIPTION='<text>'  # a client token, for Grafana
 make revoke-device ID=<id>                         # or revoke-client: the token stops resolving
-make probe                                         # or probe-ceiling, with `make tail WORKER=ingest` beside it
-make sql SQL='<statement>'                         # the live D1; `$` in a JSON path reaches it intact
 ```
+
+A deploy is walked end to end by the simulator, a device token in hand:
+`bun run sim <endpoint> <device-id> <token>`, `ceiling` after it for the largest manifest and batch.
 
 ## Layout
 
@@ -87,7 +108,7 @@ apps/api-worker/     client-facing read API
 tools/simulator/     a fake device that speaks the contract
 tools/emit-openapi/  writes both openapi.json files from the workers' routes
 tools/token-cli/     mints or revokes a device or client token, as the statement to run
-scripts/             the Makefile's shell, reaching the account
+scripts/             shell for the Makefile and the deploy workflow
 ```
 
 Apps and tools are transport; what they do lives in packages

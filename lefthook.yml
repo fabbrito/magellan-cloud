@@ -26,3 +26,13 @@ pre-commit:
         ]
       file_types: &file [not symlink]
       run: bun run test
+    # Workflows: actionlint reads them, shellcheck their `run:`s with it; pinact
+    # refuses an action not pinned by sha. Offline: the pin's shape, not its age.
+    - name: actionlint
+      glob: &workflow [".github/workflows/*.{yml,yaml}"]
+      file_types: *file
+      run: actionlint {staged_files}
+    - name: pinact
+      glob: *workflow
+      file_types: *file
+      run: pinact run --fix=false --no-api {staged_files}
