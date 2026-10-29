@@ -47,7 +47,7 @@ included, and `dev:reset` is the only thing that clears it. It is not the store 
 boot their own and throw it away, so a test run leaves it untouched.
 
 The admin worker wants `apps/admin-worker/.dev.vars`, copied from its `.dev.vars.example` with the
-hash `bun run mint admin` prints; without it, every request to it is a 500.
+hash `bun run mint:admin` prints; without it, every request to it is a 500.
 
 ### Against the device
 
@@ -77,7 +77,7 @@ secrets from the `production` environment:
 | `CLOUDFLARE_API_TOKEN`  | the "Edit Cloudflare Workers" template, plus D1 Edit        |
 | `CLOUDFLARE_ACCOUNT_ID` | the account                                                 |
 | `D1_DATABASE_ID`        | the live D1; `scripts/prod-config.sh` renders it into place |
-| `ADMIN_TOKEN_HASH`      | the admin token's hash, from `bun run mint admin`           |
+| `ADMIN_TOKEN_HASH`      | the admin token's hash, from `bun run mint:admin`           |
 
 Repository settings, set by hand — the workflows assume them:
 

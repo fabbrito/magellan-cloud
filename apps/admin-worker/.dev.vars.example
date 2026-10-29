@@ -1,2 +1,2 @@
-# Copy to .dev.vars; `bun run mint admin` prints a token and the hash that goes here.
+# Copy to .dev.vars; `bun run mint:admin` prints a token and the hash that goes here.
 ADMIN_TOKEN_HASH=
