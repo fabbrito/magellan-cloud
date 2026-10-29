@@ -84,7 +84,7 @@ Repository settings, set by hand — the workflows assume them:
 
 Tokens are the maintainer's: `bun run mint` prints one and the statement that registers it, which
 the maintainer runs in the live D1's console. Revoking is the same, its statement from
-`bun tools/token-cli/src/index.ts revoke <device|client> <id>`.
+`bun run revoke <device|client> <id>`.
 
 ## Layout
 

@@ -38,7 +38,7 @@ live D1's console:
 
 ```bash
 bun run mint client grafana 'Grafana'
-bun tools/token-cli/src/index.ts revoke client grafana   # it stops resolving at once
+bun run revoke client grafana   # it stops resolving at once
 ```
 
 A client token reads every device and writes nothing.
