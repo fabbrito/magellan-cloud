@@ -84,9 +84,11 @@ again under Allowed hosts.
 
 ## Queries
 
-Every query: Type JSON, Parser JSONata, Source URL, Method GET. JSONata is Infinity's backend
-parser, the one alerting runs; the frontend parsers do not alert. Declare the columns — without them
-the time field can go undetected and a panel shows no data.
+Every query: Type JSON, Source URL, Method GET. Parser JSONata for panels and variables,
+`jq-backend` for anything an alert reads. Of Infinity's parsers only `backend` (gjson) and
+`jq-backend` run server side, where alerting runs: JSONata there yields null and the rule reads
+NoData. Declare the columns — without them the time field can go undetected and a panel shows no
+data.
 
 ### Variables
 
@@ -120,6 +122,21 @@ A table or stat panel over `/v1/devices/${device}/latest` (the series columns, F
 one over `/v1/devices/${device}/health` (`last_heard` Timestamp, `seq_gaps` Number, and whichever
 heartbeat fields it shows). `/health/sources` is the device's side of the same question, one row a
 source; alerting on either is the client's (`docs/adr/0006-the-client-owns-presentation.md`).
+
+### Alerting
+
+A rule per device, on silence: Parser `jq-backend`, URL `/v1/devices/<id>/health`, Format Table,
+column `age_min` Number, root selector:
+
+```jq
+map({age_min: (if .last_heard then (now - (.last_heard | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601)) / 60 else 1e9 end)})
+```
+
+Then a threshold expression, `age_min` above the heartbeat period plus a margin.
+
+- `fromdateiso8601` refuses fractional seconds; `last_heard` carries milliseconds, so `sub` drops
+  them first.
+- Never heard is `1e9`: a device that never spoke reads as silent, not as NoData.
 
 ## Presentation
 
