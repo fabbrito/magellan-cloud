@@ -29,7 +29,8 @@ make upgrade # every pin and dependency, cooled three days, then fmt and check; 
 
 Anything that authenticates to Cloudflare is the maintainer's to run, never an agent's
 (`AGENTS.md`). The split is in the tool: `bun run` reaches the local store at most; `make` is the
-maintainer's — per-clone setup, upgrades, and the account — but for `help`, `check`, `fmt` and `-n`.
+maintainer's — per-clone setup and upgrades — but for `help`, `check`, `fmt` and `-n`; deploys are
+CI's.
 
 ## Running it
 
@@ -81,19 +82,9 @@ Repository settings, set by hand — the workflows assume them:
 - A ruleset on `main`: a PR, `check` passing, no force-push, no deletion, no bypass.
 - Environment `production`: deploys from `main` only; the secrets above, none at repository level.
 
-Tokens are the maintainer's, through `make`. Copy `cloudflare.prod.env.example` to
-`cloudflare.prod.env` — git ignores it — and fill it. Each target fetches an API token from
-`CLOUDFLARE_TOKEN_CMD` — account-scoped, D1 Edit alone, not the deploy's — so no `wrangler login` is
-left for anything else to use:
-
-```bash
-make register ID=<id> DESCRIPTION='<text>'         # a device token, printed once
-make register-client ID=<id> DESCRIPTION='<text>'  # a client token, for Grafana
-make revoke-device ID=<id>                         # or revoke-client: the token stops resolving
-```
-
-A deploy is walked end to end by the simulator, a device token in hand:
-`bun run sim <endpoint> <device-id> <token>`, `ceiling` after it for the largest manifest and batch.
+Tokens are the maintainer's: `bun run mint` prints one and the statement that registers it, which
+the maintainer runs in the live D1's console. Revoking is the same, its statement from
+`bun run revoke <device|client> <id>`.
 
 ## Layout
 
@@ -108,7 +99,7 @@ apps/api-worker/     client-facing read API
 tools/simulator/     a fake device that speaks the contract
 tools/emit-openapi/  writes both openapi.json files from the workers' routes
 tools/token-cli/     mints or revokes a device or client token, as the statement to run
-scripts/             shell for the Makefile and the deploy workflow
+scripts/             shell for the deploy workflow
 ```
 
 Apps and tools are transport; what they do lives in packages

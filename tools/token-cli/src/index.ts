@@ -1,9 +1,10 @@
 import { isTokenKind, mintStatement, revokeStatement } from "@magellan/token";
 
 // Prints the SQL that changes the token registry — minting prints the token once beside it. It
-// never talks to Cloudflare: scripts/ run what it prints against the live store.
+// never talks to Cloudflare: the statement runs locally through dev:exec, or by the maintainer's
+// hand in the live D1's console.
 const usage = `usage:
-  bun tools/token-cli/src/index.ts mint [--plain] <device|client> <id> <description>
+  bun tools/token-cli/src/index.ts mint <device|client> <id> <description>
   bun tools/token-cli/src/index.ts revoke <device|client> <id>`;
 
 function refuse(problem: string): never {
@@ -12,21 +13,17 @@ function refuse(problem: string): never {
 }
 
 async function mint(commandArguments: string[]): Promise<void> {
-  const plain = commandArguments[0] === "--plain";
-  const [kind, id, description, ...rest] = plain ? commandArguments.slice(1) : commandArguments;
+  const [kind, id, description, ...rest] = commandArguments;
   if (rest.length > 0) refuse("Too many arguments; quote a description with spaces.");
   if (!isTokenKind(kind)) refuse("A kind is device or client.");
 
   const minted = await mintStatement(kind, id ?? "", description ?? "", Date.now());
   if (!minted.ok) refuse(minted.problem);
 
-  if (plain) {
-    console.log(`${minted.token}\n${minted.statement}`);
-  } else {
-    console.log(`token, shown once — store it now:\n\n  ${minted.token}\n`);
-    console.log(`register it in the local store:\n`);
-    console.log(`  bun run dev:exec --command "${minted.statement}"\n`);
-  }
+  console.log(`token, shown once — store it now:\n\n  ${minted.token}\n`);
+  console.log(`register it in the local store:\n`);
+  console.log(`  bun run dev:exec --command "${minted.statement}"\n`);
+  console.log(`or in the live D1, through its console:\n\n  ${minted.statement}\n`);
 }
 
 function revoke(commandArguments: string[]): void {

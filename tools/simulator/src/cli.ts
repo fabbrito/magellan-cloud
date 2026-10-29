@@ -2,6 +2,7 @@ import type { Manifest } from "@magellan/contract";
 
 import { ceilingReadings, gaugeManifest, largestManifest } from "./ceiling.ts";
 import { SimulatedDevice, type CloudFetch } from "./index.ts";
+import { isLoopback } from "./loopback.ts";
 
 // Drives the simulated device over a real socket, which is the one thing the suite cannot do: its
 // tests reach workerd in process. It walks a boot — heartbeat, declare, poll, flush — against the
@@ -33,7 +34,9 @@ function parseRun(argument: string): Run {
 }
 
 const [endpoint, deviceId, token, runArgument = String(sweepsDefault)] = process.argv.slice(2);
-if (endpoint === undefined || !endpoint.startsWith("http")) refuse("An endpoint is an http URL.");
+if (endpoint === undefined) refuse("An endpoint is required.");
+if (!isLoopback(endpoint))
+  refuse("An endpoint is a loopback URL: the simulator never reaches prod.");
 if (deviceId === undefined) refuse("A device id is required.");
 if (token === undefined) refuse("A token is required.");
 const run = parseRun(runArgument);

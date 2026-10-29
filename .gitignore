@@ -24,9 +24,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Cloudflare / Wrangler
 .wrangler
-# live values: the D1 id, tokens
+# live values: the rendered prod config, its D1 id
 *.prod.*
-!*.prod.*.example
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
@@ -49,3 +48,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 tmp
 .scratch
 scratch
+
+# Agent skills, installed per machine by a skills manager, with its lock
+.agents/skills/
+.claude/skills/
+skills-lock.json

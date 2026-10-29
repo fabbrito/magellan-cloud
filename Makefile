@@ -1,23 +1,10 @@
-# Magellan cloud — the maintainer's: per-clone setup, upgrade, and the Tokens
-# targets, which act on the live D1. Deploys are .github/workflows/deploy.yml's.
-# An agent runs only the local tree's: help, check, fmt, -n.
+# Magellan cloud — the maintainer's: per-clone setup and upgrade. Nothing here
+# reaches Cloudflare: deploys are .github/workflows/deploy.yml's. An agent runs
+# only the local tree's: help, check, fmt, -n.
 
 include .config/make/base.mk
 include .config/make/shell.mk
 .DEFAULT_GOAL := help # base.mk defines `deps` first
-
--include cloudflare.prod.env
-
-ingest := apps/ingest-worker
-ingest_config := $(ingest)/wrangler.prod.jsonc
-
-need = $(if $($(1)),,$(error $(1) is unset))
-
-# The token lives in one child's env, never the shell's; a failed lookup stops
-# the recipe rather than falling back to a stored login.
-auth = $(call need,CLOUDFLARE_TOKEN_CMD)$(call need,CLOUDFLARE_ACCOUNT_ID)token=$$($(CLOUDFLARE_TOKEN_CMD)) && CLOUDFLARE_API_TOKEN=$$token
-# Names the account, so the token needs no scope to look it up.
-export CLOUDFLARE_ACCOUNT_ID
 
 # The TS lanes are package.json's, where an agent runs them: make delegates, one
 # definition, two entries. Shell and lefthook's own are the includes'.
@@ -44,7 +31,7 @@ bump-bun:
 bump-actions:
 	pinact run -u -m 3
 
-.PHONY: bump-bun bump-actions help register register-client revoke-device revoke-client
+.PHONY: bump-bun bump-actions help
 
 define HELP_AWK
 BEGIN {
@@ -64,26 +51,3 @@ help: ## show this help
 # mise exec: PATH was read before mise install.
 deps::
 	mise exec -- bun install
-
-%/wrangler.prod.jsonc: %/wrangler.jsonc cloudflare.prod.env
-	$(call need,D1_DATABASE_ID)
-	scripts/prod-config.sh $(D1_DATABASE_ID) $< $@
-
-##@ Tokens
-register: $(ingest_config) ## mint and register a device token - ID=, DESCRIPTION=
-	$(call need,ID)
-	$(call need,DESCRIPTION)
-	$(auth) scripts/register.sh device $(ID) '$(DESCRIPTION)'
-
-register-client: $(ingest_config) ## mint and register a read API client token - ID=, DESCRIPTION=
-	$(call need,ID)
-	$(call need,DESCRIPTION)
-	$(auth) scripts/register.sh client $(ID) '$(DESCRIPTION)'
-
-revoke-device: $(ingest_config) ## revoke a device's token - ID=
-	$(call need,ID)
-	$(auth) scripts/revoke.sh device $(ID)
-
-revoke-client: $(ingest_config) ## revoke a client's token - ID=
-	$(call need,ID)
-	$(auth) scripts/revoke.sh client $(ID)

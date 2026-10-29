@@ -46,9 +46,9 @@ environments, rulesets and repository settings are the maintainer's, and so is t
 
 The split is in the tool, so it is read rather than remembered. `package.json` scripts reach the
 local store at most and are agent work. **In the `Makefile`, an agent runs only the local tree's:**
-`help`, `check`, `fmt`, and `-n` on any target. The rest is the maintainer's — per-clone setup,
-`upgrade` (interactive), and with its `scripts/`, the account. A new command that authenticates goes
-in a workflow, or failing that in the `Makefile`, before it gets a body.
+`help`, `check`, `fmt`, and `-n` on any target. The rest is the maintainer's — per-clone setup and
+`upgrade` (interactive); nothing in it reaches Cloudflare. A new command that authenticates goes in
+a workflow before it gets a body.
 
 ## The contract is the seam
 
