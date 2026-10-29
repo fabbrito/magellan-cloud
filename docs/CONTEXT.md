@@ -64,24 +64,24 @@ time or request latency. Those are logs and live elsewhere.
 
 ## Cloud
 
-| Term              | Meaning                                                                       |
-| ----------------- | ----------------------------------------------------------------------------- |
-| **Ingest worker** | Device-facing. Verifies the token, validates, stores, commits, archives       |
-| **API worker**    | Client-facing read API. Devices, health, series                               |
-| **Admin worker**  | Maintainer-facing. Mints, revokes and lists device and client tokens          |
-| **Registry**      | D1's declaration of what exists: devices, manifests, metrics                  |
-| **Rollup**        | Readings aggregated in D1 as read: one value per bucket per metric            |
-| **Bucket**        | The window a rollup covers — an hour or a day                                 |
-| **Archive**       | R2: every raw batch and every manifest, unchanged. D1 can be rebuilt from it  |
-| **Site**          | A cloud-side registry grouping above plant, holding a place                   |
-| **Plant**         | A cloud-side registry grouping between site and device, holding a facility    |
-| **Device token**  | One revocable credential per device; the cloud stores only its hash           |
-| **Last heard**    | When a hop last heard from the next: cloud from device, device from source    |
-| **Silent device** | A device last heard longer ago than its heartbeat cadence; a client decides   |
-| **Client**        | What reads the read API — a Grafana, a script. Owns presentation              |
-| **Client token**  | One revocable read credential per client; never a device token                |
-| **Token**         | A device token or a client token; its **kind** says which                     |
-| **Admin token**   | The one credential that mints and revokes tokens; per deployment, not a Token |
+| Term              | Meaning                                                                      |
+| ----------------- | ---------------------------------------------------------------------------- |
+| **Ingest worker** | Device-facing. Verifies the token, validates, stores, commits, archives      |
+| **API worker**    | Client-facing read API. Devices, health, series                              |
+| **Admin worker**  | Maintainer-facing. Mints, revokes and lists device and client tokens         |
+| **Registry**      | D1's declaration of what exists: devices, manifests, metrics                 |
+| **Rollup**        | Readings aggregated in D1 as read: one value per bucket per metric           |
+| **Bucket**        | The window a rollup covers — an hour or a day                                |
+| **Archive**       | R2: every raw batch and every manifest, unchanged. D1 can be rebuilt from it |
+| **Site**          | A cloud-side registry grouping above plant, holding a place                  |
+| **Plant**         | A cloud-side registry grouping between site and device, holding a facility   |
+| **Device token**  | One revocable credential per device; the cloud stores only its hash          |
+| **Last heard**    | When a hop last heard from the next: cloud from device, device from source   |
+| **Silent device** | A device last heard longer ago than its heartbeat cadence; a client decides  |
+| **Client**        | What reads the read API — a Grafana, a script. Owns presentation             |
+| **Client token**  | One revocable read credential per client; never a device token               |
+| **Token**         | A device token or a client token; its **kind** says which                    |
+| **Admin token**   | Authorizes minting and revoking Tokens; one per deployment, not a Token      |
 
 **Caution — a Cloudflare API token is never a Token here.** It is the maintainer's credential to the
 account, and no code in the workers or packages ever holds one.

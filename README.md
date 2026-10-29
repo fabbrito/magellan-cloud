@@ -35,9 +35,10 @@ CI's.
 ## Running it
 
 ```bash
-bun run dev                                      # local migrations, then ingest :8787, api :8788, admin :8789
-bun run dev:ingest                               # or one of them alone: dev:ingest, dev:api, dev:admin
+bun run dev                                      # migrate; ingest :8787, api :8788, admin :8789
+bun run dev:ingest                               # or one alone: dev:ingest, dev:api, dev:admin
 bun run mint <device|client> <id> <description>  # a token, and the statement that registers it
+bun run mint:admin                               # an admin token, and its hash
 bun run dev:reset                                # drop the local store; the next dev rebuilds it
 ```
 
