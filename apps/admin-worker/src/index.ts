@@ -60,8 +60,12 @@ const problemContent = { "application/problem+json": { schema: problemSchema } }
 const unauthorized = { description: "No admin token, or another.", content: problemContent };
 const malformed = { description: "Malformed request.", content: problemContent };
 
+// The path each kind is served under: the one place a kind becomes a collection.
+const collections = { device: "devices", client: "clients" } satisfies Record<TokenKind, string>;
+
 // The same three routes for each kind: the kind names the collection, and nothing else differs.
-function mount(kind: TokenKind, collection: "devices" | "clients"): void {
+function mount(kind: TokenKind): void {
+  const collection = collections[kind];
   app.openapi(
     createRoute({
       method: "get",
@@ -128,8 +132,8 @@ function mount(kind: TokenKind, collection: "devices" | "clients"): void {
   );
 }
 
-mount("device", "devices");
-mount("client", "clients");
+mount("device");
+mount("client");
 
 app.notFound((context) => problem(context, 404, "No such route"));
 
