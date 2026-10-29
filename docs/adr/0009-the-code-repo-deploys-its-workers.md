@@ -28,7 +28,9 @@ forward-compatible for one deploy — a drop ships a deploy after its last reade
 forward: a revert, or an older run re-run, never D1 rolled back.
 
 The deploy holds an API token as a secret, so who can run the workflow is a security boundary: the
-ruleset on main and the production environment are its gate, set by hand.
+ruleset on main and the production environment are its gate, set by hand. A PR runs its own copy of
+the check, so a change to the workflows passes a check it wrote: there, the maintainer's review is
+the gate.
 
 ## Reverses
 
