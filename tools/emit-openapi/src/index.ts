@@ -5,7 +5,8 @@ import { openApiDocument as ingestDocument } from "@magellan/ingest-worker/docum
 // Writes the documents the contracts publish, each beside the package that owns its shapes: the
 // ingest contract in packages/contract, the seam the device repository reads; the read contract in
 // packages/query, what a client reads; the admin contract in packages/token, what the maintainer's
-// infra repository mints and revokes through. The workers only happen to be where the routes are declared.
+// infra repository mints and revokes through. The workers only happen to be where the routes are
+// declared.
 // oxfmt owns the formatting from here, and each worker's test compares the parsed document, not the
 // bytes.
 const documents = [
