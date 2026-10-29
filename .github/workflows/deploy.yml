@@ -57,8 +57,12 @@ jobs:
         working-directory: apps/admin-worker
         env:
           ADMIN_TOKEN_HASH: ${{ secrets.ADMIN_TOKEN_HASH }}
+        # A malformed hash would deploy a worker that answers 500 to everyone.
         run: |
+          if ! [[ $ADMIN_TOKEN_HASH =~ ^[0-9a-f]{64}$ ]]; then
+            echo "ADMIN_TOKEN_HASH is not a SHA-256 hex digest: bun run mint:admin" >&2
+            exit 1
+          fi
           secrets="$RUNNER_TEMP/admin-secrets.json"
-          jq -n --arg hash "${ADMIN_TOKEN_HASH:?the production environment holds no ADMIN_TOKEN_HASH}" \
-            '{ADMIN_TOKEN_HASH: $hash}' >"$secrets"
+          jq -n --arg hash "$ADMIN_TOKEN_HASH" '{ADMIN_TOKEN_HASH: $hash}' >"$secrets"
           bunx wrangler deploy -c wrangler.prod.jsonc --secrets-file "$secrets"
