@@ -1,10 +1,9 @@
+import { instantSchema } from "@magellan/http";
 import { z } from "zod";
 
 import { descriptionPattern, descriptionRule, idPattern, idRule, tokenPattern } from "./token.ts";
 
 // The admin contract's bodies, schemas so the document is emitted from what the registry builds.
-
-const instantSchema = z.iso.datetime().meta({ description: "RFC 3339, UTC, to the millisecond." });
 
 export const idSchema = z
   .string()

@@ -1,6 +1,6 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getDb } from "@magellan/db";
-import { problemSchema } from "@magellan/query";
+import { detailOf, problem, problemSchema } from "@magellan/http";
 import {
   idSchema,
   listTokens,
@@ -14,7 +14,6 @@ import {
 import { bodyLimit } from "hono/body-limit";
 
 import { isAdminToken } from "./admin.ts";
-import { detailOf, problem } from "./problem.ts";
 
 // Maintainer-facing: mints and revokes device and client tokens. The admin token is the authority
 // on every route, and nothing else is.

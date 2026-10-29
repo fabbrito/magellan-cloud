@@ -96,6 +96,7 @@ console.
 ```
 packages/contract/   the contract: Zod schemas, and openapi.json emitted from the routes
 packages/db/         D1 schema and migrations
+packages/http/       what the HTTP APIs share on the wire: RFC 9457 refusals, RFC 3339 instants
 packages/ingest/     a device's writes: manifests, batches, heartbeats, archived then committed
 packages/query/      reads, rollups, row schemas, and the read openapi.json
 packages/token/      tokens: minted, hashed, resolved, revoked, and the admin openapi.json

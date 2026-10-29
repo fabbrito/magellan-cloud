@@ -1,4 +1,5 @@
 import type { Db } from "@magellan/db";
+import { instantOf } from "@magellan/http";
 import { asc, eq, sql } from "drizzle-orm";
 
 import type { Registration, TokenRow } from "./api.ts";
@@ -6,8 +7,6 @@ import { tables, type TokenKind } from "./kind.ts";
 import { hashToken, mintToken } from "./token.ts";
 
 // The registry as the admin worker writes it: bound queries, where token-cli prints SQL text.
-
-const instantOf = (ms: number) => new Date(ms).toISOString();
 
 // Revoked rows too: what was once let in stays listed.
 export async function listTokens(db: Db, kind: TokenKind): Promise<TokenRow[]> {

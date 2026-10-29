@@ -1,4 +1,5 @@
 import type { Db } from "@magellan/db";
+import { instantOf } from "@magellan/http";
 
 import type { Answer, ValueRow } from "./api.ts";
 import { dayMs } from "./bucket.ts";
@@ -6,7 +7,6 @@ import { readDeclaration } from "./devices.ts";
 import { exponentLookup } from "./metric.ts";
 import { manifestsOf, selectLatestReading } from "./read.ts";
 import { scale } from "./series.ts";
-import { instantOf } from "./time.ts";
 
 // Each current metric's value in its source's latest reading, raw: a counter is its running total,
 // not a delta. One row read a source, so a stat panel costs what the manifest has sources; a metric

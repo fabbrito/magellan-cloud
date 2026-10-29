@@ -1,12 +1,12 @@
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { keySchema } from "@magellan/contract";
 import { getDb } from "@magellan/db";
+import { detailOf, problem, problemSchema } from "@magellan/http";
 import {
   deviceRowSchema,
   healthRowSchema,
   listDevices,
   metricRowSchema,
-  problemSchema,
   readHealth,
   readLatest,
   readMetrics,
@@ -19,8 +19,6 @@ import {
 } from "@magellan/query";
 import { resolveToken } from "@magellan/token";
 import type { Context } from "hono";
-
-import { detailOf, problem } from "./problem.ts";
 
 // Client-facing. A client token is the authority on every route; the device token never reads.
 //
