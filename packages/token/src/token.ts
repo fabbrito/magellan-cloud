@@ -19,6 +19,10 @@ export const descriptionPattern = new RegExp(
   `^[A-Za-z0-9 ._:()/-]{1,${TOKEN.descriptionLengthMax}}$`,
 );
 
+// Each pattern in words, once: the CLI refuses with it and the admin contract describes with it.
+export const idRule = `lowercase letters, digits and dashes, starting with a letter or digit`;
+export const descriptionRule = `1 to ${TOKEN.descriptionLengthMax} letters, digits, space, ._:()/-`;
+
 const scheme = "Bearer ";
 
 // The token an `Authorization` header carries, or undefined for any other shape. Shape before

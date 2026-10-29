@@ -35,7 +35,7 @@
                       "id": {
                         "type": "string",
                         "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
-                        "description": "Lowercase letters, digits and dashes; never reused, revoked or not."
+                        "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
                       },
                       "description": {
                         "type": "string"
@@ -97,12 +97,12 @@
                   "id": {
                     "type": "string",
                     "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
-                    "description": "Lowercase letters, digits and dashes; never reused, revoked or not."
+                    "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
                   },
                   "description": {
                     "type": "string",
                     "pattern": "^[A-Za-z0-9 ._:()/-]{1,64}$",
-                    "description": "What a person recognizes the holder by."
+                    "description": "What a person recognizes the holder by: 1 to 64 letters, digits, space, ._:()/-."
                   }
                 },
                 "required": ["id", "description"]
@@ -121,7 +121,7 @@
                     "id": {
                       "type": "string",
                       "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
-                      "description": "Lowercase letters, digits and dashes; never reused, revoked or not."
+                      "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
                     },
                     "token": {
                       "type": "string",
@@ -252,10 +252,10 @@
             "schema": {
               "type": "string",
               "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
-              "description": "Lowercase letters, digits and dashes; never reused, revoked or not."
+              "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
             },
             "required": true,
-            "description": "Lowercase letters, digits and dashes; never reused, revoked or not.",
+            "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not.",
             "name": "id",
             "in": "path"
           }
@@ -363,7 +363,7 @@
                       "id": {
                         "type": "string",
                         "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
-                        "description": "Lowercase letters, digits and dashes; never reused, revoked or not."
+                        "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
                       },
                       "description": {
                         "type": "string"
@@ -425,12 +425,12 @@
                   "id": {
                     "type": "string",
                     "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
-                    "description": "Lowercase letters, digits and dashes; never reused, revoked or not."
+                    "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
                   },
                   "description": {
                     "type": "string",
                     "pattern": "^[A-Za-z0-9 ._:()/-]{1,64}$",
-                    "description": "What a person recognizes the holder by."
+                    "description": "What a person recognizes the holder by: 1 to 64 letters, digits, space, ._:()/-."
                   }
                 },
                 "required": ["id", "description"]
@@ -449,7 +449,7 @@
                     "id": {
                       "type": "string",
                       "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
-                      "description": "Lowercase letters, digits and dashes; never reused, revoked or not."
+                      "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
                     },
                     "token": {
                       "type": "string",
@@ -580,10 +580,10 @@
             "schema": {
               "type": "string",
               "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
-              "description": "Lowercase letters, digits and dashes; never reused, revoked or not."
+              "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
             },
             "required": true,
-            "description": "Lowercase letters, digits and dashes; never reused, revoked or not.",
+            "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not.",
             "name": "id",
             "in": "path"
           }

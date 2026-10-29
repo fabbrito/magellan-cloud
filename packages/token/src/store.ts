@@ -5,10 +5,11 @@ import { tables, type TokenKind } from "./kind.ts";
 import {
   bearerToken,
   descriptionPattern,
+  descriptionRule,
   hashToken,
   idPattern,
+  idRule,
   mintToken,
-  TOKEN,
 } from "./token.ts";
 
 // The id a header's token names, or undefined for no token, an unknown one, a revoked one, or one of
@@ -37,8 +38,8 @@ export type Refusal = { ok: false; problem: string };
 export type Statement = { ok: true; statement: string } | Refusal;
 export type Minted = { ok: true; statement: string; token: string } | Refusal;
 
-const idProblem = "An id is lowercase letters, digits and dashes, starting with a letter or digit.";
-const descriptionProblem = `A description is 1 to ${TOKEN.descriptionLengthMax} characters, no quotes or backslashes.`;
+const idProblem = `An id is ${idRule}.`;
+const descriptionProblem = `A description is ${descriptionRule}.`;
 
 // The token is returned once and never stored: the statement carries only its hash.
 export async function mintStatement(

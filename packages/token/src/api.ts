@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { descriptionPattern, idPattern, tokenPattern } from "./token.ts";
+import { descriptionPattern, descriptionRule, idPattern, idRule, tokenPattern } from "./token.ts";
 
 // The admin contract's bodies, schemas so the document is emitted from what the registry builds.
 
@@ -9,14 +9,14 @@ const instantSchema = z.iso.datetime().meta({ description: "RFC 3339, UTC, to th
 export const idSchema = z
   .string()
   .regex(idPattern)
-  .meta({ description: "Lowercase letters, digits and dashes; never reused, revoked or not." });
+  .meta({ description: `${idRule}; never reused, revoked or not.` });
 
 export const registrationSchema = z.object({
   id: idSchema,
   description: z
     .string()
     .regex(descriptionPattern)
-    .meta({ description: "What a person recognizes the holder by." }),
+    .meta({ description: `What a person recognizes the holder by: ${descriptionRule}.` }),
 });
 
 export type Registration = z.infer<typeof registrationSchema>;
