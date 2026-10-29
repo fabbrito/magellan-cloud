@@ -78,6 +78,7 @@ promoted. A comment explaining another package is already a doc in the wrong pla
 | `docs/DESIGN.md`  | what the system is meant to be — layers, invariants, the shape decisions check against |
 | `AGENTS.md`       | how to work here — the process an agent follows, never facts about the system          |
 | `docs/CONTEXT.md` | domain vocabulary                                                                      |
+| `docs/ROADMAP.md` | directions deferred in outline — each with the trigger that brings it in               |
 | `docs/STYLE.md`   | how the code is written — bounds, assertions, naming                                   |
 | `README.md`       | orientation — layout, setup, where the docs are                                        |
 | `docs/agents/`    | how the engineering skills read this repo — issue tracker, domain docs consumption     |

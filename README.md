@@ -4,6 +4,7 @@ Cloud half of Magellan — collects readings from small devices and stores them 
 device half is `magellan-device`; the two meet only at the contract.
 
 - North star: `docs/DESIGN.md`
+- Deferred directions: `docs/ROADMAP.md`
 - Vocabulary: `docs/CONTEXT.md`
 - Conventions: `AGENTS.md`
 - Style: `docs/STYLE.md`
