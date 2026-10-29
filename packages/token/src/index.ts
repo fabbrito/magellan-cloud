@@ -16,4 +16,4 @@ export {
   type Refusal,
   type Statement,
 } from "./store.ts";
-export { hashToken, mintToken } from "./token.ts";
+export { bearerToken, hashToken, mintToken } from "./token.ts";

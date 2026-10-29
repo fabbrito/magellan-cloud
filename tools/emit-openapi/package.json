@@ -8,6 +8,7 @@
     "emit": "bun run src/index.ts"
   },
   "dependencies": {
+    "@magellan/admin-worker": "workspace:*",
     "@magellan/api-worker": "workspace:*",
     "@magellan/ingest-worker": "workspace:*"
   },

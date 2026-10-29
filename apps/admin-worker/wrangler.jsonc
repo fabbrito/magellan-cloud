@@ -1,0 +1,33 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "magellan-admin",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-19",
+  "workers_dev": true,
+  "preview_urls": false,
+  // Beside ingest and api in `bun run dev`: its own port and inspector.
+  "dev": {
+    "port": 8789,
+    "inspector_port": 9231,
+  },
+  "observability": {
+    "enabled": true,
+    // The top-level flag does not reach traces; unset here they are silently off.
+    "traces": {
+      "enabled": true,
+    },
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "magellan",
+      // Local dev and tests key D1 by binding name. The live id is never committed.
+      "database_id": "local",
+      "migrations_dir": "../../packages/db/migrations",
+    },
+  ],
+  // The admin token's hash: the deploy ships it, `.dev.vars` holds it locally.
+  "secrets": {
+    "required": ["ADMIN_TOKEN_HASH"],
+  },
+}

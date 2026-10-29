@@ -22,6 +22,7 @@
     "dev:exec": "bun --cwd=apps/ingest-worker run dev:exec",
     "dev:reset": "rm -rf .wrangler/state",
     "dev:api": "bun run dev:migrate && bun --cwd=apps/api-worker run dev",
+    "dev:admin": "bun run dev:migrate && bun --cwd=apps/admin-worker run dev",
     "db:generate": "bun --cwd=packages/db run db:generate",
     "mint": "bun tools/token-cli/src/index.ts mint",
     "revoke": "bun tools/token-cli/src/index.ts revoke",
