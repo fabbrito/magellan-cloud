@@ -13,7 +13,7 @@ target=$3
 
 uuid='^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 if ! [[ $id =~ $uuid ]]; then
-	echo "not a D1 database id: '$id'" >&2
+	echo '<database-id> is not a D1 database id' >&2
 	exit 1
 fi
 
