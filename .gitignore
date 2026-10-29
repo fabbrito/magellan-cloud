@@ -49,3 +49,8 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 tmp
 .scratch
 scratch
+
+# Agent skills, installed per machine by a skills manager, with its lock
+.agents/skills/
+.claude/skills/
+skills-lock.json
