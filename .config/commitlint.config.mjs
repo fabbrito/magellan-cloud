@@ -89,6 +89,14 @@ export const bodyBullets = ({ raw }, _when, max = 2) => {
   return [errs.length === 0, errs.join("\n    ")];
 };
 
+// config-conventional has no rule for `feat(): x`. The parser reads empty
+// parens as no scope at all, so `scope-empty` and `scope-enum` both skip it -
+// the header is where the parens still show.
+export const scopeNotEmpty = ({ header }) => [
+  !/^[A-Za-z]+\(\)/.test(header ?? ""),
+  "empty scope\n  write: drop the parens, or name a scope",
+];
+
 // A rebase replays messages it did not author: failing them would make this
 // hook the reason you cannot rebase.
 const rebasing = () =>
@@ -100,10 +108,11 @@ export default {
   extends: ["@commitlint/config-conventional"],
   helpUrl: "https://github.com/fabbrito/repokit#message-rules",
   ignores: [rebasing],
-  plugins: [{ rules: { "body-bullets": bodyBullets } }],
+  plugins: [{ rules: { "body-bullets": bodyBullets, "scope-not-empty": scopeNotEmpty } }],
   rules: {
     "type-enum": [2, "always", types],
     "scope-enum": [2, "always", scopes],
+    "scope-not-empty": [2, "always"],
     "header-max-length": [2, "always", 72],
     "body-max-line-length": [2, "always", 80],
     "body-bullets": [2, "always", 2],

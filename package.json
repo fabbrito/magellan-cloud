@@ -8,10 +8,8 @@
   ],
   "type": "module",
   "scripts": {
-    "check": "mise exec -- sh -c 'lefthook validate && oxfmt --check && oxlint --deny-warnings && bun run typecheck && bun run test && bun run shell:check'",
-    "fix": "mise exec -- sh -c 'oxfmt && bun run shell:fix'",
-    "shell:check": "mise exec -- sh -c 'f=$(git ls-files -co --exclude-standard \"*.sh\") && shfmt -i 0 -ci -d $f && shellcheck -x $f'",
-    "shell:fix": "mise exec -- sh -c 'shfmt -i 0 -ci -w $(git ls-files -co --exclude-standard \"*.sh\")'",
+    "check": "oxfmt --check && oxlint --deny-warnings && bun run typecheck && bun run test",
+    "fix": "oxfmt",
     "update": "bun update --latest -r -i && bun install",
     "format": "oxfmt",
     "lint": "oxlint",
@@ -30,12 +28,12 @@
     "emit": "bun --cwd=tools/emit-openapi run emit && bun format"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.3",
-    "oxfmt": "^0.73.0",
-    "oxlint": "^1.88.0",
+    "@types/bun": "^1.4.4",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.4",
-    "wrangler": "^4.149.0"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.152.0"
   },
   "engines": {
     "node": ">=24"

@@ -1,7 +1,9 @@
-# Magellan cloud — the maintainer's: per-clone setup, and every target under
-# Deploy, Tokens and Observe acts on the live deploy. An agent never runs make.
+# Magellan cloud — the maintainer's: per-clone setup, upgrade, and every target
+# under Deploy, Tokens and Observe acts on the live deploy. An agent runs only
+# the local tree's: help, check, fmt, -n.
 
 include .config/make/base.mk
+include .config/make/shell.mk
 .DEFAULT_GOAL := help # base.mk defines `deps` first
 
 -include cloudflare.prod.env
@@ -29,7 +31,23 @@ export CLOUDFLARE_ACCOUNT_ID
 override SQL := $(value SQL)
 export SQL
 
-.PHONY: help bootstrap migrate deploy takedown tail sql register register-client revoke-device revoke-client probe probe-ceiling
+# The TS lanes are package.json's, where an agent runs them: make delegates, one
+# definition, two entries. Shell and lefthook's own are the includes'.
+check::
+	bun run check
+
+fmt::
+	bun run fix
+
+# package.json's `update`: every workspace (-r), past the declared ranges
+# (--latest) - `^0.x` holds a minor - picked by hand (-i), so a major stays a
+# decision. Cooled too: `bun outdated` marks Latest held by bunfig.toml.
+bump: bump-bun
+
+bump-bun:
+	bun run update
+
+.PHONY: bump-bun help bootstrap migrate deploy takedown tail sql register register-client revoke-device revoke-client probe probe-ceiling
 
 define HELP_AWK
 BEGIN {
