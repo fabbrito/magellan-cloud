@@ -24,7 +24,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Cloudflare / Wrangler
 .wrangler
-# live values: the D1 id, tokens
+# live values: the rendered prod config, its D1 id
 *.prod.*
 .dev.vars
 .dev.vars.*
