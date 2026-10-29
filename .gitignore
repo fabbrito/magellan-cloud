@@ -26,7 +26,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .wrangler
 # live values: the D1 id, tokens
 *.prod.*
-!*.prod.*.example
 .dev.vars
 .dev.vars.*
 !.dev.vars.example

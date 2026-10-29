@@ -33,11 +33,12 @@ missing point.
 
 ## Token
 
-One client token per Grafana, minted by the maintainer and printed once:
+One client token per Grafana, minted by the maintainer and printed once, its statement run in the
+live D1's console:
 
 ```bash
-make register-client ID=grafana DESCRIPTION='Grafana'
-make revoke-client ID=grafana   # it stops resolving at once
+bun run mint client grafana 'Grafana'
+bun tools/token-cli/src/index.ts revoke client grafana   # it stops resolving at once
 ```
 
 A client token reads every device and writes nothing.
