@@ -70,7 +70,7 @@ secrets from the `production` environment:
 
 | Secret                  | Holds                                                       |
 | ----------------------- | ----------------------------------------------------------- |
-| `CLOUDFLARE_API_TOKEN`  | account-scoped: Workers Scripts Edit, D1 Edit               |
+| `CLOUDFLARE_API_TOKEN`  | the "Edit Cloudflare Workers" template, plus D1 Edit        |
 | `CLOUDFLARE_ACCOUNT_ID` | the account                                                 |
 | `D1_DATABASE_ID`        | the live D1; `scripts/prod-config.sh` renders it into place |
 
