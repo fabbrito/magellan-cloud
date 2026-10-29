@@ -5,6 +5,7 @@ export const TOKEN = {
   entropyBytes: 32,
   bodyLength: 43,
   idLengthMax: 64,
+  descriptionLengthMax: 64,
 } as const;
 
 export const tokenPattern = new RegExp(`^${TOKEN.prefix}[A-Za-z0-9_-]{${TOKEN.bodyLength}}$`);
@@ -12,6 +13,15 @@ export const tokenPattern = new RegExp(`^${TOKEN.prefix}[A-Za-z0-9_-]{${TOKEN.bo
 // A device's or a client's id. Narrower than the contract's key pattern: an id rides in a URL path
 // and in SQL, so it is limited to what needs no escaping in either.
 export const idPattern = new RegExp(`^[a-z0-9][a-z0-9-]{0,${TOKEN.idLengthMax - 1}}$`);
+
+// What a person reads beside the id; it reaches SQL too, so it is as narrow.
+export const descriptionPattern = new RegExp(
+  `^[A-Za-z0-9 ._:()/-]{1,${TOKEN.descriptionLengthMax}}$`,
+);
+
+// Each pattern in words, once: the CLI refuses with it and the admin contract describes with it.
+export const idRule = `lowercase letters, digits and dashes, starting with a letter or digit`;
+export const descriptionRule = `1 to ${TOKEN.descriptionLengthMax} letters, digits, space, ._:()/-`;
 
 const scheme = "Bearer ";
 

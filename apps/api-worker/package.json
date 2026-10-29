@@ -15,6 +15,7 @@
     "@hono/zod-openapi": "^1.6.3",
     "@magellan/contract": "workspace:*",
     "@magellan/db": "workspace:*",
+    "@magellan/http": "workspace:*",
     "@magellan/query": "workspace:*",
     "@magellan/token": "workspace:*",
     "hono": "^4.13.14",

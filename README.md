@@ -35,16 +35,20 @@ CI's.
 ## Running it
 
 ```bash
-bun run dev                                      # local migrations, then ingest on :8787 and api on :8788
-bun run dev:ingest                               # or one of them alone: dev:ingest, dev:api
+bun run dev                                      # migrate; ingest :8787, api :8788, admin :8789
+bun run dev:ingest                               # or one alone: dev:ingest, dev:api, dev:admin
 bun run mint <device|client> <id> <description>  # a token, and the statement that registers it
+bun run mint:admin                               # an admin token, and its hash
 bun run dev:reset                                # drop the local store; the next dev rebuilds it
 ```
 
-`dev` serves both workers in workerd against one local D1 and R2 under `.wrangler/state` at the
-root, so the API worker reads what ingest commits. That store persists across restarts, registered
-devices included, and `dev:reset` is the only thing that clears it. It is not the store the tests
-use — they boot their own and throw it away, so a test run leaves it untouched.
+`dev` serves the workers in workerd against one local D1 and R2 under `.wrangler/state` at the root,
+so the API worker reads what ingest commits. That store persists across restarts, registered devices
+included, and `dev:reset` is the only thing that clears it. It is not the store the tests use — they
+boot their own and throw it away, so a test run leaves it untouched.
+
+The admin worker wants `apps/admin-worker/.dev.vars`, copied from its `.dev.vars.example` with the
+hash `bun run mint:admin` prints; without it, every request to it is a 500.
 
 ### Against the device
 
@@ -62,11 +66,11 @@ another host wants a tunnel to this one rather than a LAN address.
 ## Deploying
 
 A merge to `main` deploys: `.github/workflows/deploy.yml` runs the check, applies D1 migrations,
-then deploys ingest and the API, in that order. A change to docs alone deploys nothing. Rollback is
-a revert merged like any change, or an older run re-run: migrations stay forward-compatible
-(`docs/STYLE.md`), so older code still reads the schema.
+then deploys ingest, the API and admin, in that order. A change to docs alone deploys nothing.
+Rollback is a revert merged like any change, or an older run re-run: migrations stay
+forward-compatible (`docs/STYLE.md`), so older code still reads the schema.
 
-D1 and R2 are the maintainer's infrastructure repository's, not this one's. The workflow reads three
+D1 and R2 are the maintainer's infrastructure repository's, not this one's. The workflow reads four
 secrets from the `production` environment:
 
 | Secret                  | Holds                                                       |
@@ -74,6 +78,7 @@ secrets from the `production` environment:
 | `CLOUDFLARE_API_TOKEN`  | the "Edit Cloudflare Workers" template, plus D1 Edit        |
 | `CLOUDFLARE_ACCOUNT_ID` | the account                                                 |
 | `D1_DATABASE_ID`        | the live D1; `scripts/prod-config.sh` renders it into place |
+| `ADMIN_TOKEN_HASH`      | the admin token's hash, from `bun run mint:admin`           |
 
 Repository settings, set by hand — the workflows assume them:
 
@@ -82,23 +87,26 @@ Repository settings, set by hand — the workflows assume them:
 - A ruleset on `main`: a PR, `check` passing, no force-push, no deletion, no bypass.
 - Environment `production`: deploys from `main` only; the secrets above, none at repository level.
 
-Tokens are the maintainer's: `bun run mint` prints one and the statement that registers it, which
-the maintainer runs in the live D1's console. Revoking is the same, its statement from
-`bun run revoke <device|client> <id>`.
+Tokens are minted and revoked through the admin worker, with the admin token; its contract is
+`packages/token/openapi.json`. Rotating the admin token is a new secret and a re-run deploy. Should
+it be lost, `bun run mint` and `bun run revoke` still print the statements for the live D1's
+console.
 
 ## Layout
 
 ```
 packages/contract/   the contract: Zod schemas, and openapi.json emitted from the routes
 packages/db/         D1 schema and migrations
+packages/http/       what the HTTP APIs share on the wire: RFC 9457 refusals, RFC 3339 instants
 packages/ingest/     a device's writes: manifests, batches, heartbeats, archived then committed
 packages/query/      reads, rollups, row schemas, and the read openapi.json
-packages/token/      tokens: minted, hashed, resolved to a device or client, revoked
+packages/token/      tokens: minted, hashed, resolved, revoked, and the admin openapi.json
 apps/ingest-worker/  device-facing
 apps/api-worker/     client-facing read API
+apps/admin-worker/   maintainer-facing: mints, revokes and lists tokens
 tools/simulator/     a fake device that speaks the contract
-tools/emit-openapi/  writes both openapi.json files from the workers' routes
-tools/token-cli/     mints or revokes a device or client token, as the statement to run
+tools/emit-openapi/  writes the openapi.json files from the workers' routes
+tools/token-cli/     mints the admin token, or a token as the statement to run
 scripts/             shell for the deploy workflow
 ```
 

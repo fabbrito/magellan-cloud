@@ -1,0 +1,25 @@
+{
+  "name": "@magellan/admin-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./document": "./src/document.ts"
+  },
+  "scripts": {
+    "dev": "wrangler dev --persist-to ../../.wrangler/state",
+    "cf-typegen": "wrangler types",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json"
+  },
+  "dependencies": {
+    "@hono/zod-openapi": "^1.6.3",
+    "@magellan/db": "workspace:*",
+    "@magellan/http": "workspace:*",
+    "@magellan/token": "workspace:*",
+    "hono": "^4.13.14",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5"
+  }
+}

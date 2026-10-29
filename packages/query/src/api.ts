@@ -1,17 +1,6 @@
 import { keySchema, metricSchema } from "@magellan/contract";
+import { instantSchema } from "@magellan/http";
 import { z } from "zod";
-
-// A refusal's body, RFC 9457.
-export const problemSchema = z
-  .object({
-    type: z.literal("about:blank"),
-    status: z.int(),
-    title: z.string(),
-    detail: z.string().optional(),
-  })
-  .meta({ description: "RFC 9457. A client branches on the status, never the text." });
-
-export type Problem = z.infer<typeof problemSchema>;
 
 // What a read answers: the body, or the refusal a route turns into a problem. The statuses are the
 // read's, so a route declares exactly the ones it can answer.
@@ -25,8 +14,6 @@ export const noDevice = { ok: false, status: 404, title: "No such device" } as c
 // The bodies the API answers with, schemas so the document is emitted from what the reads build and
 // a route cannot drift from either. Every body is a flat array of rows, the shape a client splits
 // into series or table columns without a parser of its own.
-
-const instantSchema = z.iso.datetime().meta({ description: "RFC 3339, UTC, to the millisecond." });
 
 export const deviceRowSchema = z.object({
   id: keySchema,

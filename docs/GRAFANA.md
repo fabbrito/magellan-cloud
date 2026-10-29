@@ -33,12 +33,13 @@ missing point.
 
 ## Token
 
-One client token per Grafana, minted by the maintainer and printed once, its statement run in the
-live D1's console:
+One client token per Grafana, minted by the maintainer through the admin worker and answered once:
 
 ```bash
-bun run mint client grafana 'Grafana'
-bun run revoke client grafana   # it stops resolving at once
+curl -H "Authorization: Bearer $ADMIN_TOKEN" -H 'content-type: application/json' \
+  -d '{"id":"grafana","description":"Grafana"}' https://<admin>/v1/clients
+curl -H "Authorization: Bearer $ADMIN_TOKEN" -X POST \
+  https://<admin>/v1/clients/grafana/revoke   # it stops resolving at once
 ```
 
 A client token reads every device and writes nothing.

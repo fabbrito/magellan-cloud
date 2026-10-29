@@ -68,6 +68,7 @@ time or request latency. Those are logs and live elsewhere.
 | ----------------- | ---------------------------------------------------------------------------- |
 | **Ingest worker** | Device-facing. Verifies the token, validates, stores, commits, archives      |
 | **API worker**    | Client-facing read API. Devices, health, series                              |
+| **Admin worker**  | Maintainer-facing. Mints, revokes and lists device and client tokens         |
 | **Registry**      | D1's declaration of what exists: devices, manifests, metrics                 |
 | **Rollup**        | Readings aggregated in D1 as read: one value per bucket per metric           |
 | **Bucket**        | The window a rollup covers — an hour or a day                                |
@@ -80,9 +81,13 @@ time or request latency. Those are logs and live elsewhere.
 | **Client**        | What reads the read API — a Grafana, a script. Owns presentation             |
 | **Client token**  | One revocable read credential per client; never a device token               |
 | **Token**         | A device token or a client token; its **kind** says which                    |
+| **Admin token**   | Authorizes minting and revoking Tokens; one per deployment, not a Token      |
 
 **Caution — a Cloudflare API token is never a Token here.** It is the maintainer's credential to the
 account, and no code in the workers or packages ever holds one.
+
+**Caution — the admin token is not a Token either.** It has no kind and no row in the registry; it
+reaches the admin worker and nothing else, and is replaced rather than revoked.
 
 **Caution — a client is not a tenant.** Many clients read one deployment's devices; none owns them.
 Presentation is the client's, never stored here.

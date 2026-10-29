@@ -1,5 +1,6 @@
-# A merge to main ships: check, migrate, then ingest before api - after a
-# migration the running ingest may write a shape the database no longer takes.
+# A merge to main ships: check, migrate, then ingest before api and admin -
+# after a migration the running ingest may write a shape the database no longer
+# takes.
 # The D1 id and the account stay secrets: the live id is never committed.
 name: deploy
 
@@ -37,7 +38,7 @@ jobs:
       - run: bun install --frozen-lockfile
       - name: render the live configs
         run: |
-          for app in ingest-worker api-worker; do
+          for app in ingest-worker api-worker admin-worker; do
             scripts/prod-config.sh "$D1_DATABASE_ID" "apps/$app/wrangler.jsonc" "apps/$app/wrangler.prod.jsonc"
           done
       # No prompt in CI: wrangler confirms on its own when it sees no TTY.
@@ -50,3 +51,18 @@ jobs:
       - name: deploy api
         working-directory: apps/api-worker
         run: bunx wrangler deploy -c wrangler.prod.jsonc
+      # The hash ships with the version it guards, never as a step of its own
+      # that would publish one without the other.
+      - name: deploy admin
+        working-directory: apps/admin-worker
+        env:
+          ADMIN_TOKEN_HASH: ${{ secrets.ADMIN_TOKEN_HASH }}
+        # A malformed hash would deploy a worker that answers 500 to everyone.
+        run: |
+          if ! [[ $ADMIN_TOKEN_HASH =~ ^[0-9a-f]{64}$ ]]; then
+            echo "ADMIN_TOKEN_HASH is not a SHA-256 hex digest: bun run mint:admin" >&2
+            exit 1
+          fi
+          secrets="$RUNNER_TEMP/admin-secrets.json"
+          jq -n --arg hash "$ADMIN_TOKEN_HASH" '{ADMIN_TOKEN_HASH: $hash}' >"$secrets"
+          bunx wrangler deploy -c wrangler.prod.jsonc --secrets-file "$secrets"

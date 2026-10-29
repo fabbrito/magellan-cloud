@@ -1,0 +1,681 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Magellan admin",
+    "version": "1.0.0"
+  },
+  "security": [
+    {
+      "adminToken": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "adminToken": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {},
+    "parameters": {}
+  },
+  "paths": {
+    "/v1/devices": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Every device, revoked ones too, by id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+                        "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "RFC 3339, UTC, to the millisecond."
+                      },
+                      "revoked_at": {
+                        "type": ["string", "null"],
+                        "format": "date-time",
+                        "description": "Revoked, never deleted."
+                      }
+                    },
+                    "required": ["id", "description", "created_at", "revoked_at"]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No admin token, or another.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+                    "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
+                  },
+                  "description": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9 ._:()/-]{1,64}$",
+                    "description": "What a person recognizes the holder by: 1 to 64 letters, digits, space, ._:()/-."
+                  }
+                },
+                "required": ["id", "description"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The device's token, shown once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+                      "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
+                    },
+                    "token": {
+                      "type": "string",
+                      "pattern": "^mgl_[A-Za-z0-9_-]{43}$",
+                      "description": "Shown once; the cloud keeps only its hash."
+                    }
+                  },
+                  "required": ["id", "token"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No admin token, or another.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The id is taken, revoked or not.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body too large.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/devices/{id}/revoke": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+              "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
+            },
+            "required": true,
+            "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Revoked, now or already."
+          },
+          "400": {
+            "description": "Malformed request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No admin token, or another.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such device.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/clients": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Every client, revoked ones too, by id.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+                        "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
+                      },
+                      "description": {
+                        "type": "string"
+                      },
+                      "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": "RFC 3339, UTC, to the millisecond."
+                      },
+                      "revoked_at": {
+                        "type": ["string", "null"],
+                        "format": "date-time",
+                        "description": "Revoked, never deleted."
+                      }
+                    },
+                    "required": ["id", "description", "created_at", "revoked_at"]
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No admin token, or another.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+                    "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
+                  },
+                  "description": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9 ._:()/-]{1,64}$",
+                    "description": "What a person recognizes the holder by: 1 to 64 letters, digits, space, ._:()/-."
+                  }
+                },
+                "required": ["id", "description"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The client's token, shown once.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+                      "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
+                    },
+                    "token": {
+                      "type": "string",
+                      "pattern": "^mgl_[A-Za-z0-9_-]{43}$",
+                      "description": "Shown once; the cloud keeps only its hash."
+                    }
+                  },
+                  "required": ["id", "token"]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No admin token, or another.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The id is taken, revoked or not.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Body too large.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/clients/{id}/revoke": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+              "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not."
+            },
+            "required": true,
+            "description": "lowercase letters, digits and dashes, starting with a letter or digit; never reused, revoked or not.",
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Revoked, now or already."
+          },
+          "400": {
+            "description": "Malformed request.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "No admin token, or another.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such client.",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string",
+                      "enum": ["about:blank"]
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["type", "status", "title"],
+                  "description": "RFC 9457. A client branches on the status, never the text."
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

@@ -216,6 +216,7 @@ never raised.
   manifest, commits readings, writes the raw batch to R2, stores heartbeats.
 - **api-worker** — client-facing. The read API: device list, health, time-series queries over D1.
   Writes nothing.
+- **admin-worker** — maintainer-facing. Mints, revokes and lists device and client tokens.
 - **D1** — the registry (devices, manifests, metrics), readings, batch receipts, heartbeats.
 - **R2** — every raw batch and every manifest, unchanged. The archive D1 can be rebuilt from.
 
@@ -233,6 +234,9 @@ match it or the request is `403`.
 A client token is minted the same way and kept apart: one authority per worker. A device token never
 reads, a client token never ingests. Either is revoked, never deleted — the row stays, the token
 resolves to nothing, and the refusal is `401`.
+
+The admin worker mints and revokes both, on the admin token alone. That token is the deployment's:
+no row, its hash a secret shipped with the worker, replaced rather than revoked.
 
 ## 8. Device (Layers 5–8)
 

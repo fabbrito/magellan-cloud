@@ -4,7 +4,6 @@ export {
   deviceRowSchema,
   healthRowSchema,
   metricRowSchema,
-  problemSchema,
   sourceHealthRowSchema,
   valueRowSchema,
 } from "./api.ts";

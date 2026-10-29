@@ -1,5 +1,6 @@
 import { keySchema, type Metric } from "@magellan/contract";
 import type { Db } from "@magellan/db";
+import { instantOf } from "@magellan/http";
 import { z } from "zod";
 
 import type { Answer, ValueRow } from "./api.ts";
@@ -16,7 +17,6 @@ import {
 } from "./read.ts";
 import { bucketPoints, readingPoints, type BucketGroup, type Point } from "./rollup.ts";
 import type { Sample } from "./series.ts";
-import { instantOf } from "./time.ts";
 
 // Readings pass through, so the bound is on readings read, and a range past it is narrowed, not
 // paged: a week of one reading a minute fits. Buckets are aggregated in D1, so the bound is on

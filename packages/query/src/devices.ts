@@ -1,5 +1,6 @@
 import type { Manifest } from "@magellan/contract";
 import type { Db } from "@magellan/db";
+import { instantOf } from "@magellan/http";
 
 import {
   noDevice,
@@ -21,7 +22,6 @@ import {
   selectLatestReceipt,
   selectReceipts,
 } from "./read.ts";
-import { instantOf } from "./time.ts";
 
 export async function listDevices(db: Db): Promise<DeviceRow[]> {
   const rows = await selectDevices(db);
