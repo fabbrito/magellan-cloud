@@ -39,15 +39,24 @@ check::
 fmt::
 	bun run fix
 
+# The workflows' lanes: lefthook.yml's actionlint and pinact, over the tree.
+check::
+	actionlint
+	pinact run --fix=false --no-api
+
 # package.json's `update`: every workspace (-r), past the declared ranges
 # (--latest) - `^0.x` holds a minor - picked by hand (-i), so a major stays a
 # decision. Cooled too: `bun outdated` marks Latest held by bunfig.toml.
-bump: bump-bun
+bump: bump-bun bump-actions
 
 bump-bun:
 	bun run update
 
-.PHONY: bump-bun help bootstrap migrate deploy takedown tail sql register register-client revoke-device revoke-client probe probe-ceiling
+# Every action to its newest sha, cooled as mise and bun are.
+bump-actions:
+	pinact run -u -m 3
+
+.PHONY: bump-bun bump-actions help bootstrap migrate deploy takedown tail sql register register-client revoke-device revoke-client probe probe-ceiling
 
 define HELP_AWK
 BEGIN {
