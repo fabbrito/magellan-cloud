@@ -18,9 +18,9 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261026.1",
+    "@cloudflare/workers-types": "^5.20261031.1",
     "@magellan/simulator": "workspace:*",
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "vitest": "^5.0.5"
   }
 }
