@@ -9,6 +9,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to a PR replaces the run testing the old one. A deploy's call
+# always finishes.
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     runs-on: ubuntu-24.04
